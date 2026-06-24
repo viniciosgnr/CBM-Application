@@ -5,12 +5,12 @@ import { ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight, SlidersHorizont
 interface Column {
   key: string;
   header: string;
-  render?: (val: any, row: any) => React.ReactNode;
+  render?: (val: string, row: Record<string, string>) => React.ReactNode;
 }
 
 interface CustomTableProps {
   columns: Column[];
-  data: any[];
+  data: Record<string, string>[];
   title: string;
 }
 

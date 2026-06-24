@@ -1,6 +1,7 @@
 'use client';
 import { useState, useEffect } from 'react';
 import { ResponsiveContainer, PieChart, Pie, Cell, BarChart, Bar, XAxis, YAxis, Tooltip, Legend } from 'recharts';
+import type { PieLabelRenderProps } from 'recharts';
 
 // Definindo as cores do OptSite correspondentes ao CSS do globals.css
 const COLORS = {
@@ -11,12 +12,22 @@ const COLORS = {
   gray: '#64748b'     // var(--text-muted)
 };
 
+// Interface para o Tooltip Customizado
+interface CustomTooltipProps {
+  active?: boolean;
+  payload?: Array<{
+    name?: string;
+    value?: number | string;
+    payload?: Record<string, string | number>;
+  }>;
+}
+
 // Tooltip customizado do OptSite
-const CustomTooltip = ({ active, payload }: any) => {
+const CustomTooltip = ({ active, payload }: CustomTooltipProps) => {
   if (active && payload && payload.length) {
     return (
       <div className="bg-[#111827] border border-[#1e2a3a] p-2 rounded shadow-lg text-[10px]">
-        <p className="font-semibold text-[#e2e8f0]">{payload[0].name || payload[0].dataKey}</p>
+        <p className="font-semibold text-[#e2e8f0]">{payload[0].name}</p>
         <p className="text-[#0ea5e9] font-medium mt-1">Valor: {payload[0].value}%</p>
       </div>
     );
@@ -25,7 +36,16 @@ const CustomTooltip = ({ active, payload }: any) => {
 };
 
 // Componente para desenhar as bolinhas com porcentagem ao redor do Donut Chart
-const renderCustomizedLabel = ({ cx, cy, midAngle, innerRadius, outerRadius, percent, index, color, name }: any) => {
+interface CustomizedLabelProps {
+  cx: number;
+  cy: number;
+  midAngle: number;
+  outerRadius: number;
+  percent: number;
+  color: string;
+}
+
+const renderCustomizedLabel = ({ cx, cy, midAngle, outerRadius, percent, color }: CustomizedLabelProps) => {
   const RADIAN = Math.PI / 180;
   // Desloca o raio para fora da circunferência
   const radius = outerRadius + 14;
@@ -79,7 +99,22 @@ export function WorkOrderStatusPie() {
           outerRadius={65}
           paddingAngle={2}
           dataKey="value"
-          label={(props) => renderCustomizedLabel({ ...props, color: data[props.index].color })}
+          label={(props: PieLabelRenderProps) => {
+            const cx = props.cx ?? 0;
+            const cy = props.cy ?? 0;
+            const midAngle = props.midAngle ?? 0;
+            const outerRadius = props.outerRadius ?? 0;
+            const percent = props.percent ?? 0;
+            const index = props.index ?? 0;
+            return renderCustomizedLabel({
+              cx,
+              cy,
+              midAngle,
+              outerRadius,
+              percent,
+              color: data[index].color
+            });
+          }}
           labelLine={false}
         >
           {data.map((entry, index) => (
@@ -187,7 +222,22 @@ export function EquipmentConditionPie() {
           outerRadius={65}
           paddingAngle={2}
           dataKey="value"
-          label={(props) => renderCustomizedLabel({ ...props, color: data[props.index].color })}
+          label={(props: PieLabelRenderProps) => {
+            const cx = props.cx ?? 0;
+            const cy = props.cy ?? 0;
+            const midAngle = props.midAngle ?? 0;
+            const outerRadius = props.outerRadius ?? 0;
+            const percent = props.percent ?? 0;
+            const index = props.index ?? 0;
+            return renderCustomizedLabel({
+              cx,
+              cy,
+              midAngle,
+              outerRadius,
+              percent,
+              color: data[index].color
+            });
+          }}
           labelLine={false}
         >
           {data.map((entry, index) => (
