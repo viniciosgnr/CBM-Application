@@ -78,12 +78,12 @@ export default function CustomTable({ columns, data, title }: CustomTableProps) 
               paginatedData.map((row, idx) => (
                 <tr
                   key={row.id || idx}
-                  className="border-b border-border-panel/40 hover:bg-bg-panel/40 transition-colors last:border-b-0"
+                  className="border-b border-border-panel hover:bg-bg-panel/40 transition-colors last:border-b-0"
                 >
                   {columns.map(col => (
                     <td
                       key={col.key}
-                      className="px-4 py-3 text-[#a2b4cd] text-[11px] whitespace-nowrap overflow-hidden text-ellipsis max-w-[280px] font-normal"
+                      className="px-4 py-2.5 text-[#a2b4cd] text-[11px] font-normal break-words whitespace-normal"
                     >
                       {col.render ? col.render(row[col.key], row) : row[col.key]}
                     </td>

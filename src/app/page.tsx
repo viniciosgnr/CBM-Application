@@ -59,11 +59,17 @@ export default function MainPage() {
             <span className="text-[#a2b4cd]">{status}</span>
           </span>
         );
-      case 'Pending':
       case 'Degraded':
         return (
           <span className="inline-flex items-center gap-1.5 font-medium text-[11px]">
             <span className="w-1.5 h-1.5 rounded-full bg-status-warn" />
+            <span className="text-[#a2b4cd]">{status}</span>
+          </span>
+        );
+      case 'Pending':
+        return (
+          <span className="inline-flex items-center gap-1.5 font-medium text-[11px]">
+            <span className="w-1.5 h-1.5 rounded-full bg-text-muted" />
             <span className="text-[#a2b4cd]">{status}</span>
           </span>
         );
