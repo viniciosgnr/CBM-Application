@@ -82,7 +82,7 @@ export default function MainPage() {
     {
       key: 'reference',
       header: 'WO Reference',
-      render: (val: any) => (
+      render: (val: string) => (
         <span className="text-accent-blue hover:underline cursor-pointer font-medium hover:text-[#38bdf8] transition-colors">
           {val}
         </span>
@@ -90,13 +90,13 @@ export default function MainPage() {
     },
     { key: 'fpso', header: 'FPSO' },
     { key: 'description', header: 'WO Description' },
-    { key: 'priority', header: 'Priority', render: (val: any) => getStatusDot(val) },
+    { key: 'priority', header: 'Priority', render: (val: string) => getStatusDot(val) },
     { key: 'tagNumber', header: 'Tag Number' },
     { key: 'tagDescription', header: 'Tag Description' },
     { key: 'monitoringTechnique', header: 'Monitoring Technique' },
     { key: 'creationDate', header: 'Creation Date' },
     { key: 'dueDate', header: 'Due Date' },
-    { key: 'status', header: 'WO Status', render: (val: any) => getStatusDot(val) },
+    { key: 'status', header: 'WO Status', render: (val: string) => getStatusDot(val) },
   ];
 
   // Definição de colunas da tabela de Equipamentos
@@ -104,7 +104,7 @@ export default function MainPage() {
     {
       key: 'tag',
       header: 'Equipment Tag',
-      render: (val: any) => <span className="font-semibold text-text-primary">{val}</span>
+      render: (val: string) => <span className="font-semibold text-text-primary">{val}</span>
     },
     { key: 'fpso', header: 'FPSO' },
     { key: 'name', header: 'Name' },
@@ -112,7 +112,7 @@ export default function MainPage() {
     { key: 'system', header: 'System' },
     { key: 'criticality', header: 'Criticality' },
     { key: 'objectType', header: 'Object Type' },
-    { key: 'condition', header: 'Equip. CBM Condition', render: (val: any) => getStatusDot(val) },
+    { key: 'condition', header: 'Equip. CBM Condition', render: (val: string) => getStatusDot(val) },
     { key: 'lastUpdate', header: 'Last Update' },
     { key: 'observation', header: 'Observation' },
   ];
@@ -126,7 +126,7 @@ export default function MainPage() {
       <Sidebar />
 
       {/* Main Container */}
-      <main className="flex-1 pt-14 pr-16 pl-6 pb-6 flex flex-col gap-6 max-w-7xl mx-auto w-full">
+      <main className="flex-1 pt-14 pr-16 pl-6 pb-6 flex flex-col gap-6 max-w-[1440px] mx-auto w-full">
         {/* Navigation & Header */}
         <div className="flex items-center justify-between border-b border-border-panel/40 pb-3 mt-2">
           <div className="flex items-center gap-3">

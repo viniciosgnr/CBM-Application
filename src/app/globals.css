@@ -52,6 +52,18 @@ body {
   font-weight: 500;
 }
 
+/* Table column filter input */
+.filter-input {
+  width: 100%;
+  background: transparent;
+  border: none;
+  border-bottom: 1px solid var(--border-panel);
+  font-size: 10px;
+  color: var(--text-muted);
+  outline: none;
+  padding-bottom: 2px;
+}
+
 /* Tab toggle transition */
 @keyframes fadeIn {
   from { opacity: 0; transform: translateY(4px); }

@@ -21,10 +21,10 @@ export default function CustomTable({ columns, data, title }: CustomTableProps) 
 
   const handleFilterChange = (key: string, value: string) => {
     setFilters(prev => ({ ...prev, [key]: value }));
-    setCurrentPage(1); // Reinicia para a primeira página ao filtrar
+    setCurrentPage(1); // Reset to first page on filtering
   };
 
-  // Lógica de filtragem local baseada em cada coluna
+  // Local filtering logic per column
   const filteredData = data.filter(row => {
     return Object.entries(filters).every(([key, filterVal]) => {
       if (!filterVal) return true;
@@ -33,7 +33,7 @@ export default function CustomTable({ columns, data, title }: CustomTableProps) 
     });
   });
 
-  // Lógica de paginação local
+  // Local pagination logic
   const totalRows = filteredData.length;
   const startIndex = (currentPage - 1) * rowsPerPage;
   const paginatedData = filteredData.slice(startIndex, startIndex + rowsPerPage);
@@ -45,24 +45,30 @@ export default function CustomTable({ columns, data, title }: CustomTableProps) 
         <h3 className="text-sm font-semibold text-text-primary">{title}</h3>
       </div>
       
-      {/* Tabela */}
-      <div className="overflow-x-auto border border-border-panel rounded-card bg-bg-card">
-        <table className="w-full text-left border-collapse text-[11px]">
+      {/* Table Wrapper (No vertical borders, auto width to prevent overflow) */}
+      <div className="overflow-x-auto bg-bg-card">
+        <table className="w-full text-left border-collapse">
           <thead>
-            <tr className="border-b border-border-panel bg-topbar text-text-muted select-none">
+            <tr className="border-b border-border-panel bg-bg-panel/40 select-none">
               {columns.map(col => (
-                <th key={col.key} className="p-3 font-medium min-w-[130px] border-r border-border-panel/40 last:border-r-0">
-                  <div className="flex items-center justify-between gap-2 mb-2">
-                    <span className="uppercase tracking-wider font-semibold text-[10px]">{col.header}</span>
-                    <SlidersHorizontal size={10} className="text-text-muted opacity-60 flex-shrink-0" />
+                <th
+                  key={col.key}
+                  className="px-4 py-3 text-[10px] font-bold uppercase tracking-wider text-text-primary whitespace-nowrap"
+                >
+                  <div className="flex items-center justify-between gap-1">
+                    <span>{col.header}</span>
                   </div>
-                  <input
-                    type="text"
-                    value={filters[col.key] || ''}
-                    onChange={e => handleFilterChange(col.key, e.target.value)}
-                    placeholder=""
-                    className="w-full bg-transparent border-0 border-b border-border-panel/60 pb-1 text-[10px] text-text-primary focus:outline-none focus:border-accent-blue transition-colors font-normal"
-                  />
+                  {/* Underlined filter input with SlidersHorizontal icon on the right */}
+                  <div className="flex items-center gap-1 mt-1.5 w-full">
+                    <input
+                      type="text"
+                      value={filters[col.key] || ''}
+                      onChange={e => handleFilterChange(col.key, e.target.value)}
+                      placeholder=""
+                      className="filter-input"
+                    />
+                    <SlidersHorizontal size={11} className="text-text-muted flex-shrink-0" />
+                  </div>
                 </th>
               ))}
             </tr>
@@ -70,9 +76,15 @@ export default function CustomTable({ columns, data, title }: CustomTableProps) 
           <tbody>
             {paginatedData.length > 0 ? (
               paginatedData.map((row, idx) => (
-                <tr key={row.id || idx} className="border-b border-border-panel/40 hover:bg-border-panel/10 transition-colors last:border-b-0">
+                <tr
+                  key={row.id || idx}
+                  className="border-b border-border-panel/40 hover:bg-bg-panel/40 transition-colors last:border-b-0"
+                >
                   {columns.map(col => (
-                    <td key={col.key} className="p-3 align-middle text-text-primary font-normal border-r border-border-panel/20 last:border-r-0 whitespace-nowrap overflow-hidden text-ellipsis max-w-[250px]">
+                    <td
+                      key={col.key}
+                      className="px-4 py-3 text-[#a2b4cd] text-[11px] whitespace-nowrap overflow-hidden text-ellipsis max-w-[280px] font-normal"
+                    >
                       {col.render ? col.render(row[col.key], row) : row[col.key]}
                     </td>
                   ))}
@@ -80,7 +92,7 @@ export default function CustomTable({ columns, data, title }: CustomTableProps) 
               ))
             ) : (
               <tr>
-                <td colSpan={columns.length} className="p-8 text-center text-text-muted font-medium">
+                <td colSpan={columns.length} className="px-4 py-8 text-center text-text-muted text-xs font-medium">
                   Nenhum registro encontrado.
                 </td>
               </tr>
@@ -89,7 +101,7 @@ export default function CustomTable({ columns, data, title }: CustomTableProps) 
         </table>
       </div>
 
-      {/* Paginação */}
+      {/* Pagination component matching design */}
       <div className="flex items-center justify-end gap-6 mt-4 text-[11px] text-text-muted select-none">
         <div className="flex items-center gap-2">
           <span>Rows per page:</span>
@@ -111,12 +123,12 @@ export default function CustomTable({ columns, data, title }: CustomTableProps) 
             {totalRows > 0 ? startIndex + 1 : 0}-{Math.min(startIndex + rowsPerPage, totalRows)} of {totalRows}
           </span>
         </div>
-        <div className="flex items-center gap-1.5">
+        <div className="flex items-center gap-1">
           <button
             onClick={() => setCurrentPage(1)}
             disabled={currentPage === 1}
             className="p-1 hover:text-text-primary disabled:opacity-30 disabled:hover:text-text-muted cursor-pointer transition-colors"
-            title="Primeira página"
+            title="First Page"
           >
             <ChevronsLeft size={14} />
           </button>
@@ -124,7 +136,7 @@ export default function CustomTable({ columns, data, title }: CustomTableProps) 
             onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
             disabled={currentPage === 1}
             className="p-1 hover:text-text-primary disabled:opacity-30 disabled:hover:text-text-muted cursor-pointer transition-colors"
-            title="Página anterior"
+            title="Previous Page"
           >
             <ChevronLeft size={14} />
           </button>
@@ -133,7 +145,7 @@ export default function CustomTable({ columns, data, title }: CustomTableProps) 
             onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
             disabled={currentPage === totalPages}
             className="p-1 hover:text-text-primary disabled:opacity-30 disabled:hover:text-text-muted cursor-pointer transition-colors"
-            title="Próxima página"
+            title="Next Page"
           >
             <ChevronRight size={14} />
           </button>
@@ -141,7 +153,7 @@ export default function CustomTable({ columns, data, title }: CustomTableProps) 
             onClick={() => setCurrentPage(totalPages)}
             disabled={currentPage === totalPages}
             className="p-1 hover:text-text-primary disabled:opacity-30 disabled:hover:text-text-muted cursor-pointer transition-colors"
-            title="Última página"
+            title="Last Page"
           >
             <ChevronsRight size={14} />
           </button>
