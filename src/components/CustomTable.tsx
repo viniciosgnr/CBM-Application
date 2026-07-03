@@ -12,9 +12,10 @@ interface CustomTableProps {
   columns: Column[];
   data: Record<string, string>[];
   title: string;
+  onRowClick?: (row: Record<string, string>) => void;
 }
 
-export default function CustomTable({ columns, data, title }: CustomTableProps) {
+export default function CustomTable({ columns, data, title, onRowClick }: CustomTableProps) {
   const [filters, setFilters] = useState<Record<string, string>>({});
   const [currentPage, setCurrentPage] = useState(1);
   const [rowsPerPage, setRowsPerPage] = useState(10);
@@ -78,7 +79,10 @@ export default function CustomTable({ columns, data, title }: CustomTableProps) 
               paginatedData.map((row, idx) => (
                 <tr
                   key={row.id || idx}
-                  className="border-b border-border-panel hover:bg-bg-panel/40 transition-colors last:border-b-0"
+                  onClick={() => onRowClick?.(row)}
+                  className={`border-b border-border-panel hover:bg-bg-panel/40 transition-colors last:border-b-0 ${
+                    onRowClick ? 'cursor-pointer' : ''
+                  }`}
                 >
                   {columns.map(col => (
                     <td

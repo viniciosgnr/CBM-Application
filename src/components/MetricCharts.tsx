@@ -3,6 +3,11 @@ import { useState, useEffect } from 'react';
 import { ResponsiveContainer, PieChart, Pie, Cell, BarChart, Bar, XAxis, YAxis, Tooltip, Legend } from 'recharts';
 import type { PieLabelRenderProps } from 'recharts';
 
+export interface EquipmentChartData {
+  condition: string;
+  criticality: string;
+}
+
 // Definindo as cores do OptSite correspondentes ao CSS do globals.css
 const COLORS = {
   green: '#22c55e',   // var(--status-ok)
@@ -193,7 +198,7 @@ export function DaysLeftBar() {
 }
 
 // 3. Donut Chart: Equipment by CBM Condition
-export function EquipmentConditionPie() {
+export function EquipmentConditionPie({ equipments = [] }: { equipments?: EquipmentChartData[] }) {
   const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
@@ -204,12 +209,31 @@ export function EquipmentConditionPie() {
     return <div className="h-[220px] w-full" />;
   }
 
-  const data = [
-    { name: 'Good', value: 45, color: COLORS.green },
-    { name: 'Degraded', value: 46, color: COLORS.orange },
-    { name: 'Critical', value: 9, color: COLORS.red },
-    { name: 'Pending', value: 1, color: COLORS.gray }
-  ];
+  // Use dynamic counts if data is passed, otherwise fallback to static placeholder counts
+  let data = [];
+  if (equipments && equipments.length > 0) {
+    const counts = { Good: 0, Degraded: 0, Critical: 0, 'Machine Off': 0 };
+    equipments.forEach(e => {
+      const cond = e.condition;
+      if (cond === 'Good') counts.Good++;
+      else if (cond === 'Degraded') counts.Degraded++;
+      else if (cond === 'Critical') counts.Critical++;
+      else if (cond === 'Machine Off') counts['Machine Off']++;
+    });
+    data = [
+      { name: 'Good', value: counts.Good, color: COLORS.green },
+      { name: 'Degraded', value: counts.Degraded, color: COLORS.orange },
+      { name: 'Critical', value: counts.Critical, color: COLORS.red },
+      { name: 'Machine Off', value: counts['Machine Off'], color: COLORS.gray }
+    ].filter(item => item.value > 0);
+  } else {
+    data = [
+      { name: 'Good', value: 45, color: COLORS.green },
+      { name: 'Degraded', value: 46, color: COLORS.orange },
+      { name: 'Critical', value: 9, color: COLORS.red },
+      { name: 'Machine Off', value: 1, color: COLORS.gray }
+    ];
+  }
 
   return (
     <ResponsiveContainer width="100%" height={220}>
@@ -257,7 +281,7 @@ export function EquipmentConditionPie() {
 }
 
 // 4. Bar Chart: CBM Condition by Equipment Criticality
-export function CbmCriticalityBar() {
+export function CbmCriticalityBar({ equipments = [] }: { equipments?: EquipmentChartData[] }) {
   const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
@@ -268,11 +292,36 @@ export function CbmCriticalityBar() {
     return <div className="h-[220px] w-full" />;
   }
 
-  const data = [
-    { name: 'High', Good: 15, Degraded: 20, Critical: 10, Pending: 3 },
-    { name: 'Medium', Good: 15, Degraded: 20, Critical: 10, Pending: 3 },
-    { name: 'Low', Good: 15, Degraded: 20, Critical: 10, Pending: 3 }
-  ];
+  let data = [];
+  if (equipments && equipments.length > 0) {
+    const groups = {
+      High: { Good: 0, Degraded: 0, Critical: 0, 'Machine Off': 0 },
+      Medium: { Good: 0, Degraded: 0, Critical: 0, 'Machine Off': 0 },
+      Low: { Good: 0, Degraded: 0, Critical: 0, 'Machine Off': 0 }
+    };
+    equipments.forEach(e => {
+      const crit = e.criticality; // 'High', 'Medium', 'Low'
+      const cond = e.condition;
+      if (crit in groups) {
+        const c = crit as keyof typeof groups;
+        if (cond === 'Good') groups[c].Good++;
+        else if (cond === 'Degraded') groups[c].Degraded++;
+        else if (cond === 'Critical') groups[c].Critical++;
+        else if (cond === 'Machine Off') groups[c]['Machine Off']++;
+      }
+    });
+    data = [
+      { name: 'High', Good: groups.High.Good, Degraded: groups.High.Degraded, Critical: groups.High.Critical, 'Machine Off': groups.High['Machine Off'] },
+      { name: 'Medium', Good: groups.Medium.Good, Degraded: groups.Medium.Degraded, Critical: groups.Medium.Critical, 'Machine Off': groups.Medium['Machine Off'] },
+      { name: 'Low', Good: groups.Low.Good, Degraded: groups.Low.Degraded, Critical: groups.Low.Critical, 'Machine Off': groups.Low['Machine Off'] }
+    ];
+  } else {
+    data = [
+      { name: 'High', Good: 15, Degraded: 20, Critical: 10, 'Machine Off': 3 },
+      { name: 'Medium', Good: 15, Degraded: 20, Critical: 10, 'Machine Off': 3 },
+      { name: 'Low', Good: 15, Degraded: 20, Critical: 10, 'Machine Off': 3 }
+    ];
+  }
 
   return (
     <ResponsiveContainer width="100%" height={220}>
@@ -289,8 +338,8 @@ export function CbmCriticalityBar() {
           fontSize={9}
           axisLine={false}
           tickLine={false}
-          domain={[0, 80]}
-          ticks={[0, 20, 40, 60, 80]}
+          domain={[0, 10]}
+          allowDecimals={false}
         />
         <Tooltip
           contentStyle={{
@@ -307,7 +356,7 @@ export function CbmCriticalityBar() {
           verticalAlign="bottom"
           wrapperStyle={{ fontSize: 9, paddingTop: 10 }}
         />
-        <Bar dataKey="Pending" stackId="a" fill={COLORS.gray} barSize={32} />
+        <Bar dataKey="Machine Off" stackId="a" fill={COLORS.gray} barSize={32} />
         <Bar dataKey="Degraded" stackId="a" fill={COLORS.orange} barSize={32} />
         <Bar dataKey="Critical" stackId="a" fill={COLORS.red} barSize={32} />
         <Bar dataKey="Good" stackId="a" fill={COLORS.green} barSize={32} />
