@@ -97,7 +97,7 @@ export default function CustomTable({ columns, data, title, onRowClick }: Custom
             ) : (
               <tr>
                 <td colSpan={columns.length} className="px-4 py-8 text-center text-text-muted text-xs font-medium">
-                  Nenhum registro encontrado.
+                  No records found.
                 </td>
               </tr>
             )}

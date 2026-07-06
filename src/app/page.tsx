@@ -10,7 +10,6 @@ import {
   RefreshCw, 
   Activity, 
   Droplet, 
-  ChevronDown, 
   FileText, 
   PlusCircle,
   Calendar,
@@ -87,6 +86,34 @@ interface AnalysisReport {
   createdAt: string;
 }
 
+interface WorkOrder {
+  id: number;
+  reference: string;
+  fpso: string;
+  description: string;
+  priority: string;
+  status: string;
+  tagNumber: string;
+  tagDescription: string;
+  monitoringTechnique: string;
+  creationDate: string;
+  dueDate: string;
+  reportId?: number | null;
+  woSite?: string | null;
+  directive?: string | null;
+  maintOrg?: string | null;
+  workType?: string | null;
+  externalSource?: string | null;
+  externalSourceId?: string | null;
+  faultDesc?: string | null;
+  symptom?: string | null;
+  discovery?: string | null;
+  actionId?: string | null;
+  operationalStatus?: string | null;
+  attachedFilename?: string | null;
+  attachedFileSize?: number | null;
+}
+
 // Severity mappings for dynamic chart plotting
 const CHART_VALUE_MAP: Record<string, number> = {
   'Good': 3,
@@ -95,17 +122,6 @@ const CHART_VALUE_MAP: Record<string, number> = {
   'Machine Off': 0,
 };
 
-// Mock de dados para as Ordens de Serviço (Work Orders)
-const workOrdersMock = [
-  { id: '1', reference: '801021309', fpso: 'UNY', description: 'The work order for the equipment has been flagged for analysis.', priority: 'Accepted', tagNumber: '123456789', tagDescription: 'Compressor Performance', monitoringTechnique: 'CBM Vibration - Analysis High', creationDate: '23/02/2026, 12:47:04', dueDate: '23/02/2026, 12:47:04', status: 'Accepted' },
-  { id: '2', reference: '801021310', fpso: 'UNY', description: 'Centrifugal compressor casing temperature exceeded limit.', priority: 'Rejected', tagNumber: '123456789', tagDescription: 'Compressor Performance', monitoringTechnique: 'CBM Temperature - Monitoring High', creationDate: '23/02/2026, 12:47:04', dueDate: '23/02/2026, 12:47:04', status: 'Rejected' },
-  { id: '3', reference: '801021311', fpso: 'UNY', description: 'Pressure transmitter readings unstable on discharge header.', priority: 'Pending', tagNumber: '123456789', tagDescription: 'Compressor Performance', monitoringTechnique: 'CBM Pressure - Calibration', creationDate: '23/02/2026, 12:47:04', dueDate: '23/02/2026, 12:47:04', status: 'Pending' },
-  { id: '4', reference: '801021312', fpso: 'UNY', description: 'Routine diagnostic inspection on mechanical seal oil.', priority: 'Accepted', tagNumber: '123456789', tagDescription: 'Compressor Performance', monitoringTechnique: 'CBM Vibration - Analysis High', creationDate: '23/02/2026, 12:47:04', dueDate: '23/02/2026, 12:47:04', status: 'Accepted' },
-  { id: '5', reference: '801021313', fpso: 'UNY', description: 'Lube oil filter delta pressure alarm triggered.', priority: 'Pending', tagNumber: '123456789', tagDescription: 'Compressor Performance', monitoringTechnique: 'CBM Delta P - Filter Check', creationDate: '23/02/2026, 12:47:04', dueDate: '23/02/2026, 12:47:04', status: 'Pending' },
-  { id: '6', reference: '801021314', fpso: 'UNY', description: 'Stator winding insulation check required.', priority: 'Accepted', tagNumber: '987654321', tagDescription: 'Turbine Performance', monitoringTechnique: 'CBM Electrical - Stator', creationDate: '24/02/2026, 10:20:15', dueDate: '25/02/2026, 10:20:15', status: 'Accepted' },
-  { id: '7', reference: '801021315', fpso: 'UNY', description: 'Auxiliary cooling pump seal leakage audit.', priority: 'Rejected', tagNumber: '987654321', tagDescription: 'Turbine Performance', monitoringTechnique: 'CBM Seal - Visual Check', creationDate: '24/02/2026, 11:35:40', dueDate: '25/02/2026, 11:35:40', status: 'Rejected' },
-  { id: '8', reference: '801021316', fpso: 'UNY', description: 'Emergency shutdown valve response time test.', priority: 'Accepted', tagNumber: '456789123', tagDescription: 'ESD System', monitoringTechnique: 'CBM Safety - Stroke Test', creationDate: '25/02/2026, 08:00:00', dueDate: '28/02/2026, 08:00:00', status: 'Accepted' },
-];
 
 export default function MainPage() {
   const [activeTab, setActiveTab] = useState<'equipment' | 'work-order' | 'recommendations'>('work-order');
@@ -120,13 +136,16 @@ export default function MainPage() {
   const [reports, setReports] = useState<AnalysisReport[]>([]);
   const [loadingReports, setLoadingReports] = useState(true);
 
+  // Work Orders state
+  const [workOrders, setWorkOrders] = useState<WorkOrder[]>([]);
+  const [loadingWorkOrders, setLoadingWorkOrders] = useState(true);
+  const [woSearchQuery, setWoSearchQuery] = useState('');
+
   // Modal states (Equipment Detail View)
   const [selectedEquipment, setSelectedEquipment] = useState<Equipment | null>(null);
   const [history, setHistory] = useState<HistoryEntry[]>([]);
   const [modalOpen, setModalOpen] = useState(false);
   const [modalTab, setModalTab] = useState<'trends' | 'history'>('trends');
-  const [vibrationDropdownOpen, setVibrationDropdownOpen] = useState(false);
-  const [lubeDropdownOpen, setLubeDropdownOpen] = useState(false);
 
   // Report Creation Form state
   const [reportFormOpen, setReportFormOpen] = useState(false);
@@ -156,6 +175,110 @@ export default function MainPage() {
   // Report Detail Viewer state
   const [selectedReport, setSelectedReport] = useState<AnalysisReport | null>(null);
   const [reportDetailsOpen, setReportDetailsOpen] = useState(false);
+
+  // States and Handlers for Work Order (Fault Report) creation
+  const [workOrderFormOpen, setWorkOrderFormOpen] = useState(false);
+  const [selectedReportForWo, setSelectedReportForWo] = useState<AnalysisReport | null>(null);
+  const [woFormFields, setWoFormFields] = useState({
+    woSite: '',
+    directive: '',
+    maintOrg: 'MECHTS',
+    workType: 'CM',
+    externalSource: '',
+    externalSourceId: '',
+    faultDesc: '',
+    symptom: 'VIB',
+    discovery: '04',
+    actionId: '6',
+    operationalStatus: '01',
+    attachedFilename: '',
+    attachedFileSize: 0,
+  });
+  const [woFormFieldsError, setWoFormFieldsError] = useState({
+    directive: '',
+  });
+  const [isSubmittingWo, setIsSubmittingWo] = useState(false);
+  const [woSuccessAlert, setWoSuccessAlert] = useState<string | null>(null);
+
+  const navigateToWorkOrder = (ref: string) => {
+    setReportDetailsOpen(false);
+    setActiveTab('work-order');
+    setWoSearchQuery(ref);
+  };
+
+  const openWorkOrderForm = (report: AnalysisReport) => {
+    setSelectedReportForWo(report);
+    
+    let extSrc = 'CBM';
+    const tech = report.technology || '';
+    const cond = report.overallCondition || '';
+    const critChar = cond === 'Critical' ? 'H' : 'M';
+    if (tech.toLowerCase().includes('vibration')) {
+      extSrc = `CBM-VIB/${critChar}`;
+    } else if (tech.toLowerCase().includes('lube') || tech.toLowerCase().includes('oil')) {
+      extSrc = `CBM-LUB/${critChar}`;
+    }
+
+    setWoFormFields({
+      woSite: equipments.find(e => e.tag === report.equipmentTag)?.fpso || 'UNY',
+      directive: '',
+      maintOrg: 'MECHTS',
+      workType: 'CM',
+      externalSource: extSrc,
+      externalSourceId: `CBM-${report.id}`,
+      faultDesc: `Anomaly: ${report.conditionAssessment}\n\nRecommendation: ${report.longDescription}`,
+      symptom: tech.toLowerCase().includes('vibration') ? 'VIB' : 'ELU',
+      discovery: '04',
+      actionId: tech.toLowerCase().includes('vibration') ? '6' : '7',
+      operationalStatus: '01',
+      attachedFilename: '',
+      attachedFileSize: 0,
+    });
+    
+    setWoFormFieldsError({
+      directive: '',
+    });
+    setWorkOrderFormOpen(true);
+  };
+
+  const handleWoSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!woFormFields.directive.trim()) {
+      setWoFormFieldsError({ directive: 'Directive is required.' });
+      return;
+    }
+    
+    setIsSubmittingWo(true);
+    try {
+      const res = await fetch('/api/work-orders', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          reportId: selectedReportForWo?.id,
+          ...woFormFields,
+        }),
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setWoSuccessAlert(`Work Order ${data.reference} successfully created!`);
+        await fetchReports();
+        await fetchWorkOrders();
+        setTimeout(() => {
+          setWorkOrderFormOpen(false);
+          setWoSuccessAlert(null);
+          setReportDetailsOpen(false);
+        }, 3000);
+      } else {
+        const errData = await res.json();
+        alert(errData.error || 'Failed to create work order.');
+      }
+    } catch (err) {
+      console.error(err);
+      alert('Error creating work order.');
+    } finally {
+      setIsSubmittingWo(false);
+    }
+  };
 
   // Fetch all equipments on load
   const fetchEquipments = async () => {
@@ -187,10 +310,26 @@ export default function MainPage() {
     }
   };
 
+  // Fetch all work orders on load
+  const fetchWorkOrders = async () => {
+    try {
+      const res = await fetch('/api/work-orders');
+      if (res.ok) {
+        const data = await res.json();
+        setWorkOrders(data);
+      }
+    } catch (err) {
+      console.error('Error fetching work orders:', err);
+    } finally {
+      setLoadingWorkOrders(false);
+    }
+  };
+
   useEffect(() => {
     setMounted(true);
     fetchEquipments();
     fetchReports();
+    fetchWorkOrders();
   }, []);
 
   // Fetch single equipment history logs
@@ -214,8 +353,6 @@ export default function MainPage() {
     setSelectedEquipment(equip);
     setHistory([]);
     setModalTab('trends');
-    setVibrationDropdownOpen(false);
-    setLubeDropdownOpen(false);
     setModalOpen(true);
 
     await fetchEquipmentHistory(equip.tag);
@@ -310,43 +447,10 @@ export default function MainPage() {
         setReportFormOpen(false);
       } else {
         const err = await res.json();
-        alert(`Erro ao salvar relatório: ${err.error}`);
+        alert(`Error saving report: ${err.error}`);
       }
     } catch (err) {
       console.error('Error submitting report:', err);
-    }
-  };
-
-  // Trigger PUT request to update statuses directly (fallback/simple updates)
-  const handleStatusChange = async (type: 'vibration' | 'lube', newStatus: string) => {
-    if (!selectedEquipment) return;
-
-    const body = {
-      vibrationStatus: type === 'vibration' ? newStatus : selectedEquipment.vibrationStatus,
-      lubeOilStatus: type === 'lube' ? newStatus : selectedEquipment.lubeOilStatus,
-    };
-
-    try {
-      const res = await fetch(`/api/equipments/${selectedEquipment.tag}`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(body),
-      });
-
-      if (res.ok) {
-        const updated = await res.json();
-        
-        // Update local state list
-        setEquipments(prev => prev.map(e => e.tag === updated.tag ? updated : e));
-        setSelectedEquipment(updated);
-        
-        // Refresh history
-        await fetchEquipmentHistory(updated.tag);
-        // Sync reports list in case any matches
-        await fetchReports();
-      }
-    } catch (err) {
-      console.error('Failed to change status:', err);
     }
   };
 
@@ -537,6 +641,25 @@ export default function MainPage() {
     woNumber: r.woNumber || '',
   }));
 
+  const formattedWorkOrders = workOrders
+    .filter(w => {
+      if (!woSearchQuery) return true;
+      return w.reference.toLowerCase().includes(woSearchQuery.toLowerCase());
+    })
+    .map(w => ({
+      id: String(w.id),
+      reference: w.reference,
+      fpso: w.fpso,
+      description: w.description,
+      priority: w.priority,
+      tagNumber: w.tagNumber,
+      tagDescription: w.tagDescription,
+      monitoringTechnique: w.monitoringTechnique,
+      creationDate: w.creationDate,
+      dueDate: w.dueDate,
+      status: w.status,
+    }));
+
   return (
     <div className="min-h-screen bg-bg-base text-text-primary flex flex-col">
       {/* Topbar Layout */}
@@ -604,7 +727,7 @@ export default function MainPage() {
                 filterText="Last Month"
                 onMaximize={() => setMaximizedChart('wo-status')}
               >
-                <WorkOrderStatusPie />
+                <WorkOrderStatusPie workOrders={workOrders} />
               </DashboardCard>
               
               <DashboardCard
@@ -612,13 +735,33 @@ export default function MainPage() {
                 filterText="Last Week"
                 onMaximize={() => setMaximizedChart('days-due')}
               >
-                <DaysLeftBar />
+                <DaysLeftBar workOrders={workOrders} />
               </DashboardCard>
             </div>
 
             {/* Seção inferior com tabela (Work Orders) */}
             <div className="bg-bg-card border border-border-panel rounded-card p-4">
-              <CustomTable title="Work Order List" columns={woColumns} data={workOrdersMock} />
+              {loadingWorkOrders ? (
+                <div className="py-8 text-center text-text-muted text-xs font-medium flex items-center justify-center gap-2">
+                  <RefreshCw className="animate-spin text-accent-blue" size={14} />
+                  Loading work orders...
+                </div>
+              ) : (
+                <>
+                  {woSearchQuery && (
+                    <div className="mb-3 flex items-center justify-between text-xs bg-accent-blue/10 border border-accent-blue/20 rounded p-2.5 text-accent-blue font-semibold select-none animate-fadeIn">
+                      <span>Showing filtered results for WO reference: <strong className="text-white bg-accent-blue/20 px-1.5 py-0.5 rounded ml-1">{woSearchQuery}</strong></span>
+                      <button 
+                        onClick={() => setWoSearchQuery('')} 
+                        className="underline cursor-pointer hover:text-white font-bold uppercase text-[9px] bg-accent-blue/20 hover:bg-accent-blue/40 px-2 py-1 rounded transition-colors"
+                      >
+                        Clear Filter
+                      </button>
+                    </div>
+                  )}
+                  <CustomTable title="Work Order List" columns={woColumns} data={formattedWorkOrders} />
+                </>
+              )}
             </div>
           </div>
         )}
@@ -649,7 +792,7 @@ export default function MainPage() {
               {loadingEquipments ? (
                 <div className="py-8 text-center text-text-muted text-xs font-medium flex items-center justify-center gap-2">
                   <RefreshCw className="animate-spin text-accent-blue" size={14} />
-                  Carregando equipamentos do banco...
+                  Loading equipments from database...
                 </div>
               ) : (
                 <CustomTable 
@@ -692,7 +835,7 @@ export default function MainPage() {
               {loadingReports ? (
                 <div className="py-8 text-center text-text-muted text-xs font-medium flex items-center justify-center gap-2">
                   <RefreshCw className="animate-spin text-accent-blue" size={14} />
-                  Carregando relatórios de recomendação...
+                  Loading recommendation reports...
                 </div>
               ) : (
                 <CustomTable 
@@ -716,7 +859,7 @@ export default function MainPage() {
             <button
               onClick={() => setModalOpen(false)}
               className="absolute top-4 right-4 text-text-muted hover:text-text-primary transition-colors cursor-pointer"
-              title="Fechar"
+              title="Close"
             >
               <X size={18} />
             </button>
@@ -783,108 +926,44 @@ export default function MainPage() {
             {/* Conteúdo da Modal de acordo com a aba ativa */}
             {modalTab === 'trends' ? (
               <div className="flex flex-col gap-5">
-                {/* Cards Interativos */}
+                {/* Status Indicators (ReadOnly) */}
                 <div className="grid grid-cols-2 gap-4">
                   {/* Card Vibration Status */}
-                  <div className="relative">
-                    <div
-                      onClick={() => {
-                        setVibrationDropdownOpen(!vibrationDropdownOpen);
-                        setLubeDropdownOpen(false);
-                      }}
-                      className="flex items-center justify-between p-3.5 bg-bg-panel/40 border border-border-panel rounded-lg hover:border-accent-blue/40 transition-all cursor-pointer select-none"
-                    >
-                      <div className="flex items-center gap-3">
-                        <div className="p-2 bg-accent-blue/10 text-accent-blue rounded-lg border border-accent-blue/20">
-                          <Activity size={16} />
-                        </div>
-                        <div className="flex flex-col">
-                          <span className="text-[10px] text-text-muted font-medium">Vibration Status</span>
-                          <span className={`text-xs font-bold ${
-                            selectedEquipment.vibrationStatus === 'Good' ? 'text-status-ok' :
-                            selectedEquipment.vibrationStatus === 'Degraded' ? 'text-status-warn' :
-                            selectedEquipment.vibrationStatus === 'Critical' ? 'text-status-error' : 'text-text-muted'
-                          }`}>
-                            {selectedEquipment.vibrationStatus.toUpperCase()}
-                          </span>
-                        </div>
+                  <div className="flex items-center justify-between p-3.5 bg-bg-panel/40 border border-border-panel rounded-lg select-none">
+                    <div className="flex items-center gap-3">
+                      <div className="p-2 bg-accent-blue/10 text-accent-blue rounded-lg border border-accent-blue/20">
+                        <Activity size={16} />
                       </div>
-                      <ChevronDown size={14} className="text-text-muted" />
+                      <div className="flex flex-col">
+                        <span className="text-[10px] text-text-muted font-semibold uppercase tracking-wider">Vibration Status</span>
+                        <span className={`text-xs font-bold ${
+                          selectedEquipment.vibrationStatus === 'Good' ? 'text-status-ok' :
+                          selectedEquipment.vibrationStatus === 'Degraded' ? 'text-status-warn' :
+                          selectedEquipment.vibrationStatus === 'Critical' ? 'text-status-error' : 'text-text-muted'
+                        }`}>
+                          {selectedEquipment.vibrationStatus.toUpperCase()}
+                        </span>
+                      </div>
                     </div>
-
-                    {/* Dropdown Vibration */}
-                    {vibrationDropdownOpen && (
-                      <div className="absolute top-full left-0 right-0 mt-1.5 bg-[#111827] border border-[#1e2a3a] rounded-lg shadow-xl z-20 py-1 overflow-hidden animate-fadeIn">
-                        {['Good', 'Degraded', 'Critical', 'Machine Off'].map(status => (
-                          <button
-                            key={status}
-                            onClick={() => {
-                              handleStatusChange('vibration', status);
-                              setVibrationDropdownOpen(false);
-                            }}
-                            className="w-full text-left px-4 py-2 text-[11px] text-[#a2b4cd] hover:bg-[#1e2a3a] hover:text-[#e2e8f0] transition-colors flex items-center gap-2 cursor-pointer font-medium"
-                          >
-                            <span className={`w-1.5 h-1.5 rounded-full ${
-                              status === 'Good' ? 'bg-status-ok' :
-                              status === 'Degraded' ? 'bg-status-warn' :
-                              status === 'Critical' ? 'bg-status-error' : 'bg-gray-500'
-                            }`} />
-                            {status}
-                          </button>
-                        ))}
-                      </div>
-                    )}
                   </div>
 
                   {/* Card Lube Oil Status */}
-                  <div className="relative">
-                    <div
-                      onClick={() => {
-                        setLubeDropdownOpen(!lubeDropdownOpen);
-                        setVibrationDropdownOpen(false);
-                      }}
-                      className="flex items-center justify-between p-3.5 bg-bg-panel/40 border border-border-panel rounded-lg hover:border-status-warn/40 transition-all cursor-pointer select-none"
-                    >
-                      <div className="flex items-center gap-3">
-                        <div className="p-2 bg-status-warn/10 text-status-warn rounded-lg border border-status-warn/20">
-                          <Droplet size={16} />
-                        </div>
-                        <div className="flex flex-col">
-                          <span className="text-[10px] text-text-muted font-medium">Lube Oil Status</span>
-                          <span className={`text-xs font-bold ${
-                            selectedEquipment.lubeOilStatus === 'Good' ? 'text-status-ok' :
-                            selectedEquipment.lubeOilStatus === 'Degraded' ? 'text-status-warn' :
-                            selectedEquipment.lubeOilStatus === 'Critical' ? 'text-status-error' : 'text-text-muted'
-                          }`}>
-                            {selectedEquipment.lubeOilStatus.toUpperCase()}
-                          </span>
-                        </div>
+                  <div className="flex items-center justify-between p-3.5 bg-bg-panel/40 border border-border-panel rounded-lg select-none">
+                    <div className="flex items-center gap-3">
+                      <div className="p-2 bg-status-warn/10 text-status-warn rounded-lg border border-status-warn/20">
+                        <Droplet size={16} />
                       </div>
-                      <ChevronDown size={14} className="text-text-muted" />
+                      <div className="flex flex-col">
+                        <span className="text-[10px] text-text-muted font-semibold uppercase tracking-wider">Lube Oil Status</span>
+                        <span className={`text-xs font-bold ${
+                          selectedEquipment.lubeOilStatus === 'Good' ? 'text-status-ok' :
+                          selectedEquipment.lubeOilStatus === 'Degraded' ? 'text-status-warn' :
+                          selectedEquipment.lubeOilStatus === 'Critical' ? 'text-status-error' : 'text-text-muted'
+                        }`}>
+                          {selectedEquipment.lubeOilStatus.toUpperCase()}
+                        </span>
+                      </div>
                     </div>
-
-                    {/* Dropdown Lube Oil */}
-                    {lubeDropdownOpen && (
-                      <div className="absolute top-full left-0 right-0 mt-1.5 bg-[#111827] border border-[#1e2a3a] rounded-lg shadow-xl z-20 py-1 overflow-hidden animate-fadeIn">
-                        {['Good', 'Degraded', 'Critical', 'Machine Off'].map(status => (
-                          <button
-                            key={status}
-                            onClick={() => {
-                              handleStatusChange('lube', status);
-                              setLubeDropdownOpen(false);
-                            }}
-                            className="w-full text-left px-4 py-2 text-[11px] text-[#a2b4cd] hover:bg-[#1e2a3a] hover:text-[#e2e8f0] transition-colors flex items-center gap-2 cursor-pointer font-medium"
-                          >
-                            <span className={`w-1.5 h-1.5 rounded-full ${
-                              status === 'Good' ? 'bg-status-ok' :
-                              status === 'Degraded' ? 'bg-status-warn' :
-                              status === 'Critical' ? 'bg-status-error' : 'bg-gray-500'
-                            }`} />
-                            {status}
-                          </button>
-                        ))}
-                      </div>
-                    )}
                   </div>
                 </div>
 
@@ -944,7 +1023,7 @@ export default function MainPage() {
                     </ResponsiveContainer>
                   ) : (
                     <div className="h-[180px] flex items-center justify-center text-text-muted text-[10px]">
-                      Nenhum dado de histórico disponível para este equipamento.
+                      No history data available for this equipment.
                     </div>
                   )}
 
@@ -1007,7 +1086,7 @@ export default function MainPage() {
                     ) : (
                       <tr>
                         <td colSpan={4} className="px-4 py-8 text-center text-text-muted text-[11px]">
-                          Nenhum registro de histórico encontrado.
+                          No history records found.
                         </td>
                       </tr>
                     )}
@@ -1083,7 +1162,7 @@ export default function MainPage() {
                     placeholder="e.g. Compressor"
                     value={formFields.component}
                     onChange={e => setFormFields({ ...formFields, component: e.target.value })}
-                    className="bg-bg-panel/40 border border-border-panel rounded p-2 text-text-primary focus:border-accent-blue outline-none"
+                    className="bg-[#0b0f19] border border-border-panel rounded p-2 text-text-primary focus:border-accent-blue focus:outline-none transition-colors"
                   />
                 </div>
 
@@ -1094,7 +1173,7 @@ export default function MainPage() {
                     required
                     value={formFields.raisedBy}
                     onChange={e => setFormFields({ ...formFields, raisedBy: e.target.value })}
-                    className="bg-bg-panel/40 border border-border-panel rounded p-2 text-text-primary focus:border-accent-blue outline-none"
+                    className="bg-[#0b0f19] border border-border-panel rounded p-2 text-text-primary focus:border-accent-blue focus:outline-none transition-colors"
                   />
                 </div>
 
@@ -1106,7 +1185,7 @@ export default function MainPage() {
                       required
                       value={formFields.raisedDate}
                       onChange={e => setFormFields({ ...formFields, raisedDate: e.target.value })}
-                      className="bg-bg-panel/40 border border-border-panel rounded p-2 text-text-primary focus:border-accent-blue outline-none cursor-pointer"
+                      className="bg-[#0b0f19] border border-border-panel rounded p-2 text-text-primary focus:border-accent-blue focus:outline-none transition-colors cursor-pointer"
                     />
                   </div>
                   <div className="flex flex-col gap-1.5">
@@ -1116,7 +1195,7 @@ export default function MainPage() {
                       required
                       value={formFields.targetDate}
                       onChange={e => setFormFields({ ...formFields, targetDate: e.target.value })}
-                      className="bg-bg-panel/40 border border-border-panel rounded p-2 text-text-primary focus:border-accent-blue outline-none cursor-pointer"
+                      className="bg-[#0b0f19] border border-border-panel rounded p-2 text-text-primary focus:border-accent-blue focus:outline-none transition-colors cursor-pointer"
                     />
                   </div>
                 </div>
@@ -1129,7 +1208,7 @@ export default function MainPage() {
                     placeholder="e.g. Instrumentation Failure"
                     value={formFields.shortDescription}
                     onChange={e => setFormFields({ ...formFields, shortDescription: e.target.value })}
-                    className="bg-bg-panel/40 border border-border-panel rounded p-2 text-text-primary focus:border-accent-blue outline-none"
+                    className="bg-[#0b0f19] border border-border-panel rounded p-2 text-text-primary focus:border-accent-blue focus:outline-none transition-colors"
                   />
                 </div>
 
@@ -1140,7 +1219,7 @@ export default function MainPage() {
                     placeholder="e.g. 1089487"
                     value={formFields.woNumber}
                     onChange={e => setFormFields({ ...formFields, woNumber: e.target.value })}
-                    className="bg-bg-panel/40 border border-border-panel rounded p-2 text-text-primary focus:border-accent-blue outline-none"
+                    className="bg-[#0b0f19] border border-border-panel rounded p-2 text-text-primary focus:border-accent-blue focus:outline-none transition-colors"
                   />
                 </div>
               </div>
@@ -1154,7 +1233,7 @@ export default function MainPage() {
                     placeholder="Insert detailed observations regarding the equipment conditions..."
                     value={formFields.conditionAssessment}
                     onChange={e => setFormFields({ ...formFields, conditionAssessment: e.target.value })}
-                    className="bg-bg-panel/40 border border-border-panel rounded p-2.5 text-text-primary focus:border-accent-blue outline-none flex-1 resize-none h-full"
+                    className="bg-[#0b0f19] border border-border-panel rounded p-2.5 text-text-primary focus:border-accent-blue focus:outline-none transition-colors flex-1 resize-none h-full"
                   />
                 </div>
 
@@ -1165,7 +1244,7 @@ export default function MainPage() {
                     placeholder="Insert recommended maintenance actions (e.g. Check connections, replace sensors, top up oil)..."
                     value={formFields.longDescription}
                     onChange={e => setFormFields({ ...formFields, longDescription: e.target.value })}
-                    className="bg-bg-panel/40 border border-border-panel rounded p-2.5 text-text-primary focus:border-accent-blue outline-none flex-1 resize-none h-full"
+                    className="bg-[#0b0f19] border border-border-panel rounded p-2.5 text-text-primary focus:border-accent-blue focus:outline-none transition-colors flex-1 resize-none h-full"
                   />
                 </div>
               </div>
@@ -1206,7 +1285,7 @@ export default function MainPage() {
               <button
                 onClick={() => setReportDetailsOpen(false)}
                 className="p-1 text-text-muted hover:text-text-primary hover:bg-bg-panel/40 rounded transition-all cursor-pointer"
-                title="Fechar"
+                title="Close"
               >
                 <X size={16} />
               </button>
@@ -1362,7 +1441,16 @@ export default function MainPage() {
                     <span className="bg-[#1e293b] text-[#f87171] p-2 w-[100px] flex-shrink-0 border-r border-[#334155] flex items-center">WO Number</span>
                     <span className="p-2 text-text-primary flex-1 flex items-center flex-row gap-1 font-bold">
                       <Hash size={10} />
-                      {selectedReport.woNumber || 'PENDING'}
+                      {selectedReport.woNumber ? (
+                        <button
+                          onClick={() => navigateToWorkOrder(selectedReport.woNumber!)}
+                          className="text-accent-blue hover:underline font-bold text-left cursor-pointer"
+                        >
+                          {selectedReport.woNumber}
+                        </button>
+                      ) : (
+                        <span className="text-text-muted italic">PENDING</span>
+                      )}
                     </span>
                   </div>
                 </div>
@@ -1379,7 +1467,276 @@ export default function MainPage() {
                 </div>
               </div>
 
+              {/* Action Buttons below Simulated Excel Sheet */}
+              <div className="max-w-[620px] mx-auto mt-6 flex justify-end gap-3 select-none">
+                {selectedReport.woNumber ? (
+                  <button
+                    onClick={() => navigateToWorkOrder(selectedReport.woNumber!)}
+                    className="flex items-center gap-2 bg-[#1e293b] text-accent-blue font-bold px-4 py-2 rounded text-xs border border-accent-blue/30 hover:border-accent-blue/60 transition-all cursor-pointer uppercase shadow-lg active:scale-95"
+                  >
+                    <FileText size={14} />
+                    View Work Order ({selectedReport.woNumber})
+                  </button>
+                ) : (
+                  (selectedReport.overallCondition === 'Critical' || selectedReport.overallCondition === 'Degraded') && (
+                    <button
+                      onClick={() => openWorkOrderForm(selectedReport)}
+                      className="flex items-center gap-2 bg-accent-blue text-[#090d16] font-bold px-4 py-2 rounded text-xs hover:bg-[#38bdf8] transition-all cursor-pointer uppercase shadow-lg active:scale-95"
+                    >
+                      <PlusCircle size={14} />
+                      Raise Work Order (Fault Report)
+                    </button>
+                  )
+                )}
+              </div>
+
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Create Work Order Modal */}
+      {workOrderFormOpen && selectedReportForWo && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[1000] flex items-center justify-center p-4">
+          <div className="bg-[#0b0f19] border border-border-panel rounded-card p-6 w-full max-w-[680px] relative animate-fadeIn shadow-2xl text-left flex flex-col max-h-[90vh]">
+            
+            {/* Header */}
+            <div className="flex items-center justify-between pb-4 border-b border-border-panel/40">
+              <div className="flex items-center gap-2">
+                <Wrench className="text-accent-blue" size={16} />
+                <h2 className="text-base font-bold text-text-primary uppercase tracking-wide">
+                  Raise Fault Report (Work Order)
+                </h2>
+              </div>
+              <button
+                onClick={() => setWorkOrderFormOpen(false)}
+                className="text-text-muted hover:text-text-primary transition-colors cursor-pointer"
+                title="Close"
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            {/* Form */}
+            <form onSubmit={handleWoSubmit} className="flex-1 overflow-y-auto mt-4 pr-1 flex flex-col gap-4 text-xs">
+              
+              {/* Success Alert Banner inside Modal */}
+              {woSuccessAlert && (
+                <div className="bg-status-ok/10 border border-status-ok/30 text-status-ok p-3 rounded flex items-center gap-2 font-medium animate-fadeIn">
+                  <RefreshCw className="animate-spin" size={14} />
+                  <span>{woSuccessAlert}</span>
+                </div>
+              )}
+
+              {/* Grid 1: Prefilled Read-Only Details */}
+              <div className="grid grid-cols-2 gap-4 bg-[#090d16]/40 p-4 border border-border-panel/20 rounded">
+                <div className="flex flex-col gap-1">
+                  <label className="text-text-muted uppercase text-[9px] font-semibold">WO Site</label>
+                  <input
+                    type="text"
+                    value={woFormFields.woSite}
+                    disabled
+                    className="bg-[#0b0f19] border border-border-panel/40 rounded p-2 text-text-muted font-medium cursor-not-allowed"
+                  />
+                </div>
+                <div className="flex flex-col gap-1">
+                  <label className="text-text-muted uppercase text-[9px] font-semibold">Work Type</label>
+                  <input
+                    type="text"
+                    value={woFormFields.workType}
+                    disabled
+                    className="bg-[#0b0f19] border border-border-panel/40 rounded p-2 text-text-muted font-medium cursor-not-allowed"
+                  />
+                </div>
+                <div className="flex flex-col gap-1">
+                  <label className="text-text-muted uppercase text-[9px] font-semibold">External Source</label>
+                  <input
+                    type="text"
+                    value={woFormFields.externalSource}
+                    disabled
+                    className="bg-[#0b0f19] border border-border-panel/40 rounded p-2 text-text-muted font-medium cursor-not-allowed"
+                  />
+                </div>
+                <div className="flex flex-col gap-1">
+                  <label className="text-text-muted uppercase text-[9px] font-semibold">External Source ID</label>
+                  <input
+                    type="text"
+                    value={woFormFields.externalSourceId}
+                    onChange={(e) => setWoFormFields({ ...woFormFields, externalSourceId: e.target.value })}
+                    className="bg-[#0b0f19] border border-border-panel rounded p-2 text-text-primary focus:border-accent-blue focus:outline-none transition-colors"
+                  />
+                </div>
+                <div className="flex flex-col gap-1 col-span-2">
+                  <label className="text-text-muted uppercase text-[9px] font-semibold">Discovery</label>
+                  <input
+                    type="text"
+                    value={`${woFormFields.discovery} - Periodic condition monitoring`}
+                    disabled
+                    className="bg-[#0b0f19] border border-border-panel/40 rounded p-2 text-text-muted font-medium cursor-not-allowed"
+                  />
+                </div>
+              </div>
+
+              {/* Grid 2: Interactive Fields */}
+              <div className="grid grid-cols-2 gap-4">
+                <div className="flex flex-col gap-1 col-span-2">
+                  <label className="text-text-primary uppercase text-[9px] font-bold flex items-center gap-1">
+                    Directive <span className="text-status-error">*</span>
+                    <span className="text-[8px] text-text-muted normal-case font-normal">(Use capital letters, e.g. OIL REPLACE)</span>
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="Enter directive title in CAPITAL letters"
+                    value={woFormFields.directive}
+                    onChange={(e) => {
+                      const val = e.target.value.toUpperCase();
+                      setWoFormFields({ ...woFormFields, directive: val });
+                      if (val.trim()) setWoFormFieldsError({ directive: '' });
+                    }}
+                    className={`bg-[#0b0f19] border rounded p-2 text-text-primary focus:border-accent-blue focus:outline-none transition-colors ${
+                      woFormFieldsError.directive ? 'border-status-error' : 'border-border-panel'
+                    }`}
+                  />
+                  {woFormFieldsError.directive && (
+                    <span className="text-status-error text-[10px] mt-0.5">{woFormFieldsError.directive}</span>
+                  )}
+                </div>
+
+                <div className="flex flex-col gap-1">
+                  <label className="text-text-muted uppercase text-[9px] font-semibold">Maint. Org.</label>
+                  <select
+                    value={woFormFields.maintOrg}
+                    onChange={(e) => setWoFormFields({ ...woFormFields, maintOrg: e.target.value })}
+                    className="bg-[#0b0f19] border border-border-panel rounded p-2 text-text-primary focus:border-accent-blue focus:outline-none cursor-pointer text-xs"
+                  >
+                    <option value="MECHTS">MECHTS - Mechanic - Topside</option>
+                    <option value="MECHER">MECHER - Mechanic - Engine Room</option>
+                    <option value="INSTR">INSTR - Instrument</option>
+                    <option value="ELEC">ELEC - Electrical</option>
+                    <option value="DCS">DCS - Distributed Control System</option>
+                    <option value="EX_INSP">EX_INSP - Ex Inspector</option>
+                    <option value="FABRIC">FABRIC - Fabric Maintenance</option>
+                    <option value="CARGO">CARGO - Cargo</option>
+                    <option value="MEDIC">MEDIC - Medic</option>
+                  </select>
+                </div>
+
+                <div className="flex flex-col gap-1">
+                  <label className="text-text-muted uppercase text-[9px] font-semibold">Symptom</label>
+                  <select
+                    value={woFormFields.symptom}
+                    onChange={(e) => setWoFormFields({ ...woFormFields, symptom: e.target.value })}
+                    className="bg-[#0b0f19] border border-border-panel rounded p-2 text-text-primary focus:border-accent-blue focus:outline-none cursor-pointer text-xs"
+                  >
+                    <option value="VIB">VIB - Vibration</option>
+                    <option value="ELU">ELU - External leakage - utility medium</option>
+                    <option value="ELP">ELP - External leakage - process medium</option>
+                    <option value="PLU">PLU - Plugged / Choked</option>
+                    <option value="STD">STD - Structural deficiency</option>
+                  </select>
+                </div>
+
+                <div className="flex flex-col gap-1">
+                  <label className="text-text-muted uppercase text-[9px] font-semibold">Action ID</label>
+                  <select
+                    value={woFormFields.actionId}
+                    onChange={(e) => setWoFormFields({ ...woFormFields, actionId: e.target.value })}
+                    className="bg-[#0b0f19] border border-border-panel rounded p-2 text-text-primary focus:border-accent-blue focus:outline-none cursor-pointer text-xs"
+                  >
+                    <option value="2">2 - Repair</option>
+                    <option value="3">3 - Modify</option>
+                    <option value="4">4 - Adjust</option>
+                    <option value="5">5 - Refit</option>
+                    <option value="6">6 - Check</option>
+                    <option value="7">7 - Service</option>
+                    <option value="8">8 - Test</option>
+                    <option value="9">9 - Inspection</option>
+                    <option value="10">10 - Overhaul</option>
+                    <option value="11">11 - Combination</option>
+                  </select>
+                </div>
+
+                <div className="flex flex-col gap-1">
+                  <label className="text-text-muted uppercase text-[9px] font-semibold">Operational Status</label>
+                  <select
+                    value={woFormFields.operationalStatus}
+                    onChange={(e) => setWoFormFields({ ...woFormFields, operationalStatus: e.target.value })}
+                    className="bg-[#0b0f19] border border-border-panel rounded p-2 text-text-primary focus:border-accent-blue focus:outline-none cursor-pointer text-xs"
+                  >
+                    <option value="01">01 - Non-intrusive / Non-obstructive</option>
+                    <option value="02">02 - Item Intrusive / Obstructive</option>
+                    <option value="03">03 - Package Intrusive / Obstructive</option>
+                  </select>
+                </div>
+
+                <div className="flex flex-col gap-1 col-span-2">
+                  <label className="text-text-muted uppercase text-[9px] font-semibold">Fault Description</label>
+                  <textarea
+                    value={woFormFields.faultDesc}
+                    onChange={(e) => setWoFormFields({ ...woFormFields, faultDesc: e.target.value })}
+                    rows={4}
+                    className="bg-[#0b0f19] border border-border-panel rounded p-2 text-text-primary focus:border-accent-blue focus:outline-none resize-y leading-relaxed text-xs"
+                  />
+                </div>
+
+                {/* Simulated File Upload Input */}
+                <div className="flex flex-col gap-1 col-span-2">
+                  <label className="text-text-muted uppercase text-[9px] font-semibold block mb-1">Attach the report file</label>
+                  <div className="border border-dashed border-border-panel/60 rounded-lg p-4 bg-[#090d16]/30 flex flex-col items-center justify-center gap-2 hover:bg-[#090d16]/50 transition-colors relative cursor-pointer">
+                    <input
+                      type="file"
+                      id="simulated-wo-file"
+                      className="absolute inset-0 opacity-0 cursor-pointer"
+                      onChange={(e) => {
+                        const file = e.target.files?.[0];
+                        if (file) {
+                          setWoFormFields({
+                            ...woFormFields,
+                            attachedFilename: file.name,
+                            attachedFileSize: file.size,
+                          });
+                        }
+                      }}
+                    />
+                    <FileText size={20} className="text-accent-blue/60" />
+                    {woFormFields.attachedFilename ? (
+                      <div className="text-center">
+                        <span className="text-status-ok font-semibold block">✓ File Attached</span>
+                        <span className="text-text-muted text-[10px]">{woFormFields.attachedFilename} ({(woFormFields.attachedFileSize / 1024).toFixed(1)} KB)</span>
+                      </div>
+                    ) : (
+                      <span className="text-text-muted text-[10px]">Select PDF or spreadsheet analysis report to attach</span>
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              {/* Submit Buttons */}
+              <div className="flex justify-end gap-3 pt-4 border-t border-border-panel/40 select-none mt-2">
+                <button
+                  type="button"
+                  onClick={() => setWorkOrderFormOpen(false)}
+                  disabled={isSubmittingWo}
+                  className="px-4 py-2 border border-border-panel/60 text-text-muted hover:text-text-primary hover:bg-border-panel/20 rounded cursor-pointer transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={isSubmittingWo}
+                  className="px-4 py-2 bg-accent-blue text-[#090d16] font-bold rounded cursor-pointer hover:bg-[#38bdf8] transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-1.5"
+                >
+                  {isSubmittingWo ? (
+                    <>
+                      <RefreshCw className="animate-spin" size={12} />
+                      Submitting...
+                    </>
+                  ) : (
+                    'Submit Fault Report'
+                  )}
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       )}
@@ -1391,7 +1748,7 @@ export default function MainPage() {
             <button
               onClick={() => setMaximizedChart(null)}
               className="absolute top-4 right-4 text-text-muted hover:text-text-primary transition-colors cursor-pointer"
-              title="Fechar"
+              title="Close"
             >
               <X size={18} />
             </button>
@@ -1403,8 +1760,8 @@ export default function MainPage() {
               {maximizedChart === 'cbm-criticality' && 'CBM Condition by Equipment Criticality (Maximized View)'}
             </h2>
             <div className="h-[360px] flex items-center justify-center">
-              {maximizedChart === 'wo-status' && <WorkOrderStatusPie />}
-              {maximizedChart === 'days-due' && <DaysLeftBar />}
+              {maximizedChart === 'wo-status' && <WorkOrderStatusPie workOrders={workOrders} />}
+              {maximizedChart === 'days-due' && <DaysLeftBar workOrders={workOrders} />}
               {maximizedChart === 'equip-condition' && <EquipmentConditionPie equipments={equipments} />}
               {maximizedChart === 'cbm-criticality' && <CbmCriticalityBar equipments={equipments} />}
             </div>

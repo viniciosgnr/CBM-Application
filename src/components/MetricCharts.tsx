@@ -8,6 +8,11 @@ export interface EquipmentChartData {
   criticality: string;
 }
 
+export interface ChartWorkOrder {
+  status: string;
+  dueDate?: string | null;
+}
+
 // Definindo as cores do OptSite correspondentes ao CSS do globals.css
 const COLORS = {
   green: '#22c55e',   // var(--status-ok)
@@ -74,8 +79,26 @@ const renderCustomizedLabel = ({ cx, cy, midAngle, outerRadius, percent, color }
   );
 };
 
+// Helper to parse dates in different formats (dd/mm/yyyy or ISO)
+function parseDateString(str?: string | null): Date | null {
+  if (!str) return null;
+  if (str.includes('/')) {
+    const parts = str.split(',');
+    const dateParts = parts[0].trim().split('/');
+    if (dateParts.length === 3) {
+      const day = parseInt(dateParts[0], 10);
+      const month = parseInt(dateParts[1], 10) - 1;
+      const year = parseInt(dateParts[2], 10);
+      return new Date(year, month, day);
+    }
+  }
+  const parsed = Date.parse(str);
+  if (!isNaN(parsed)) return new Date(parsed);
+  return null;
+}
+
 // 1. Donut Chart: Work Order by Status
-export function WorkOrderStatusPie() {
+export function WorkOrderStatusPie({ workOrders = [] }: { workOrders?: ChartWorkOrder[] }) {
   const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
@@ -86,12 +109,36 @@ export function WorkOrderStatusPie() {
     return <div className="h-[220px] w-full" />;
   }
 
-  const data = [
-    { name: 'Completed', value: 45, color: COLORS.green },
-    { name: 'In Progress', value: 46, color: COLORS.blue },
-    { name: 'Pending', value: 9, color: COLORS.gray },
-    { name: 'Cancelled', value: 1, color: COLORS.red }
-  ];
+  let data = [];
+  if (workOrders && workOrders.length > 0) {
+    const counts = { Completed: 0, InProgress: 0, Pending: 0, Cancelled: 0 };
+    workOrders.forEach(w => {
+      const s = w.status;
+      if (s === 'Finished' || s === 'Completed') {
+        counts.Completed++;
+      } else if (s === 'Pending' || s === 'Observed') {
+        counts.Pending++;
+      } else if (s === 'Rejected' || s === 'Cancelled') {
+        counts.Cancelled++;
+      } else {
+        // e.g. 'Accepted', 'Under Preparation', 'Prepared', 'Released', 'Work Started', 'Work Done', 'Reported'
+        counts.InProgress++;
+      }
+    });
+    data = [
+      { name: 'Completed', value: counts.Completed, color: COLORS.green },
+      { name: 'In Progress', value: counts.InProgress, color: COLORS.blue },
+      { name: 'Pending', value: counts.Pending, color: COLORS.gray },
+      { name: 'Cancelled', value: counts.Cancelled, color: COLORS.red }
+    ].filter(item => item.value > 0);
+  } else {
+    data = [
+      { name: 'Completed', value: 45, color: COLORS.green },
+      { name: 'In Progress', value: 46, color: COLORS.blue },
+      { name: 'Pending', value: 9, color: COLORS.gray },
+      { name: 'Cancelled', value: 1, color: COLORS.red }
+    ];
+  }
 
   return (
     <ResponsiveContainer width="100%" height={220}>
@@ -139,7 +186,7 @@ export function WorkOrderStatusPie() {
 }
 
 // 2. Bar Chart: Days Left to Due
-export function DaysLeftBar() {
+export function DaysLeftBar({ workOrders = [] }: { workOrders?: ChartWorkOrder[] }) {
   const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
@@ -150,12 +197,56 @@ export function DaysLeftBar() {
     return <div className="h-[220px] w-full" />;
   }
 
-  const data = [
-    { name: 'Overdue', 'In Progress': 10, Pending: 10 },
-    { name: '0-7 days', 'In Progress': 15, Pending: 15 },
-    { name: '8-30 days', 'In Progress': 5, Pending: 75 },
-    { name: '> 30 days', 'In Progress': 0, Pending: 75 }
-  ];
+  let data = [];
+  if (workOrders && workOrders.length > 0) {
+    const counts = {
+      overdue: { 'In Progress': 0, Pending: 0 },
+      week: { 'In Progress': 0, Pending: 0 },
+      month: { 'In Progress': 0, Pending: 0 },
+      longer: { 'In Progress': 0, Pending: 0 }
+    };
+    
+    workOrders.forEach(w => {
+      const s = w.status;
+      if (s === 'Finished' || s === 'Completed' || s === 'Rejected' || s === 'Cancelled') {
+        return; // Exclude resolved/cancelled from dynamic due list
+      }
+      const typeKey = (s === 'Pending' || s === 'Observed') ? 'Pending' : 'In Progress';
+      const due = parseDateString(w.dueDate);
+      if (!due) return;
+      
+      const diffTime = due.getTime() - Date.now();
+      const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+      
+      if (diffDays <= 0) {
+        counts.overdue[typeKey]++;
+      } else if (diffDays <= 7) {
+        counts.week[typeKey]++;
+      } else if (diffDays <= 30) {
+        counts.month[typeKey]++;
+      } else {
+        counts.longer[typeKey]++;
+      }
+    });
+    
+    data = [
+      { name: 'Overdue', 'In Progress': counts.overdue['In Progress'], Pending: counts.overdue.Pending },
+      { name: '0-7 days', 'In Progress': counts.week['In Progress'], Pending: counts.week.Pending },
+      { name: '8-30 days', 'In Progress': counts.month['In Progress'], Pending: counts.month.Pending },
+      { name: '> 30 days', 'In Progress': counts.longer['In Progress'], Pending: counts.longer.Pending }
+    ];
+  } else {
+    data = [
+      { name: 'Overdue', 'In Progress': 10, Pending: 10 },
+      { name: '0-7 days', 'In Progress': 15, Pending: 15 },
+      { name: '8-30 days', 'In Progress': 5, Pending: 75 },
+      { name: '> 30 days', 'In Progress': 0, Pending: 75 }
+    ];
+  }
+
+  // Determine max value for YAxis scaling
+  const maxVal = Math.max(...data.map(d => d['In Progress'] + d.Pending), 10);
+  const domainMax = Math.ceil(maxVal / 5) * 5; // rounded to nearest multiple of 5
 
   return (
     <ResponsiveContainer width="100%" height={220}>
@@ -172,8 +263,8 @@ export function DaysLeftBar() {
           fontSize={9}
           axisLine={false}
           tickLine={false}
-          domain={[0, 80]}
-          ticks={[0, 20, 40, 60, 80]}
+          domain={[0, domainMax]}
+          allowDecimals={false}
         />
         <Tooltip
           contentStyle={{
@@ -196,6 +287,7 @@ export function DaysLeftBar() {
     </ResponsiveContainer>
   );
 }
+
 
 // 3. Donut Chart: Equipment by CBM Condition
 export function EquipmentConditionPie({ equipments = [] }: { equipments?: EquipmentChartData[] }) {

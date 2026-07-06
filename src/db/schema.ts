@@ -55,3 +55,37 @@ export const analysisReports = sqliteTable('analysis_reports', {
   longDescription: text('long_description').notNull(), // Recommendation
   createdAt: text('created_at').notNull(),
 });
+
+export const workOrders = sqliteTable('work_orders', {
+  id: integer('id').primaryKey({ autoIncrement: true }),
+  reference: text('reference').notNull().unique(),
+  fpso: text('fpso').notNull(),
+  description: text('description').notNull(),
+  priority: text('priority').notNull(), // 'Accepted' | 'Pending' | 'Rejected'
+  status: text('status').notNull(), // e.g. 'Pending', 'Observed', 'Under Preparation', etc.
+  tagNumber: text('tag_number').notNull(),
+  tagDescription: text('tag_description').notNull(),
+  monitoringTechnique: text('monitoring_technique').notNull(),
+  creationDate: text('creation_date').notNull(),
+  dueDate: text('due_date').notNull(),
+  
+  // Link back to analysis report
+  reportId: integer('report_id').references(() => analysisReports.id),
+
+  // CMMS Fault Report Fields
+  woSite: text('wo_site').notNull(),
+  directive: text('directive').notNull(),
+  maintOrg: text('maint_org').notNull(),
+  workType: text('work_type').notNull(), // Default 'CM'
+  externalSource: text('external_source').notNull(),
+  externalSourceId: text('external_source_id').notNull(),
+  faultDesc: text('fault_desc').notNull(),
+  symptom: text('symptom').notNull(),
+  discovery: text('discovery').notNull(), // Default '04'
+  actionId: text('action_id').notNull(),
+  operationalStatus: text('operational_status').notNull(),
+  
+  // Simulated File Upload Metadata
+  attachedFilename: text('attached_filename'),
+  attachedFileSize: integer('attached_file_size'),
+});

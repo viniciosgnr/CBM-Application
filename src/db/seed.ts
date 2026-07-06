@@ -1,5 +1,5 @@
 import { db } from './index';
-import { equipments, equipmentHistory, analysisReports } from './schema';
+import { equipments, equipmentHistory, analysisReports, workOrders } from './schema';
 import { sql } from 'drizzle-orm';
 
 const initialEquipments = [
@@ -165,7 +165,7 @@ const mockReports = [
     raisedDate: '2026-06-15',
     targetDate: '2026-07-15',
     shortDescription: 'High vibration alarm on Compressor axial sensors',
-    woNumber: '1089487',
+    woNumber: '801021309',
     
     conditionAssessment: 'Based on the System 1 (S1) trend, the event log, and the typical behavior shown in the plot (abrupt jumps, reading lock-ups, and sudden offset changes), there is strong evidence of an instrumentation failure in the axial (thrust) sensors of the LNA bearing of the Main Gas Compressor C – ADG, rather than an actual mechanical condition of the compressor.',
     longDescription: 'Verify proper sensor fastening regarding the presence of looseness, bending, or sensor displacement. Check the integrity of the sensor connections, as well as their fastening, oxidation, and moisture. Perform channel cross-substitution (channel swap) to confirm whether the fault follows the sensor/cable or remains on the same channel.',
@@ -193,11 +193,154 @@ const mockReports = [
     raisedDate: '2026-06-25',
     targetDate: '2026-07-25',
     shortDescription: 'Lube oil level drop & slight metallic wear detected',
-    woNumber: '1089555',
+    woNumber: '801021310',
     
     conditionAssessment: 'Spectrometric analysis shows a slight increase in copper and iron particles. Viscosity is within limits but on the lower bound. Observation shows slight leakage near the shaft seal.',
     longDescription: 'Top up the lube oil level to nominal immediately. Monitor shaft seal leakage weekly. Plan seal replacement during the next turnaround window. Request filter check for iron particles.',
     createdAt: '2026-06-25T14:30:00Z',
+  }
+];
+
+const mockWorkOrders = [
+  {
+    reference: '801021309',
+    fpso: 'UNY',
+    description: 'High vibration alarm on Compressor axial sensors. Verify sensor fastening and channel cross-substitution.',
+    priority: 'Accepted',
+    status: 'Accepted',
+    tagNumber: 'COCE_TIME_NRS_02',
+    tagDescription: 'Compressor Performance',
+    monitoringTechnique: 'CBM Vibration - Analysis High',
+    creationDate: '23/02/2026, 12:47:04',
+    dueDate: '23/02/2026, 12:47:04',
+    reportId: 1,
+    woSite: 'UNY',
+    directive: 'VIBRATION SENSOR CHECK',
+    maintOrg: 'MECHTS',
+    workType: 'CM',
+    externalSource: 'CBM-VIB/H',
+    externalSourceId: 'CBM-1089487',
+    faultDesc: 'Anomaly: Based on trends, instrumentation failure in axial sensors. Recommendation: Verify sensor fastening, check integrity of connections.',
+    symptom: 'VIB',
+    discovery: '04',
+    actionId: '6',
+    operationalStatus: '01',
+  },
+  {
+    reference: '801021310',
+    fpso: 'UNY',
+    description: 'Lube oil level drop & slight metallic wear detected. Viscosity is within limits but on the lower bound.',
+    priority: 'Accepted',
+    status: 'Accepted',
+    tagNumber: 'COCE_TIME_NRS_03',
+    tagDescription: 'Compressor Performance',
+    monitoringTechnique: 'CBM Lube Oil - Analysis Medium',
+    creationDate: '23/02/2026, 12:47:04',
+    dueDate: '23/02/2026, 12:47:04',
+    reportId: 2,
+    woSite: 'UNY',
+    directive: 'OIL REPLACE',
+    maintOrg: 'MECHTS',
+    workType: 'CM',
+    externalSource: 'CBM-LUB/M',
+    externalSourceId: 'CBM-1089555',
+    faultDesc: 'Anomaly: Spectrometric analysis shows copper and iron increase. Recommendation: Top up lube oil, monitor seal leakage.',
+    symptom: 'ELU',
+    discovery: '04',
+    actionId: '7',
+    operationalStatus: '01',
+  },
+  {
+    reference: '801021311',
+    fpso: 'UNY',
+    description: 'Pressure transmitter readings unstable on discharge header.',
+    priority: 'Pending',
+    status: 'Pending',
+    tagNumber: 'COCE_TIME_NRS_01',
+    tagDescription: 'Compressor Performance',
+    monitoringTechnique: 'CBM Pressure - Calibration',
+    creationDate: '23/02/2026, 12:47:04',
+    dueDate: '23/02/2026, 12:47:04',
+    woSite: 'UNY',
+    directive: 'CALIBRATE TRANSMITTER',
+    maintOrg: 'INSTR',
+    workType: 'CM',
+    externalSource: 'CBM-VIB/L',
+    externalSourceId: '3',
+    faultDesc: 'Pressure transmitter readings unstable.',
+    symptom: 'STD',
+    discovery: '04',
+    actionId: '6',
+    operationalStatus: '01',
+  },
+  {
+    reference: '801021312',
+    fpso: 'UNY',
+    description: 'Routine diagnostic inspection on mechanical seal oil.',
+    priority: 'Accepted',
+    status: 'Accepted',
+    tagNumber: 'TURB_METH_GDS_02',
+    tagDescription: 'Turbine Performance',
+    monitoringTechnique: 'CBM Vibration - Analysis High',
+    creationDate: '23/02/2026, 12:47:04',
+    dueDate: '23/02/2026, 12:47:04',
+    woSite: 'UNY',
+    directive: 'INSPECT SEAL OIL',
+    maintOrg: 'MECHTS',
+    workType: 'CM',
+    externalSource: 'CBM-VIB/H',
+    externalSourceId: '4',
+    faultDesc: 'Routine diagnostic inspection on mechanical seal oil.',
+    symptom: 'ELP',
+    discovery: '04',
+    actionId: '9',
+    operationalStatus: '01',
+  },
+  {
+    reference: '801021313',
+    fpso: 'UNY',
+    description: 'Lube oil filter delta pressure alarm triggered.',
+    priority: 'Pending',
+    status: 'Pending',
+    tagNumber: 'COCE_TIME_NRS_04',
+    tagDescription: 'Compressor Performance',
+    monitoringTechnique: 'CBM Delta P - Filter Check',
+    creationDate: '23/02/2026, 12:47:04',
+    dueDate: '23/02/2026, 12:47:04',
+    woSite: 'UNY',
+    directive: 'REPLACE FILTER',
+    maintOrg: 'MECHTS',
+    workType: 'CM',
+    externalSource: 'CBM-LUB/M',
+    externalSourceId: '5',
+    faultDesc: 'Lube oil filter delta pressure alarm triggered.',
+    symptom: 'PLU',
+    discovery: '04',
+    actionId: '5',
+    operationalStatus: '02',
+  },
+  {
+    reference: '801021314',
+    fpso: 'UNY',
+    description: 'Stator winding insulation check required.',
+    priority: 'Accepted',
+    status: 'Accepted',
+    tagNumber: 'TURB_METH_GDS_01',
+    tagDescription: 'Turbine Performance',
+    monitoringTechnique: 'CBM Electrical - Stator',
+    creationDate: '24/02/2026, 10:20:15',
+    dueDate: '25/02/2026, 10:20:15',
+    woSite: 'UNY',
+    directive: 'CHECK INSULATION',
+    maintOrg: 'ELEC',
+    workType: 'CM',
+    externalSource: 'CBM-VIB/H',
+    externalSourceId: '6',
+    faultDesc: 'Stator winding insulation check required.',
+    symptom: 'STD',
+    discovery: '04',
+    actionId: '6',
+    operationalStatus: '01',
   }
 ];
 
@@ -211,6 +354,21 @@ export async function seed() {
   console.log('Seeding database...');
   await db.insert(equipments).values(initialEquipments);
   await db.insert(equipmentHistory).values(mockHistory);
-  await db.insert(analysisReports).values(mockReports);
+  
+  // Insert reports first and get their inserted IDs
+  const insertedReports = await db.insert(analysisReports).values(mockReports).returning();
+  
+  // Update reportId references in mockWorkOrders
+  const updatedWorkOrders = mockWorkOrders.map((wo) => {
+    if (wo.reference === '801021309' && insertedReports[0]) {
+      return { ...wo, reportId: insertedReports[0].id };
+    }
+    if (wo.reference === '801021310' && insertedReports[1]) {
+      return { ...wo, reportId: insertedReports[1].id };
+    }
+    return { ...wo, reportId: null };
+  });
+
+  await db.insert(workOrders).values(updatedWorkOrders);
   console.log('Seeding completed successfully.');
 }
