@@ -26,12 +26,12 @@ export async function GET() {
   }
 }
 
-// POST create report
 export async function POST(request: Request) {
   try {
     const body = await request.json();
     const {
       equipmentTag,
+      analysisType, // 'Vibration' | 'Lube Oil'
       vibrationStatus,
       lubeOilStatus,
       facility,
@@ -57,8 +57,6 @@ export async function POST(request: Request) {
     // Validate required fields
     if (
       !equipmentTag ||
-      !vibrationStatus ||
-      !lubeOilStatus ||
       !facility ||
       !system ||
       !tagNumber ||
@@ -71,18 +69,52 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Missing required report fields' }, { status: 400 });
     }
 
-    const overallCondition = getOverallCondition(vibrationStatus, lubeOilStatus);
-    const nowStr = new Date().toLocaleString('en-GB'); // dd/mm/yyyy, hh:mm:ss
-    const nowIso = new Date().toISOString();
+    if (analysisType === 'Vibration' && !vibrationStatus) {
+      return NextResponse.json({ error: 'Missing vibration status' }, { status: 400 });
+    }
+    if (analysisType === 'Lube Oil' && !lubeOilStatus) {
+      return NextResponse.json({ error: 'Missing lube oil status' }, { status: 400 });
+    }
+    if (!analysisType && (!vibrationStatus || !lubeOilStatus)) {
+      return NextResponse.json({ error: 'Missing vibrationStatus or lubeOilStatus' }, { status: 400 });
+    }
 
     // Use transaction to update equipment, history and save report
     const result = await db.transaction(async (tx) => {
+      // Fetch current equipment status
+      const eqList = await tx
+        .select()
+        .from(equipments)
+        .where(eq(equipments.tag, equipmentTag));
+      
+      if (eqList.length === 0) {
+        throw new Error('Equipment not found');
+      }
+      const eqRecord = eqList[0];
+
+      let finalVibrationStatus = eqRecord.vibrationStatus;
+      let finalLubeOilStatus = eqRecord.lubeOilStatus;
+
+      if (analysisType === 'Vibration') {
+        finalVibrationStatus = vibrationStatus;
+      } else if (analysisType === 'Lube Oil') {
+        finalLubeOilStatus = lubeOilStatus;
+      } else {
+        // Fallback
+        if (vibrationStatus) finalVibrationStatus = vibrationStatus;
+        if (lubeOilStatus) finalLubeOilStatus = lubeOilStatus;
+      }
+
+      const overallCondition = getOverallCondition(finalVibrationStatus, finalLubeOilStatus);
+      const nowStr = new Date().toLocaleString('en-GB'); // dd/mm/yyyy, hh:mm:ss
+      const nowIso = new Date().toISOString();
+
       // 1. Update equipment active status
       await tx
         .update(equipments)
         .set({
-          vibrationStatus,
-          lubeOilStatus,
+          vibrationStatus: finalVibrationStatus,
+          lubeOilStatus: finalLubeOilStatus,
           condition: overallCondition,
           lastUpdate: nowStr,
         })
@@ -91,8 +123,8 @@ export async function POST(request: Request) {
       // 2. Insert into equipment history
       await tx.insert(equipmentHistory).values({
         equipmentTag,
-        vibrationStatus,
-        lubeOilStatus,
+        vibrationStatus: finalVibrationStatus,
+        lubeOilStatus: finalLubeOilStatus,
         overallCondition,
         changedAt: nowIso,
       });
@@ -102,8 +134,8 @@ export async function POST(request: Request) {
         .insert(analysisReports)
         .values({
           equipmentTag,
-          vibrationStatus,
-          lubeOilStatus,
+          vibrationStatus: finalVibrationStatus,
+          lubeOilStatus: finalLubeOilStatus,
           overallCondition,
           facility,
           system,

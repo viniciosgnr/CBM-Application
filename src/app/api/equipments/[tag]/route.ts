@@ -40,42 +40,75 @@ export async function PUT(request: Request, { params }: { params: { tag: string 
   try {
     const { tag } = params;
     const body = await request.json();
-    const { vibrationStatus, lubeOilStatus } = body;
+    const { vibrationStatus, lubeOilStatus, condition, observation } = body;
     
-    if (!vibrationStatus || !lubeOilStatus) {
-      return NextResponse.json({ error: 'Missing vibrationStatus or lubeOilStatus' }, { status: 400 });
-    }
-    
-    const overallCondition = getOverallCondition(vibrationStatus, lubeOilStatus);
     const nowStr = new Date().toLocaleString('en-GB'); // dd/mm/yyyy, hh:mm:ss
     const nowIso = new Date().toISOString();
     
-    // Update equipment
-    const updated = await db
-      .update(equipments)
-      .set({
+    if (condition !== undefined) {
+      // Direct override of condition and observation (supporting tiers)
+      const baseCondition = condition ? condition.split(' - ')[0] : 'Good';
+      
+      const updated = await db
+        .update(equipments)
+        .set({
+          condition,
+          observation: observation || null,
+          lastUpdate: nowStr,
+          vibrationStatus: baseCondition,
+          lubeOilStatus: baseCondition,
+        })
+        .where(eq(equipments.tag, tag))
+        .returning();
+        
+      if (updated.length === 0) {
+        return NextResponse.json({ error: 'Equipment not found' }, { status: 404 });
+      }
+      
+      // Record history
+      await db.insert(equipmentHistory).values({
+        equipmentTag: tag,
+        vibrationStatus: baseCondition,
+        lubeOilStatus: baseCondition,
+        overallCondition: baseCondition,
+        changedAt: nowIso,
+      });
+      
+      return NextResponse.json(updated[0]);
+    } else {
+      // Legacy flow
+      if (!vibrationStatus || !lubeOilStatus) {
+        return NextResponse.json({ error: 'Missing vibrationStatus or lubeOilStatus' }, { status: 400 });
+      }
+      
+      const overallCondition = getOverallCondition(vibrationStatus, lubeOilStatus);
+      
+      const updated = await db
+        .update(equipments)
+        .set({
+          vibrationStatus,
+          lubeOilStatus,
+          condition: overallCondition,
+          lastUpdate: nowStr,
+        })
+        .where(eq(equipments.tag, tag))
+        .returning();
+        
+      if (updated.length === 0) {
+        return NextResponse.json({ error: 'Equipment not found' }, { status: 404 });
+      }
+      
+      // Record history
+      await db.insert(equipmentHistory).values({
+        equipmentTag: tag,
         vibrationStatus,
         lubeOilStatus,
-        condition: overallCondition,
-        lastUpdate: nowStr,
-      })
-      .where(eq(equipments.tag, tag))
-      .returning();
+        overallCondition,
+        changedAt: nowIso,
+      });
       
-    if (updated.length === 0) {
-      return NextResponse.json({ error: 'Equipment not found' }, { status: 404 });
+      return NextResponse.json(updated[0]);
     }
-    
-    // Record history
-    await db.insert(equipmentHistory).values({
-      equipmentTag: tag,
-      vibrationStatus,
-      lubeOilStatus,
-      overallCondition,
-      changedAt: nowIso,
-    });
-    
-    return NextResponse.json(updated[0]);
   } catch (error) {
     console.error('Failed to update equipment:', error);
     return NextResponse.json({ error: 'Failed to update equipment' }, { status: 500 });

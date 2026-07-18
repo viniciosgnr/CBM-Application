@@ -306,7 +306,7 @@ export function EquipmentConditionPie({ equipments = [] }: { equipments?: Equipm
   if (equipments && equipments.length > 0) {
     const counts = { Good: 0, Degraded: 0, Critical: 0, 'Machine Off': 0 };
     equipments.forEach(e => {
-      const cond = e.condition;
+      const cond = e.condition ? e.condition.split(' - ')[0] : '';
       if (cond === 'Good') counts.Good++;
       else if (cond === 'Degraded') counts.Degraded++;
       else if (cond === 'Critical') counts.Critical++;
@@ -393,7 +393,7 @@ export function CbmCriticalityBar({ equipments = [] }: { equipments?: EquipmentC
     };
     equipments.forEach(e => {
       const crit = e.criticality; // 'High', 'Medium', 'Low'
-      const cond = e.condition;
+      const cond = e.condition ? e.condition.split(' - ')[0] : '';
       if (crit in groups) {
         const c = crit as keyof typeof groups;
         if (cond === 'Good') groups[c].Good++;

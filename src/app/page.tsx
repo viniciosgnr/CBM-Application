@@ -8,8 +8,6 @@ import {
   ArrowLeft, 
   X, 
   RefreshCw, 
-  Activity, 
-  Droplet, 
   FileText, 
   PlusCircle,
   Calendar,
@@ -116,7 +114,11 @@ interface WorkOrder {
 
 // Severity mappings for dynamic chart plotting
 const CHART_VALUE_MAP: Record<string, number> = {
-  'Good': 3,
+  'Good - Tier 4': 4,
+  'Good - Tier 3': 3,
+  'Degraded - Tier 2': 2,
+  'Critical - Tier 1': 1,
+  'Good': 4,
   'Degraded': 2,
   'Critical': 1,
   'Machine Off': 0,
@@ -146,9 +148,15 @@ export default function MainPage() {
   const [history, setHistory] = useState<HistoryEntry[]>([]);
   const [modalOpen, setModalOpen] = useState(false);
   const [modalTab, setModalTab] = useState<'trends' | 'history'>('trends');
+  const [modalFormFields, setModalFormFields] = useState({
+    condition: 'Good - Tier 4',
+    observation: '',
+  });
+  const [savingEquipment, setSavingEquipment] = useState(false);
 
   // Report Creation Form state
   const [reportFormOpen, setReportFormOpen] = useState(false);
+  const [analysisType, setAnalysisType] = useState<'Vibration' | 'Lube Oil'>('Vibration');
   const [formFields, setFormFields] = useState({
     facility: '',
     system: '',
@@ -351,11 +359,47 @@ export default function MainPage() {
     if (!equip) return;
 
     setSelectedEquipment(equip);
+    setModalFormFields({
+      condition: equip.condition || 'Good - Tier 4',
+      observation: equip.observation || '',
+    });
     setHistory([]);
     setModalTab('trends');
     setModalOpen(true);
 
     await fetchEquipmentHistory(equip.tag);
+  };
+
+  // Save manual override of equipment condition and observations
+  const handleEquipmentUpdate = async () => {
+    if (!selectedEquipment) return;
+    setSavingEquipment(true);
+    try {
+      const res = await fetch(`/api/equipments/${selectedEquipment.tag}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          condition: modalFormFields.condition,
+          observation: modalFormFields.observation,
+        }),
+      });
+      if (res.ok) {
+        const updated = await res.json();
+        // Refresh equipments list
+        await fetchEquipments();
+        // Update selected equipment details shown in modal
+        setSelectedEquipment(updated);
+        // Refresh history graph/table
+        await fetchEquipmentHistory(selectedEquipment.tag);
+      } else {
+        const err = await res.json();
+        alert(`Error: ${err.error}`);
+      }
+    } catch (err) {
+      console.error('Error updating equipment:', err);
+    } finally {
+      setSavingEquipment(false);
+    }
   };
 
   // Open detailed side panel/modal for selected report row
@@ -374,6 +418,7 @@ export default function MainPage() {
     const today = new Date().toISOString().split('T')[0];
     const target = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]; // +30 days
 
+    setAnalysisType('Vibration');
     setFormFields({
       facility: `FPSO ${selectedEquipment.fpso}`,
       system: selectedEquipment.system,
@@ -411,6 +456,7 @@ export default function MainPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           ...formFields,
+          analysisType,
           equipmentTag: selectedEquipment.tag,
         }),
       });
@@ -422,26 +468,17 @@ export default function MainPage() {
         await fetchEquipments();
         await fetchReports();
         
-        // Update currently selected equipment view statuses
-        const updatedEquip = equipments.find(eq => eq.tag === selectedEquipment.tag);
-        if (updatedEquip) {
-          // Temporarily predict updated condition for modal reactivity
-          setSelectedEquipment({
-            ...selectedEquipment,
-            vibrationStatus: formFields.vibrationStatus,
-            lubeOilStatus: formFields.lubeOilStatus,
-            condition: newReport.overallCondition,
-            lastUpdate: new Date().toLocaleString('en-GB'),
-          });
-        } else {
-          // Re-fetch details
-          fetchEquipments().then(() => {
-            const eq = equipments.find(item => item.tag === selectedEquipment.tag);
-            if (eq) setSelectedEquipment(eq);
-          });
-        }
+        // Update currently selected equipment view statuses with server resolved values
+        setSelectedEquipment({
+          ...selectedEquipment,
+          vibrationStatus: newReport.vibrationStatus,
+          lubeOilStatus: newReport.lubeOilStatus,
+          condition: newReport.overallCondition,
+          lastUpdate: new Date().toLocaleString('en-GB'),
+        });
         
         await fetchEquipmentHistory(selectedEquipment.tag);
+
         
         // Close form modal
         setReportFormOpen(false);
@@ -456,7 +493,8 @@ export default function MainPage() {
 
   // Formatação das bolinhas coloridas de status (Priority / Condition / Status)
   const getStatusDot = (status: string) => {
-    switch (status) {
+    const baseStatus = status ? status.split(' - ')[0] : '';
+    switch (baseStatus) {
       case 'Accepted':
       case 'Good':
         return (
@@ -489,6 +527,16 @@ export default function MainPage() {
         );
       case 'Pending':
       default:
+        // Handle cases like 'Accepted' that do not split with '-'
+        const checkStatus = baseStatus || status;
+        if (checkStatus === 'Accepted') {
+          return (
+            <span className="inline-flex items-center gap-1.5 font-medium text-[11px]">
+              <span className="w-1.5 h-1.5 rounded-full bg-status-ok" />
+              <span className="text-[#a2b4cd]">{status}</span>
+            </span>
+          );
+        }
         return (
           <span className="inline-flex items-center gap-1.5 font-medium text-[11px]">
             <span className="w-1.5 h-1.5 rounded-full bg-text-muted" />
@@ -498,9 +546,9 @@ export default function MainPage() {
     }
   };
 
-  // Status helper color classes for badges
   const getStatusColorClass = (status: string) => {
-    switch (status) {
+    const baseStatus = status ? status.split(' - ')[0] : '';
+    switch (baseStatus) {
       case 'Good':
         return 'text-status-ok bg-status-ok/10 border-status-ok/20';
       case 'Degraded':
@@ -518,12 +566,20 @@ export default function MainPage() {
     return [...history].reverse().map(h => {
       const date = new Date(h.changedAt);
       const label = date.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' });
+      
+      let statusStr = h.overallCondition;
+      if (h.overallCondition === 'Good') {
+        statusStr = 'Good - Tier 4'; // fallback for legacy seed data
+      } else if (h.overallCondition === 'Degraded') {
+        statusStr = 'Degraded - Tier 2';
+      } else if (h.overallCondition === 'Critical') {
+        statusStr = 'Critical - Tier 1';
+      }
+      
       return {
         name: label,
-        vibration: CHART_VALUE_MAP[h.vibrationStatus] ?? 3,
-        lube: CHART_VALUE_MAP[h.lubeOilStatus] ?? 3,
-        vibrationLabel: h.vibrationStatus,
-        lubeLabel: h.lubeOilStatus,
+        condition: CHART_VALUE_MAP[statusStr] ?? 4,
+        conditionLabel: statusStr,
       };
     });
   };
@@ -531,8 +587,7 @@ export default function MainPage() {
   interface TooltipPayloadEntry {
     payload: {
       name: string;
-      vibrationLabel: string;
-      lubeLabel: string;
+      conditionLabel: string;
     };
   }
 
@@ -549,11 +604,7 @@ export default function MainPage() {
           <p className="font-semibold text-[#e2e8f0] mb-1">{data.name}</p>
           <p className="flex items-center gap-1.5 text-accent-blue">
             <span className="w-1.5 h-1.5 rounded-full bg-accent-blue" />
-            Vibration: {data.vibrationLabel}
-          </p>
-          <p className="flex items-center gap-1.5 text-status-warn">
-            <span className="w-1.5 h-1.5 rounded-full bg-status-warn" />
-            Lube Oil: {data.lubeLabel}
+            Overall Status: {data.conditionLabel}
           </p>
         </div>
       );
@@ -874,13 +925,11 @@ export default function MainPage() {
               </h2>
               <div className="flex items-center justify-between gap-2 text-[10px] text-text-muted mt-1.5 font-medium tracking-wide uppercase">
                 <div className="flex items-center gap-1.5">
-                  <span>Vibration + Lube Oil</span>
-                  <span>/</span>
-                  <span>Overall Worst Condition:</span>
+                  <span>Overall CBM Status:</span>
                   <span className={`font-bold ${
-                    selectedEquipment.condition === 'Good' ? 'text-status-ok' :
-                    selectedEquipment.condition === 'Degraded' ? 'text-status-warn' :
-                    selectedEquipment.condition === 'Critical' ? 'text-status-error' : 'text-text-muted'
+                    selectedEquipment.condition?.startsWith('Good') ? 'text-status-ok' :
+                    selectedEquipment.condition?.startsWith('Degraded') ? 'text-status-warn' :
+                    selectedEquipment.condition?.startsWith('Critical') ? 'text-status-error' : 'text-text-muted'
                   }`}>
                     {selectedEquipment.condition}
                   </span>
@@ -926,44 +975,44 @@ export default function MainPage() {
             {/* Conteúdo da Modal de acordo com a aba ativa */}
             {modalTab === 'trends' ? (
               <div className="flex flex-col gap-5">
-                {/* Status Indicators (ReadOnly) */}
-                <div className="grid grid-cols-2 gap-4">
-                  {/* Card Vibration Status */}
-                  <div className="flex items-center justify-between p-3.5 bg-bg-panel/40 border border-border-panel rounded-lg select-none">
-                    <div className="flex items-center gap-3">
-                      <div className="p-2 bg-accent-blue/10 text-accent-blue rounded-lg border border-accent-blue/20">
-                        <Activity size={16} />
-                      </div>
-                      <div className="flex flex-col">
-                        <span className="text-[10px] text-text-muted font-semibold uppercase tracking-wider">Vibration Status</span>
-                        <span className={`text-xs font-bold ${
-                          selectedEquipment.vibrationStatus === 'Good' ? 'text-status-ok' :
-                          selectedEquipment.vibrationStatus === 'Degraded' ? 'text-status-warn' :
-                          selectedEquipment.vibrationStatus === 'Critical' ? 'text-status-error' : 'text-text-muted'
-                        }`}>
-                          {selectedEquipment.vibrationStatus.toUpperCase()}
-                        </span>
-                      </div>
+                {/* Override Condition and Observations Form */}
+                <div className="flex flex-col gap-4 bg-bg-panel/40 p-4 border border-border-panel rounded-xl text-xs">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="flex flex-col gap-1.5">
+                      <label className="text-text-muted font-semibold uppercase text-[9px]">Overall CBM Status</label>
+                      <select
+                        value={modalFormFields.condition}
+                        onChange={e => setModalFormFields({ ...modalFormFields, condition: e.target.value })}
+                        className="bg-[#111827] border border-border-panel rounded p-2 text-text-primary focus:border-accent-blue outline-none cursor-pointer text-xs"
+                      >
+                        <option value="Good - Tier 4">Good - Tier 4</option>
+                        <option value="Good - Tier 3">Good - Tier 3</option>
+                        <option value="Degraded - Tier 2">Degraded - Tier 2</option>
+                        <option value="Critical - Tier 1">Critical - Tier 1</option>
+                      </select>
                     </div>
                   </div>
+                  
+                  <div className="flex flex-col gap-1.5">
+                    <label className="text-text-muted font-semibold uppercase text-[9px]">Observation</label>
+                    <textarea
+                      rows={2}
+                      placeholder="Insert observations regarding the equipment..."
+                      value={modalFormFields.observation}
+                      onChange={e => setModalFormFields({ ...modalFormFields, observation: e.target.value })}
+                      className="bg-[#0b0f19] border border-border-panel rounded p-2 text-text-primary focus:border-accent-blue focus:outline-none transition-colors text-xs resize-none"
+                    />
+                  </div>
 
-                  {/* Card Lube Oil Status */}
-                  <div className="flex items-center justify-between p-3.5 bg-bg-panel/40 border border-border-panel rounded-lg select-none">
-                    <div className="flex items-center gap-3">
-                      <div className="p-2 bg-status-warn/10 text-status-warn rounded-lg border border-status-warn/20">
-                        <Droplet size={16} />
-                      </div>
-                      <div className="flex flex-col">
-                        <span className="text-[10px] text-text-muted font-semibold uppercase tracking-wider">Lube Oil Status</span>
-                        <span className={`text-xs font-bold ${
-                          selectedEquipment.lubeOilStatus === 'Good' ? 'text-status-ok' :
-                          selectedEquipment.lubeOilStatus === 'Degraded' ? 'text-status-warn' :
-                          selectedEquipment.lubeOilStatus === 'Critical' ? 'text-status-error' : 'text-text-muted'
-                        }`}>
-                          {selectedEquipment.lubeOilStatus.toUpperCase()}
-                        </span>
-                      </div>
-                    </div>
+                  <div className="flex justify-end">
+                    <button
+                      type="button"
+                      onClick={handleEquipmentUpdate}
+                      disabled={savingEquipment}
+                      className="bg-accent-blue text-[#090d16] font-bold px-4 py-2 rounded text-xs hover:bg-[#38bdf8] transition-colors cursor-pointer shadow disabled:opacity-50"
+                    >
+                      {savingEquipment ? 'Saving...' : 'Save Changes'}
+                    </button>
                   </div>
                 </div>
 
@@ -987,13 +1036,14 @@ export default function MainPage() {
                           fontSize={8}
                           axisLine={false}
                           tickLine={false}
-                          domain={[0, 3]}
-                          ticks={[0, 1, 2, 3]}
+                          domain={[0, 4]}
+                          ticks={[0, 1, 2, 3, 4]}
                           tickFormatter={(val) => {
                             switch (val) {
-                              case 3: return 'GOOD';
-                              case 2: return 'DEGRADED';
-                              case 1: return 'CRITICAL';
+                              case 4: return 'GOOD - T4';
+                              case 3: return 'GOOD - T3';
+                              case 2: return 'WARN - T2';
+                              case 1: return 'CRIT - T1';
                               case 0: return 'OFF';
                               default: return '';
                             }
@@ -1001,22 +1051,12 @@ export default function MainPage() {
                         />
                         <RechartsTooltip content={<CustomTooltip />} />
                         <Line
-                          name="Vibration Analysis"
+                          name="Overall CBM Status"
                           type="monotone"
-                          dataKey="vibration"
+                          dataKey="condition"
                           stroke="#38bdf8"
                           strokeWidth={2}
                           dot={{ r: 3, fill: '#38bdf8', strokeWidth: 0 }}
-                          activeDot={{ r: 5 }}
-                        />
-                        <Line
-                          name="Lube Oil Analysis"
-                          type="monotone"
-                          dataKey="lube"
-                          stroke="#fbbf24"
-                          strokeWidth={2}
-                          strokeDasharray="4 4"
-                          dot={{ r: 3, fill: '#fbbf24', strokeWidth: 0 }}
                           activeDot={{ r: 5 }}
                         />
                       </LineChart>
@@ -1031,11 +1071,7 @@ export default function MainPage() {
                   <div className="flex items-center justify-center gap-6 mt-2 text-[9px] text-text-muted select-none">
                     <span className="flex items-center gap-1.5">
                       <span className="w-2.5 h-[2px] bg-accent-blue" />
-                      Vibration Analysis
-                    </span>
-                    <span className="flex items-center gap-1.5">
-                      <span className="w-2.5 h-[2px] bg-status-warn border-t border-dashed border-status-warn" style={{ borderStyle: 'dashed' }} />
-                      Lube Oil Analysis
+                      Overall CBM Status
                     </span>
                   </div>
                 </div>
@@ -1125,13 +1161,57 @@ export default function MainPage() {
               
               {/* Coluna Esquerda: Inputs de Metadados e Status */}
               <div className="flex flex-col gap-4">
+                {/* Analysis Type Radio Group */}
+                <div className="flex flex-col gap-1.5 bg-[#0b0f19]/40 p-3 rounded border border-border-panel/40">
+                  <label className="text-text-muted font-semibold uppercase text-[9px] tracking-wide">Analysis Type</label>
+                  <div className="flex gap-6 mt-1 select-none">
+                    <label className="flex items-center gap-2 cursor-pointer text-text-primary font-medium">
+                      <input
+                        type="radio"
+                        name="analysisType"
+                        checked={analysisType === 'Vibration'}
+                        onChange={() => {
+                          setAnalysisType('Vibration');
+                          setFormFields(prev => ({
+                            ...prev,
+                            technology: 'Vibration Analysis',
+                            vibrationStatus: selectedEquipment?.vibrationStatus || 'Good',
+                          }));
+                        }}
+                        className="accent-accent-blue cursor-pointer"
+                      />
+                      <span>Vibration Analysis</span>
+                    </label>
+                    <label className="flex items-center gap-2 cursor-pointer text-text-primary font-medium">
+                      <input
+                        type="radio"
+                        name="analysisType"
+                        checked={analysisType === 'Lube Oil'}
+                        onChange={() => {
+                          setAnalysisType('Lube Oil');
+                          setFormFields(prev => ({
+                            ...prev,
+                            technology: 'Lube Oil Analysis',
+                            lubeOilStatus: selectedEquipment?.lubeOilStatus || 'Good',
+                          }));
+                        }}
+                        className="accent-accent-blue cursor-pointer"
+                      />
+                      <span>Lube Oil Analysis</span>
+                    </label>
+                  </div>
+                </div>
+
                 <div className="grid grid-cols-2 gap-3">
                   <div className="flex flex-col gap-1.5">
-                    <label className="text-text-muted font-semibold uppercase text-[9px]">Vibration Status</label>
+                    <label className="text-text-muted font-semibold uppercase text-[9px]">
+                      {analysisType === 'Vibration' ? 'Vibration Status' : 'Vibration Status (Current)'}
+                    </label>
                     <select
                       value={formFields.vibrationStatus}
                       onChange={e => setFormFields({ ...formFields, vibrationStatus: e.target.value })}
-                      className="bg-[#111827] border border-border-panel rounded p-2 text-text-primary focus:border-accent-blue outline-none cursor-pointer"
+                      disabled={analysisType !== 'Vibration'}
+                      className="bg-[#111827] border border-border-panel rounded p-2 text-text-primary focus:border-accent-blue outline-none cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
                     >
                       <option value="Good">Good</option>
                       <option value="Degraded">Degraded</option>
@@ -1140,11 +1220,14 @@ export default function MainPage() {
                     </select>
                   </div>
                   <div className="flex flex-col gap-1.5">
-                    <label className="text-text-muted font-semibold uppercase text-[9px]">Lube Oil Status</label>
+                    <label className="text-text-muted font-semibold uppercase text-[9px]">
+                      {analysisType === 'Lube Oil' ? 'Lube Oil Status' : 'Lube Oil Status (Current)'}
+                    </label>
                     <select
                       value={formFields.lubeOilStatus}
                       onChange={e => setFormFields({ ...formFields, lubeOilStatus: e.target.value })}
-                      className="bg-[#111827] border border-border-panel rounded p-2 text-text-primary focus:border-accent-blue outline-none cursor-pointer"
+                      disabled={analysisType !== 'Lube Oil'}
+                      className="bg-[#111827] border border-border-panel rounded p-2 text-text-primary focus:border-accent-blue outline-none cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
                     >
                       <option value="Good">Good</option>
                       <option value="Degraded">Degraded</option>
@@ -1153,6 +1236,7 @@ export default function MainPage() {
                     </select>
                   </div>
                 </div>
+
 
                 <div className="flex flex-col gap-1.5">
                   <label className="text-text-muted font-semibold uppercase text-[9px]">Component</label>
