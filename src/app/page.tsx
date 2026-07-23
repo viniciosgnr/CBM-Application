@@ -147,7 +147,6 @@ export default function MainPage() {
   const [selectedEquipment, setSelectedEquipment] = useState<Equipment | null>(null);
   const [history, setHistory] = useState<HistoryEntry[]>([]);
   const [modalOpen, setModalOpen] = useState(false);
-  const [modalTab, setModalTab] = useState<'trends' | 'history'>('trends');
   const [modalFormFields, setModalFormFields] = useState({
     condition: 'Good - Tier 4',
     observation: '',
@@ -364,7 +363,6 @@ export default function MainPage() {
       observation: equip.observation || '',
     });
     setHistory([]);
-    setModalTab('trends');
     setModalOpen(true);
 
     await fetchEquipmentHistory(equip.tag);
@@ -500,7 +498,7 @@ export default function MainPage() {
         return (
           <span className="inline-flex items-center gap-1.5 font-medium text-[11px]">
             <span className="w-1.5 h-1.5 rounded-full bg-status-ok" />
-            <span className="text-[#a2b4cd]">{status}</span>
+            <span className="text-[#a2b4cd]">{baseStatus}</span>
           </span>
         );
       case 'Rejected':
@@ -508,21 +506,21 @@ export default function MainPage() {
         return (
           <span className="inline-flex items-center gap-1.5 font-medium text-[11px]">
             <span className="w-1.5 h-1.5 rounded-full bg-status-error" />
-            <span className="text-[#a2b4cd]">{status}</span>
+            <span className="text-[#a2b4cd]">{baseStatus}</span>
           </span>
         );
       case 'Degraded':
         return (
           <span className="inline-flex items-center gap-1.5 font-medium text-[11px]">
             <span className="w-1.5 h-1.5 rounded-full bg-status-warn" />
-            <span className="text-[#a2b4cd]">{status}</span>
+            <span className="text-[#a2b4cd]">{baseStatus}</span>
           </span>
         );
       case 'Machine Off':
         return (
           <span className="inline-flex items-center gap-1.5 font-medium text-[11px]">
             <span className="w-1.5 h-1.5 rounded-full bg-gray-500" />
-            <span className="text-[#a2b4cd]">{status}</span>
+            <span className="text-[#a2b4cd]">{baseStatus}</span>
           </span>
         );
       case 'Pending':
@@ -533,31 +531,16 @@ export default function MainPage() {
           return (
             <span className="inline-flex items-center gap-1.5 font-medium text-[11px]">
               <span className="w-1.5 h-1.5 rounded-full bg-status-ok" />
-              <span className="text-[#a2b4cd]">{status}</span>
+              <span className="text-[#a2b4cd]">{checkStatus}</span>
             </span>
           );
         }
         return (
           <span className="inline-flex items-center gap-1.5 font-medium text-[11px]">
             <span className="w-1.5 h-1.5 rounded-full bg-text-muted" />
-            <span className="text-[#a2b4cd]">{status}</span>
+            <span className="text-[#a2b4cd]">{checkStatus}</span>
           </span>
         );
-    }
-  };
-
-  const getStatusColorClass = (status: string) => {
-    const baseStatus = status ? status.split(' - ')[0] : '';
-    switch (baseStatus) {
-      case 'Good':
-        return 'text-status-ok bg-status-ok/10 border-status-ok/20';
-      case 'Degraded':
-        return 'text-status-warn bg-status-warn/10 border-status-warn/20';
-      case 'Critical':
-        return 'text-status-error bg-status-error/10 border-status-error/20';
-      case 'Machine Off':
-      default:
-        return 'text-text-muted bg-border-panel/40 border-border-panel/60';
     }
   };
 
@@ -946,190 +929,109 @@ export default function MainPage() {
               </div>
             </div>
 
-            {/* Abas da Modal */}
-            <div className="flex border-b border-border-panel/40 mt-4 mb-4 gap-6 select-none">
-              <button
-                onClick={() => setModalTab('trends')}
-                className={`pb-2 text-xs font-semibold uppercase tracking-wider relative transition-colors cursor-pointer ${
-                  modalTab === 'trends' ? 'text-accent-blue' : 'text-text-muted hover:text-text-primary'
-                }`}
-              >
-                Overview & Trends
-                {modalTab === 'trends' && (
-                  <span className="absolute bottom-[-1px] left-0 right-0 h-[2px] bg-accent-blue" />
-                )}
-              </button>
-              <button
-                onClick={() => setModalTab('history')}
-                className={`pb-2 text-xs font-semibold uppercase tracking-wider relative transition-colors cursor-pointer ${
-                  modalTab === 'history' ? 'text-accent-blue' : 'text-text-muted hover:text-text-primary'
-                }`}
-              >
-                Report History
-                {modalTab === 'history' && (
-                  <span className="absolute bottom-[-1px] left-0 right-0 h-[2px] bg-accent-blue" />
-                )}
-              </button>
-            </div>
-
-            {/* Conteúdo da Modal de acordo com a aba ativa */}
-            {modalTab === 'trends' ? (
-              <div className="flex flex-col gap-5">
-                {/* Override Condition and Observations Form */}
-                <div className="flex flex-col gap-4 bg-bg-panel/40 p-4 border border-border-panel rounded-xl text-xs">
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div className="flex flex-col gap-1.5">
-                      <label className="text-text-muted font-semibold uppercase text-[9px]">Overall CBM Status</label>
-                      <select
-                        value={modalFormFields.condition}
-                        onChange={e => setModalFormFields({ ...modalFormFields, condition: e.target.value })}
-                        className="bg-[#111827] border border-border-panel rounded p-2 text-text-primary focus:border-accent-blue outline-none cursor-pointer text-xs"
-                      >
-                        <option value="Good - Tier 4">Good - Tier 4</option>
-                        <option value="Good - Tier 3">Good - Tier 3</option>
-                        <option value="Degraded - Tier 2">Degraded - Tier 2</option>
-                        <option value="Critical - Tier 1">Critical - Tier 1</option>
-                      </select>
-                    </div>
-                  </div>
-                  
+            {/* Override Condition and Observations Form & Chart */}
+            <div className="flex flex-col gap-5 mt-4">
+              {/* Override Condition and Observations Form */}
+              <div className="flex flex-col gap-4 bg-bg-panel/40 p-4 border border-border-panel rounded-xl text-xs">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div className="flex flex-col gap-1.5">
-                    <label className="text-text-muted font-semibold uppercase text-[9px]">Observation</label>
-                    <textarea
-                      rows={2}
-                      placeholder="Insert observations regarding the equipment..."
-                      value={modalFormFields.observation}
-                      onChange={e => setModalFormFields({ ...modalFormFields, observation: e.target.value })}
-                      className="bg-[#0b0f19] border border-border-panel rounded p-2 text-text-primary focus:border-accent-blue focus:outline-none transition-colors text-xs resize-none"
-                    />
-                  </div>
-
-                  <div className="flex justify-end">
-                    <button
-                      type="button"
-                      onClick={handleEquipmentUpdate}
-                      disabled={savingEquipment}
-                      className="bg-accent-blue text-[#090d16] font-bold px-4 py-2 rounded text-xs hover:bg-[#38bdf8] transition-colors cursor-pointer shadow disabled:opacity-50"
+                    <label className="text-text-muted font-semibold uppercase text-[9px]">Overall CBM Status</label>
+                    <select
+                      value={modalFormFields.condition}
+                      onChange={e => setModalFormFields({ ...modalFormFields, condition: e.target.value })}
+                      className="bg-[#111827] border border-border-panel rounded p-2 text-text-primary focus:border-accent-blue outline-none cursor-pointer text-xs"
                     >
-                      {savingEquipment ? 'Saving...' : 'Save Changes'}
-                    </button>
+                      <option value="Good - Tier 4">Good - Tier 4</option>
+                      <option value="Good - Tier 3">Good - Tier 3</option>
+                      <option value="Degraded - Tier 2">Degraded - Tier 2</option>
+                      <option value="Critical - Tier 1">Critical - Tier 1</option>
+                    </select>
                   </div>
                 </div>
+                
+                <div className="flex flex-col gap-1.5">
+                  <label className="text-text-muted font-semibold uppercase text-[9px]">Observation</label>
+                  <textarea
+                    rows={2}
+                    placeholder="Insert observations regarding the equipment..."
+                    value={modalFormFields.observation}
+                    onChange={e => setModalFormFields({ ...modalFormFields, observation: e.target.value })}
+                    className="bg-[#0b0f19] border border-border-panel rounded p-2 text-text-primary focus:border-accent-blue focus:outline-none transition-colors text-xs resize-none"
+                  />
+                </div>
 
-                {/* Grafico: Historical Condition Trend */}
-                <div className="bg-bg-panel/20 border border-border-panel p-4 rounded-xl">
-                  <h4 className="text-xs font-bold text-text-primary mb-3">Historical Condition Trend</h4>
-                  
-                  {mounted && history.length > 0 ? (
-                    <ResponsiveContainer width="100%" height={180}>
-                      <LineChart data={getChartData()} margin={{ top: 5, right: 10, left: -10, bottom: 0 }}>
-                        <CartesianGrid strokeDasharray="3 3" stroke="var(--border-panel)" vertical={false} opacity={0.3} />
-                        <XAxis
-                          dataKey="name"
-                          stroke="var(--text-muted)"
-                          fontSize={8}
-                          tickLine={false}
-                          axisLine={{ stroke: 'var(--border-panel)', strokeWidth: 1 }}
-                        />
-                        <YAxis
-                          stroke="var(--text-muted)"
-                          fontSize={8}
-                          axisLine={false}
-                          tickLine={false}
-                          domain={[0, 4]}
-                          ticks={[0, 1, 2, 3, 4]}
-                          tickFormatter={(val) => {
-                            switch (val) {
-                              case 4: return 'GOOD - T4';
-                              case 3: return 'GOOD - T3';
-                              case 2: return 'WARN - T2';
-                              case 1: return 'CRIT - T1';
-                              case 0: return 'OFF';
-                              default: return '';
-                            }
-                          }}
-                        />
-                        <RechartsTooltip content={<CustomTooltip />} />
-                        <Line
-                          name="Overall CBM Status"
-                          type="monotone"
-                          dataKey="condition"
-                          stroke="#38bdf8"
-                          strokeWidth={2}
-                          dot={{ r: 3, fill: '#38bdf8', strokeWidth: 0 }}
-                          activeDot={{ r: 5 }}
-                        />
-                      </LineChart>
-                    </ResponsiveContainer>
-                  ) : (
-                    <div className="h-[180px] flex items-center justify-center text-text-muted text-[10px]">
-                      No history data available for this equipment.
-                    </div>
-                  )}
-
-                  {/* Legenda Customizada */}
-                  <div className="flex items-center justify-center gap-6 mt-2 text-[9px] text-text-muted select-none">
-                    <span className="flex items-center gap-1.5">
-                      <span className="w-2.5 h-[2px] bg-accent-blue" />
-                      Overall CBM Status
-                    </span>
-                  </div>
+                <div className="flex justify-end">
+                  <button
+                    type="button"
+                    onClick={handleEquipmentUpdate}
+                    disabled={savingEquipment}
+                    className="bg-accent-blue text-[#090d16] font-bold px-4 py-2 rounded text-xs hover:bg-[#38bdf8] transition-colors cursor-pointer shadow disabled:opacity-50"
+                  >
+                    {savingEquipment ? 'Saving...' : 'Save Changes'}
+                  </button>
                 </div>
               </div>
-            ) : (
-              /* Tabela de histórico */
-              <div className="max-h-[260px] overflow-y-auto border border-border-panel rounded-xl">
-                <table className="w-full text-left border-collapse">
-                  <thead>
-                    <tr className="border-b border-border-panel bg-bg-panel/40 text-[9px] font-bold text-text-primary uppercase tracking-wider select-none">
-                      <th className="px-4 py-2.5">Date & Time</th>
-                      <th className="px-4 py-2.5">Vibration</th>
-                      <th className="px-4 py-2.5">Lube Oil</th>
-                      <th className="px-4 py-2.5">Overall Condition</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {history.length > 0 ? (
-                      history.map((h, idx) => (
-                        <tr key={h.id || idx} className="border-b border-border-panel hover:bg-bg-panel/10 last:border-b-0 text-[10px]">
-                          <td className="px-4 py-2 text-text-muted whitespace-nowrap">
-                            {new Date(h.changedAt).toLocaleString('en-GB', {
-                              day: '2-digit',
-                              month: '2-digit',
-                              year: 'numeric',
-                              hour: '2-digit',
-                              minute: '2-digit',
-                              second: '2-digit'
-                            })}
-                          </td>
-                          <td className="px-4 py-2">
-                            <span className={`px-2 py-0.5 rounded-full border text-[9px] font-medium ${getStatusColorClass(h.vibrationStatus)}`}>
-                              {h.vibrationStatus}
-                            </span>
-                          </td>
-                          <td className="px-4 py-2">
-                            <span className={`px-2 py-0.5 rounded-full border text-[9px] font-medium ${getStatusColorClass(h.lubeOilStatus)}`}>
-                              {h.lubeOilStatus}
-                            </span>
-                          </td>
-                          <td className="px-4 py-2">
-                            <span className={`px-2 py-0.5 rounded-full border text-[9px] font-medium ${getStatusColorClass(h.overallCondition)}`}>
-                              {h.overallCondition}
-                            </span>
-                          </td>
-                        </tr>
-                      ))
-                    ) : (
-                      <tr>
-                        <td colSpan={4} className="px-4 py-8 text-center text-text-muted text-[11px]">
-                          No history records found.
-                        </td>
-                      </tr>
-                    )}
-                  </tbody>
-                </table>
+
+              {/* Grafico: Historical Condition Trend */}
+              <div className="bg-bg-panel/20 border border-border-panel p-4 rounded-xl">
+                <h4 className="text-xs font-bold text-text-primary mb-3">Historical Condition Trend</h4>
+                
+                {mounted && history.length > 0 ? (
+                  <ResponsiveContainer width="100%" height={180}>
+                    <LineChart data={getChartData()} margin={{ top: 5, right: 10, left: -10, bottom: 0 }}>
+                      <CartesianGrid strokeDasharray="3 3" stroke="var(--border-panel)" vertical={false} opacity={0.3} />
+                      <XAxis
+                        dataKey="name"
+                        stroke="var(--text-muted)"
+                        fontSize={8}
+                        tickLine={false}
+                        axisLine={{ stroke: 'var(--border-panel)', strokeWidth: 1 }}
+                      />
+                      <YAxis
+                        stroke="var(--text-muted)"
+                        fontSize={8}
+                        axisLine={false}
+                        tickLine={false}
+                        domain={[0, 4]}
+                        ticks={[0, 1, 2, 3, 4]}
+                        tickFormatter={(val) => {
+                          switch (val) {
+                            case 4: return 'GOOD - T4';
+                            case 3: return 'GOOD - T3';
+                            case 2: return 'WARN - T2';
+                            case 1: return 'CRIT - T1';
+                            case 0: return 'OFF';
+                            default: return '';
+                          }
+                        }}
+                      />
+                      <RechartsTooltip content={<CustomTooltip />} />
+                      <Line
+                        name="Overall CBM Status"
+                        type="monotone"
+                        dataKey="condition"
+                        stroke="#38bdf8"
+                        strokeWidth={2}
+                        dot={{ r: 3, fill: '#38bdf8', strokeWidth: 0 }}
+                        activeDot={{ r: 5 }}
+                      />
+                    </LineChart>
+                  </ResponsiveContainer>
+                ) : (
+                  <div className="h-[180px] flex items-center justify-center text-text-muted text-[10px]">
+                    No history data available for this equipment.
+                  </div>
+                )}
+
+                {/* Legenda Customizada */}
+                <div className="flex items-center justify-center gap-6 mt-2 text-[9px] text-text-muted select-none">
+                  <span className="flex items-center gap-1.5">
+                    <span className="w-2.5 h-[2px] bg-accent-blue" />
+                    Overall CBM Status
+                  </span>
+                </div>
               </div>
-            )}
+            </div>
           </div>
         </div>
       )}
@@ -1161,45 +1063,26 @@ export default function MainPage() {
               
               {/* Coluna Esquerda: Inputs de Metadados e Status */}
               <div className="flex flex-col gap-4">
-                {/* Analysis Type Radio Group */}
+                {/* Analysis Type Dropdown */}
                 <div className="flex flex-col gap-1.5 bg-[#0b0f19]/40 p-3 rounded border border-border-panel/40">
                   <label className="text-text-muted font-semibold uppercase text-[9px] tracking-wide">Analysis Type</label>
-                  <div className="flex gap-6 mt-1 select-none">
-                    <label className="flex items-center gap-2 cursor-pointer text-text-primary font-medium">
-                      <input
-                        type="radio"
-                        name="analysisType"
-                        checked={analysisType === 'Vibration'}
-                        onChange={() => {
-                          setAnalysisType('Vibration');
-                          setFormFields(prev => ({
-                            ...prev,
-                            technology: 'Vibration Analysis',
-                            vibrationStatus: selectedEquipment?.vibrationStatus || 'Good',
-                          }));
-                        }}
-                        className="accent-accent-blue cursor-pointer"
-                      />
-                      <span>Vibration Analysis</span>
-                    </label>
-                    <label className="flex items-center gap-2 cursor-pointer text-text-primary font-medium">
-                      <input
-                        type="radio"
-                        name="analysisType"
-                        checked={analysisType === 'Lube Oil'}
-                        onChange={() => {
-                          setAnalysisType('Lube Oil');
-                          setFormFields(prev => ({
-                            ...prev,
-                            technology: 'Lube Oil Analysis',
-                            lubeOilStatus: selectedEquipment?.lubeOilStatus || 'Good',
-                          }));
-                        }}
-                        className="accent-accent-blue cursor-pointer"
-                      />
-                      <span>Lube Oil Analysis</span>
-                    </label>
-                  </div>
+                  <select
+                    value={analysisType}
+                    onChange={(e) => {
+                      const val = e.target.value as 'Vibration' | 'Lube Oil';
+                      setAnalysisType(val);
+                      setFormFields(prev => ({
+                        ...prev,
+                        technology: val === 'Vibration' ? 'Vibration Analysis' : 'Lube Oil Analysis',
+                        vibrationStatus: val === 'Vibration' ? (selectedEquipment?.vibrationStatus || 'Good') : prev.vibrationStatus,
+                        lubeOilStatus: val === 'Lube Oil' ? (selectedEquipment?.lubeOilStatus || 'Good') : prev.lubeOilStatus,
+                      }));
+                    }}
+                    className="bg-[#111827] border border-border-panel rounded p-2 text-text-primary focus:border-accent-blue outline-none cursor-pointer text-xs w-full mt-1"
+                  >
+                    <option value="Vibration">Vibration Analysis</option>
+                    <option value="Lube Oil">Lube Oil Analysis</option>
+                  </select>
                 </div>
 
                 <div className="grid grid-cols-2 gap-3">
