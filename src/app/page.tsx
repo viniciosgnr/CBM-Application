@@ -659,7 +659,7 @@ export default function MainPage() {
     system: e.system,
     criticality: e.criticality,
     objectType: e.objectType,
-    condition: e.condition,
+    condition: e.condition ? e.condition.split(' - ')[0] : e.condition,
     lastUpdate: e.lastUpdate,
     observation: e.observation || '',
   }));

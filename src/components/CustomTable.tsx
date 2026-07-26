@@ -52,7 +52,10 @@ export default function CustomTable({ columns, data, title, onRowClick }: Custom
   const getUniqueValues = (key: string): string[] => {
     const valuesSet = new Set<string>();
     data.forEach(row => {
-      const val = row[key] !== undefined && row[key] !== null ? String(row[key]) : '';
+      let val = row[key] !== undefined && row[key] !== null ? String(row[key]) : '';
+      if (val.includes(' - Tier ')) {
+        val = val.split(' - Tier ')[0];
+      }
       if (val) valuesSet.add(val);
     });
     return Array.from(valuesSet).sort();
@@ -126,7 +129,10 @@ export default function CustomTable({ columns, data, title, onRowClick }: Custom
       // If no filter state is set or all items are selected, show row
       if (!selectedSet || selectedSet.size === allValues.length) return true;
       
-      const cellVal = String(row[col.key] || '');
+      let cellVal = String(row[col.key] || '');
+      if (cellVal.includes(' - Tier ')) {
+        cellVal = cellVal.split(' - Tier ')[0];
+      }
       return selectedSet.has(cellVal);
     });
   });
