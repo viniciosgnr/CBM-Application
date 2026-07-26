@@ -1,6 +1,6 @@
 'use client';
 import { useState, useEffect } from 'react';
-import { ResponsiveContainer, PieChart, Pie, Cell, BarChart, Bar, XAxis, YAxis, Tooltip, Legend } from 'recharts';
+import { ResponsiveContainer, PieChart, Pie, Cell, BarChart, Bar, XAxis, YAxis, Tooltip } from 'recharts';
 import type { PieLabelRenderProps } from 'recharts';
 
 export interface EquipmentChartData {
@@ -13,16 +13,17 @@ export interface ChartWorkOrder {
   dueDate?: string | null;
 }
 
-// Definindo as cores do OptSite correspondentes ao CSS do globals.css
+// SLB Optisite Figma Color Palette
 const COLORS = {
-  green: '#22c55e',   // var(--status-ok)
-  blue: '#0ea5e9',    // var(--accent-blue)
-  orange: '#f59e0b',  // var(--status-warn)
-  red: '#ef4444',     // var(--status-error)
-  gray: '#64748b'     // var(--text-muted)
+  green: '#84cc16',   // Lime Green (Good / Completed)
+  blue: '#3b82f6',    // Medium Blue (In Progress)
+  skyBlue: '#93c5fd', // Sky Blue (Pending in Days Left)
+  orange: '#f97316',  // Vibrant Orange (Degraded)
+  red: '#f87171',     // Coral Red (Critical / Cancelled)
+  gray: '#475569'     // Slate Gray (Pending / Machine Off)
 };
 
-// Interface para o Tooltip Customizado
+// Interface for Custom Tooltip
 interface CustomTooltipProps {
   active?: boolean;
   payload?: Array<{
@@ -32,20 +33,19 @@ interface CustomTooltipProps {
   }>;
 }
 
-// Tooltip customizado do OptSite
 const CustomTooltip = ({ active, payload }: CustomTooltipProps) => {
   if (active && payload && payload.length) {
     return (
-      <div className="bg-[#111827] border border-[#1e2a3a] p-2 rounded shadow-lg text-[10px]">
+      <div className="bg-[#0b0f19] border border-[#1e2a3a] px-2.5 py-1.5 rounded shadow-xl text-[10px]">
         <p className="font-semibold text-[#e2e8f0]">{payload[0].name}</p>
-        <p className="text-[#0ea5e9] font-medium mt-1">Valor: {payload[0].value}%</p>
+        <p className="text-[#38bdf8] font-medium mt-0.5">Value: {payload[0].value}</p>
       </div>
     );
   }
   return null;
 };
 
-// Componente para desenhar as bolinhas com porcentagem ao redor do Donut Chart
+// Donut Chart Label Render
 interface CustomizedLabelProps {
   cx: number;
   cy: number;
@@ -57,18 +57,17 @@ interface CustomizedLabelProps {
 
 const renderCustomizedLabel = ({ cx, cy, midAngle, outerRadius, percent, color }: CustomizedLabelProps) => {
   const RADIAN = Math.PI / 180;
-  // Desloca o raio para fora da circunferência
-  const radius = outerRadius + 14;
+  const radius = outerRadius + 16;
   const x = cx + radius * Math.cos(-midAngle * RADIAN);
   const y = cy + radius * Math.sin(-midAngle * RADIAN);
 
   return (
     <g>
-      <circle cx={x - 6} cy={y - 3} r={3} fill={color} />
+      <circle cx={x - 6} cy={y - 2} r={3} fill={color} />
       <text
         x={x}
         y={y}
-        fill="var(--text-primary)"
+        fill="#cbd5e1"
         textAnchor={x > cx ? 'start' : 'end'}
         dominantBaseline="central"
         className="text-[9px] font-semibold"
@@ -79,7 +78,21 @@ const renderCustomizedLabel = ({ cx, cy, midAngle, outerRadius, percent, color }
   );
 };
 
-// Helper to parse dates in different formats (dd/mm/yyyy or ISO)
+// Top-Left Custom Legend Component
+function TopLeftLegend({ items }: { items: { label: string; color: string }[] }) {
+  return (
+    <div className="flex items-center gap-3 mb-2 text-[9px] font-medium text-text-muted select-none">
+      {items.map(item => (
+        <span key={item.label} className="flex items-center gap-1.5">
+          <span className="w-2.5 h-2.5 rounded-[2px]" style={{ backgroundColor: item.color }} />
+          {item.label}
+        </span>
+      ))}
+    </div>
+  );
+}
+
+// Date parser helper
 function parseDateString(str?: string | null): Date | null {
   if (!str) return null;
   if (str.includes('/')) {
@@ -121,7 +134,6 @@ export function WorkOrderStatusPie({ workOrders = [] }: { workOrders?: ChartWork
       } else if (s === 'Rejected' || s === 'Cancelled') {
         counts.Cancelled++;
       } else {
-        // e.g. 'Accepted', 'Under Preparation', 'Prepared', 'Released', 'Work Started', 'Work Done', 'Reported'
         counts.InProgress++;
       }
     });
@@ -136,52 +148,56 @@ export function WorkOrderStatusPie({ workOrders = [] }: { workOrders?: ChartWork
       { name: 'Completed', value: 45, color: COLORS.green },
       { name: 'In Progress', value: 46, color: COLORS.blue },
       { name: 'Pending', value: 9, color: COLORS.gray },
-      { name: 'Cancelled', value: 1, color: COLORS.red }
+      { name: 'Cancelled', value: 9, color: COLORS.red }
     ];
   }
 
+  const legendItems = [
+    { label: 'Completed', color: COLORS.green },
+    { label: 'In Progress', color: COLORS.blue },
+    { label: 'Pending', color: COLORS.gray },
+    { label: 'Cancelled', color: COLORS.red }
+  ];
+
   return (
-    <ResponsiveContainer width="100%" height={220}>
-      <PieChart>
-        <Pie
-          data={data}
-          cx="50%"
-          cy="48%"
-          innerRadius={45}
-          outerRadius={65}
-          paddingAngle={2}
-          dataKey="value"
-          label={(props: PieLabelRenderProps) => {
-            const cx = props.cx ?? 0;
-            const cy = props.cy ?? 0;
-            const midAngle = props.midAngle ?? 0;
-            const outerRadius = props.outerRadius ?? 0;
-            const percent = props.percent ?? 0;
-            const index = props.index ?? 0;
-            return renderCustomizedLabel({
-              cx,
-              cy,
-              midAngle,
-              outerRadius,
-              percent,
-              color: data[index].color
-            });
-          }}
-          labelLine={false}
-        >
-          {data.map((entry, index) => (
-            <Cell key={`cell-${index}`} fill={entry.color} />
-          ))}
-        </Pie>
-        <Tooltip content={<CustomTooltip />} />
-        <Legend
-          iconSize={8}
-          iconType="circle"
-          verticalAlign="bottom"
-          wrapperStyle={{ fontSize: 9, paddingTop: 10, fill: 'var(--text-muted)' }}
-        />
-      </PieChart>
-    </ResponsiveContainer>
+    <div className="w-full flex flex-col">
+      <TopLeftLegend items={legendItems} />
+      <ResponsiveContainer width="100%" height={190}>
+        <PieChart>
+          <Pie
+            data={data}
+            cx="50%"
+            cy="50%"
+            innerRadius={48}
+            outerRadius={68}
+            paddingAngle={3}
+            dataKey="value"
+            label={(props: PieLabelRenderProps) => {
+              const cx = props.cx ?? 0;
+              const cy = props.cy ?? 0;
+              const midAngle = props.midAngle ?? 0;
+              const outerRadius = props.outerRadius ?? 0;
+              const percent = props.percent ?? 0;
+              const index = props.index ?? 0;
+              return renderCustomizedLabel({
+                cx,
+                cy,
+                midAngle,
+                outerRadius,
+                percent,
+                color: data[index].color
+              });
+            }}
+            labelLine={false}
+          >
+            {data.map((entry, index) => (
+              <Cell key={`cell-${index}`} fill={entry.color} />
+            ))}
+          </Pie>
+          <Tooltip content={<CustomTooltip />} />
+        </PieChart>
+      </ResponsiveContainer>
+    </div>
   );
 }
 
@@ -209,7 +225,7 @@ export function DaysLeftBar({ workOrders = [] }: { workOrders?: ChartWorkOrder[]
     workOrders.forEach(w => {
       const s = w.status;
       if (s === 'Finished' || s === 'Completed' || s === 'Rejected' || s === 'Cancelled') {
-        return; // Exclude resolved/cancelled from dynamic due list
+        return;
       }
       const typeKey = (s === 'Pending' || s === 'Observed') ? 'Pending' : 'In Progress';
       const due = parseDateString(w.dueDate);
@@ -237,57 +253,55 @@ export function DaysLeftBar({ workOrders = [] }: { workOrders?: ChartWorkOrder[]
     ];
   } else {
     data = [
-      { name: 'Overdue', 'In Progress': 10, Pending: 10 },
+      { name: 'Overdue', 'In Progress': 15, Pending: 5 },
       { name: '0-7 days', 'In Progress': 15, Pending: 15 },
-      { name: '8-30 days', 'In Progress': 5, Pending: 75 },
+      { name: '8-30 days', 'In Progress': 0, Pending: 80 },
       { name: '> 30 days', 'In Progress': 0, Pending: 75 }
     ];
   }
 
-  // Determine max value for YAxis scaling
-  const maxVal = Math.max(...data.map(d => d['In Progress'] + d.Pending), 10);
-  const domainMax = Math.ceil(maxVal / 5) * 5; // rounded to nearest multiple of 5
+  const legendItems = [
+    { label: 'In Progress', color: COLORS.blue },
+    { label: 'Pending', color: COLORS.skyBlue }
+  ];
 
   return (
-    <ResponsiveContainer width="100%" height={220}>
-      <BarChart data={data} margin={{ top: 10, right: 10, left: -25, bottom: 0 }}>
-        <XAxis
-          dataKey="name"
-          stroke="var(--text-muted)"
-          fontSize={9}
-          tickLine={false}
-          axisLine={{ stroke: 'var(--border-panel)', strokeWidth: 1 }}
-        />
-        <YAxis
-          stroke="var(--text-muted)"
-          fontSize={9}
-          axisLine={false}
-          tickLine={false}
-          domain={[0, domainMax]}
-          allowDecimals={false}
-        />
-        <Tooltip
-          contentStyle={{
-            background: '#111827',
-            border: '1px solid #1e2a3a',
-            borderRadius: 4,
-            color: '#e2e8f0',
-            fontSize: 9,
-          }}
-        />
-        <Legend
-          iconSize={8}
-          iconType="circle"
-          verticalAlign="bottom"
-          wrapperStyle={{ fontSize: 9, paddingTop: 10 }}
-        />
-        <Bar dataKey="In Progress" stackId="a" fill={COLORS.blue} barSize={32} />
-        <Bar dataKey="Pending" stackId="a" fill={COLORS.gray} barSize={32} />
-      </BarChart>
-    </ResponsiveContainer>
+    <div className="w-full flex flex-col">
+      <TopLeftLegend items={legendItems} />
+      <ResponsiveContainer width="100%" height={190}>
+        <BarChart data={data} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+          <XAxis
+            dataKey="name"
+            stroke="var(--text-muted)"
+            fontSize={9}
+            tickLine={false}
+            axisLine={{ stroke: 'var(--border-panel)', strokeWidth: 1 }}
+          />
+          <YAxis
+            stroke="var(--text-muted)"
+            fontSize={9}
+            axisLine={false}
+            tickLine={false}
+            domain={[0, 80]}
+            ticks={[0, 20, 40, 60, 80]}
+            allowDecimals={false}
+          />
+          <Tooltip
+            contentStyle={{
+              background: '#0b0f19',
+              border: '1px solid #1e2a3a',
+              borderRadius: 4,
+              color: '#e2e8f0',
+              fontSize: 9,
+            }}
+          />
+          <Bar dataKey="In Progress" stackId="a" fill={COLORS.blue} barSize={44} />
+          <Bar dataKey="Pending" stackId="a" fill={COLORS.skyBlue} barSize={44} />
+        </BarChart>
+      </ResponsiveContainer>
+    </div>
   );
 }
-
 
 // 3. Donut Chart: Equipment by CBM Condition
 export function EquipmentConditionPie({ equipments = [] }: { equipments?: EquipmentChartData[] }) {
@@ -301,7 +315,6 @@ export function EquipmentConditionPie({ equipments = [] }: { equipments?: Equipm
     return <div className="h-[220px] w-full" />;
   }
 
-  // Use dynamic counts if data is passed, otherwise fallback to static placeholder counts
   let data = [];
   if (equipments && equipments.length > 0) {
     const counts = { Good: 0, Degraded: 0, Critical: 0, 'Machine Off': 0 };
@@ -316,59 +329,63 @@ export function EquipmentConditionPie({ equipments = [] }: { equipments?: Equipm
       { name: 'Good', value: counts.Good, color: COLORS.green },
       { name: 'Degraded', value: counts.Degraded, color: COLORS.orange },
       { name: 'Critical', value: counts.Critical, color: COLORS.red },
-      { name: 'Machine Off', value: counts['Machine Off'], color: COLORS.gray }
+      { name: 'Pending', value: counts['Machine Off'], color: COLORS.gray }
     ].filter(item => item.value > 0);
   } else {
     data = [
       { name: 'Good', value: 45, color: COLORS.green },
       { name: 'Degraded', value: 46, color: COLORS.orange },
       { name: 'Critical', value: 9, color: COLORS.red },
-      { name: 'Machine Off', value: 1, color: COLORS.gray }
+      { name: 'Pending', value: 10, color: COLORS.gray }
     ];
   }
 
+  const legendItems = [
+    { label: 'Good', color: COLORS.green },
+    { label: 'Degraded', color: COLORS.orange },
+    { label: 'Critical', color: COLORS.red },
+    { label: 'Pending', color: COLORS.gray }
+  ];
+
   return (
-    <ResponsiveContainer width="100%" height={220}>
-      <PieChart>
-        <Pie
-          data={data}
-          cx="50%"
-          cy="48%"
-          innerRadius={45}
-          outerRadius={65}
-          paddingAngle={2}
-          dataKey="value"
-          label={(props: PieLabelRenderProps) => {
-            const cx = props.cx ?? 0;
-            const cy = props.cy ?? 0;
-            const midAngle = props.midAngle ?? 0;
-            const outerRadius = props.outerRadius ?? 0;
-            const percent = props.percent ?? 0;
-            const index = props.index ?? 0;
-            return renderCustomizedLabel({
-              cx,
-              cy,
-              midAngle,
-              outerRadius,
-              percent,
-              color: data[index].color
-            });
-          }}
-          labelLine={false}
-        >
-          {data.map((entry, index) => (
-            <Cell key={`cell-${index}`} fill={entry.color} />
-          ))}
-        </Pie>
-        <Tooltip content={<CustomTooltip />} />
-        <Legend
-          iconSize={8}
-          iconType="circle"
-          verticalAlign="bottom"
-          wrapperStyle={{ fontSize: 9, paddingTop: 10 }}
-        />
-      </PieChart>
-    </ResponsiveContainer>
+    <div className="w-full flex flex-col">
+      <TopLeftLegend items={legendItems} />
+      <ResponsiveContainer width="100%" height={190}>
+        <PieChart>
+          <Pie
+            data={data}
+            cx="50%"
+            cy="50%"
+            innerRadius={48}
+            outerRadius={68}
+            paddingAngle={3}
+            dataKey="value"
+            label={(props: PieLabelRenderProps) => {
+              const cx = props.cx ?? 0;
+              const cy = props.cy ?? 0;
+              const midAngle = props.midAngle ?? 0;
+              const outerRadius = props.outerRadius ?? 0;
+              const percent = props.percent ?? 0;
+              const index = props.index ?? 0;
+              return renderCustomizedLabel({
+                cx,
+                cy,
+                midAngle,
+                outerRadius,
+                percent,
+                color: data[index].color
+              });
+            }}
+            labelLine={false}
+          >
+            {data.map((entry, index) => (
+              <Cell key={`cell-${index}`} fill={entry.color} />
+            ))}
+          </Pie>
+          <Tooltip content={<CustomTooltip />} />
+        </PieChart>
+      </ResponsiveContainer>
+    </div>
   );
 }
 
@@ -387,72 +404,77 @@ export function CbmCriticalityBar({ equipments = [] }: { equipments?: EquipmentC
   let data = [];
   if (equipments && equipments.length > 0) {
     const groups = {
-      High: { Good: 0, Degraded: 0, Critical: 0, 'Machine Off': 0 },
-      Medium: { Good: 0, Degraded: 0, Critical: 0, 'Machine Off': 0 },
-      Low: { Good: 0, Degraded: 0, Critical: 0, 'Machine Off': 0 }
+      High: { Good: 0, Degraded: 0, Critical: 0, Pending: 0 },
+      Medium: { Good: 0, Degraded: 0, Critical: 0, Pending: 0 },
+      Low: { Good: 0, Degraded: 0, Critical: 0, Pending: 0 }
     };
     equipments.forEach(e => {
-      const crit = e.criticality; // 'High', 'Medium', 'Low'
+      const crit = e.criticality;
       const cond = e.condition ? e.condition.split(' - ')[0] : '';
       if (crit in groups) {
         const c = crit as keyof typeof groups;
         if (cond === 'Good') groups[c].Good++;
         else if (cond === 'Degraded') groups[c].Degraded++;
         else if (cond === 'Critical') groups[c].Critical++;
-        else if (cond === 'Machine Off') groups[c]['Machine Off']++;
+        else groups[c].Pending++;
       }
     });
     data = [
-      { name: 'High', Good: groups.High.Good, Degraded: groups.High.Degraded, Critical: groups.High.Critical, 'Machine Off': groups.High['Machine Off'] },
-      { name: 'Medium', Good: groups.Medium.Good, Degraded: groups.Medium.Degraded, Critical: groups.Medium.Critical, 'Machine Off': groups.Medium['Machine Off'] },
-      { name: 'Low', Good: groups.Low.Good, Degraded: groups.Low.Degraded, Critical: groups.Low.Critical, 'Machine Off': groups.Low['Machine Off'] }
+      { name: 'High', Good: groups.High.Good, Degraded: groups.High.Degraded, Critical: groups.High.Critical, Pending: groups.High.Pending },
+      { name: 'Medium', Good: groups.Medium.Good, Degraded: groups.Medium.Degraded, Critical: groups.Medium.Critical, Pending: groups.Medium.Pending },
+      { name: 'Low', Good: groups.Low.Good, Degraded: groups.Low.Degraded, Critical: groups.Low.Critical, Pending: groups.Low.Pending }
     ];
   } else {
     data = [
-      { name: 'High', Good: 15, Degraded: 20, Critical: 10, 'Machine Off': 3 },
-      { name: 'Medium', Good: 15, Degraded: 20, Critical: 10, 'Machine Off': 3 },
-      { name: 'Low', Good: 15, Degraded: 20, Critical: 10, 'Machine Off': 3 }
+      { name: 'High', Good: 15, Degraded: 12, Critical: 10, Pending: 10 },
+      { name: 'Medium', Good: 15, Degraded: 12, Critical: 10, Pending: 10 },
+      { name: 'Low', Good: 15, Degraded: 12, Critical: 10, Pending: 10 }
     ];
   }
 
+  const legendItems = [
+    { label: 'Good', color: COLORS.green },
+    { label: 'Degraded', color: COLORS.orange },
+    { label: 'Critical', color: COLORS.red },
+    { label: 'Pending', color: COLORS.gray }
+  ];
+
   return (
-    <ResponsiveContainer width="100%" height={220}>
-      <BarChart data={data} margin={{ top: 10, right: 10, left: -25, bottom: 0 }}>
-        <XAxis
-          dataKey="name"
-          stroke="var(--text-muted)"
-          fontSize={9}
-          tickLine={false}
-          axisLine={{ stroke: 'var(--border-panel)', strokeWidth: 1 }}
-        />
-        <YAxis
-          stroke="var(--text-muted)"
-          fontSize={9}
-          axisLine={false}
-          tickLine={false}
-          domain={[0, 10]}
-          allowDecimals={false}
-        />
-        <Tooltip
-          contentStyle={{
-            background: '#111827',
-            border: '1px solid #1e2a3a',
-            borderRadius: 4,
-            color: '#e2e8f0',
-            fontSize: 9,
-          }}
-        />
-        <Legend
-          iconSize={8}
-          iconType="circle"
-          verticalAlign="bottom"
-          wrapperStyle={{ fontSize: 9, paddingTop: 10 }}
-        />
-        <Bar dataKey="Machine Off" stackId="a" fill={COLORS.gray} barSize={32} />
-        <Bar dataKey="Degraded" stackId="a" fill={COLORS.orange} barSize={32} />
-        <Bar dataKey="Critical" stackId="a" fill={COLORS.red} barSize={32} />
-        <Bar dataKey="Good" stackId="a" fill={COLORS.green} barSize={32} />
-      </BarChart>
-    </ResponsiveContainer>
+    <div className="w-full flex flex-col">
+      <TopLeftLegend items={legendItems} />
+      <ResponsiveContainer width="100%" height={190}>
+        <BarChart data={data} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+          <XAxis
+            dataKey="name"
+            stroke="var(--text-muted)"
+            fontSize={9}
+            tickLine={false}
+            axisLine={{ stroke: 'var(--border-panel)', strokeWidth: 1 }}
+          />
+          <YAxis
+            stroke="var(--text-muted)"
+            fontSize={9}
+            axisLine={false}
+            tickLine={false}
+            domain={[0, 80]}
+            ticks={[0, 20, 40, 60, 80]}
+            allowDecimals={false}
+          />
+          <Tooltip
+            contentStyle={{
+              background: '#0b0f19',
+              border: '1px solid #1e2a3a',
+              borderRadius: 4,
+              color: '#e2e8f0',
+              fontSize: 9,
+            }}
+          />
+          <Bar dataKey="Pending" stackId="a" fill={COLORS.gray} barSize={48} />
+          <Bar dataKey="Degraded" stackId="a" fill={COLORS.orange} barSize={48} />
+          <Bar dataKey="Critical" stackId="a" fill={COLORS.red} barSize={48} />
+          <Bar dataKey="Good" stackId="a" fill={COLORS.green} barSize={48} />
+        </BarChart>
+      </ResponsiveContainer>
+    </div>
   );
 }
