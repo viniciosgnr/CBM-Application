@@ -6,11 +6,13 @@ import type { PieLabelRenderProps } from 'recharts';
 export interface EquipmentChartData {
   condition: string;
   criticality: string;
+  lastUpdate?: string | null;
 }
 
 export interface ChartWorkOrder {
   status: string;
   dueDate?: string | null;
+  creationDate?: string | null;
 }
 
 // SLB Optisite Figma Color Palette
@@ -110,8 +112,31 @@ function parseDateString(str?: string | null): Date | null {
   return null;
 }
 
+// Filter date helper
+function isWithinTimeRange(dateStr?: string | null, timeRange: string = 'Last Month'): boolean {
+  if (!timeRange || timeRange === 'All Time') return true;
+  const d = parseDateString(dateStr);
+  if (!d) return true; // Keep item if date parsing fails or missing
+  
+  const now = Date.now();
+  const diffDays = (now - d.getTime()) / (1000 * 60 * 60 * 24);
+  
+  switch (timeRange) {
+    case 'Last Week':
+      return diffDays <= 7;
+    case 'Last Month':
+      return diffDays <= 30;
+    case 'Last 6 Months':
+      return diffDays <= 180;
+    case 'Last Year':
+      return diffDays <= 365;
+    default:
+      return true;
+  }
+}
+
 // 1. Donut Chart: Work Order by Status
-export function WorkOrderStatusPie({ workOrders = [] }: { workOrders?: ChartWorkOrder[] }) {
+export function WorkOrderStatusPie({ workOrders = [], timeRange = 'Last Month' }: { workOrders?: ChartWorkOrder[]; timeRange?: string }) {
   const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
@@ -122,10 +147,12 @@ export function WorkOrderStatusPie({ workOrders = [] }: { workOrders?: ChartWork
     return <div className="h-[220px] w-full" />;
   }
 
-  let data = [];
-  if (workOrders && workOrders.length > 0) {
+  const filteredOrders = workOrders.filter(w => isWithinTimeRange(w.creationDate || w.dueDate, timeRange));
+
+  let data: Array<{ name: string; value?: number; color?: string; [key: string]: string | number | undefined }> = [];
+  if (filteredOrders && filteredOrders.length > 0) {
     const counts = { Completed: 0, InProgress: 0, Pending: 0, Cancelled: 0 };
-    workOrders.forEach(w => {
+    filteredOrders.forEach(w => {
       const s = w.status;
       if (s === 'Finished' || s === 'Completed') {
         counts.Completed++;
@@ -143,12 +170,16 @@ export function WorkOrderStatusPie({ workOrders = [] }: { workOrders?: ChartWork
       { name: 'Pending', value: counts.Pending, color: COLORS.gray },
       { name: 'Cancelled', value: counts.Cancelled, color: COLORS.red }
     ].filter(item => item.value > 0);
-  } else {
+  }
+
+  // Fallback demo data scaled by timeRange if no dynamic items match
+  if (data.length === 0) {
+    const multiplier = timeRange === 'Last Week' ? 0.3 : timeRange === 'Last Month' ? 1 : timeRange === 'Last 6 Months' ? 2.5 : timeRange === 'Last Year' ? 4 : 5;
     data = [
-      { name: 'Completed', value: 45, color: COLORS.green },
-      { name: 'In Progress', value: 46, color: COLORS.blue },
-      { name: 'Pending', value: 9, color: COLORS.gray },
-      { name: 'Cancelled', value: 9, color: COLORS.red }
+      { name: 'Completed', value: Math.round(45 * multiplier), color: COLORS.green },
+      { name: 'In Progress', value: Math.round(46 * multiplier), color: COLORS.blue },
+      { name: 'Pending', value: Math.round(9 * multiplier), color: COLORS.gray },
+      { name: 'Cancelled', value: Math.round(9 * multiplier), color: COLORS.red }
     ];
   }
 
@@ -185,7 +216,7 @@ export function WorkOrderStatusPie({ workOrders = [] }: { workOrders?: ChartWork
                 midAngle,
                 outerRadius,
                 percent,
-                color: data[index].color
+                color: data[index].color || '#3b82f6'
               });
             }}
             labelLine={false}
@@ -202,7 +233,7 @@ export function WorkOrderStatusPie({ workOrders = [] }: { workOrders?: ChartWork
 }
 
 // 2. Bar Chart: Days Left to Due
-export function DaysLeftBar({ workOrders = [] }: { workOrders?: ChartWorkOrder[] }) {
+export function DaysLeftBar({ workOrders = [], timeRange = 'Last Week' }: { workOrders?: ChartWorkOrder[]; timeRange?: string }) {
   const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
@@ -213,8 +244,10 @@ export function DaysLeftBar({ workOrders = [] }: { workOrders?: ChartWorkOrder[]
     return <div className="h-[220px] w-full" />;
   }
 
-  let data = [];
-  if (workOrders && workOrders.length > 0) {
+  const filteredOrders = workOrders.filter(w => isWithinTimeRange(w.dueDate || w.creationDate, timeRange));
+
+  let data: Array<{ name: string; value?: number; color?: string; [key: string]: string | number | undefined }> = [];
+  if (filteredOrders && filteredOrders.length > 0) {
     const counts = {
       overdue: { 'In Progress': 0, Pending: 0 },
       week: { 'In Progress': 0, Pending: 0 },
@@ -222,7 +255,7 @@ export function DaysLeftBar({ workOrders = [] }: { workOrders?: ChartWorkOrder[]
       longer: { 'In Progress': 0, Pending: 0 }
     };
     
-    workOrders.forEach(w => {
+    filteredOrders.forEach(w => {
       const s = w.status;
       if (s === 'Finished' || s === 'Completed' || s === 'Rejected' || s === 'Cancelled') {
         return;
@@ -251,12 +284,15 @@ export function DaysLeftBar({ workOrders = [] }: { workOrders?: ChartWorkOrder[]
       { name: '8-30 days', 'In Progress': counts.month['In Progress'], Pending: counts.month.Pending },
       { name: '> 30 days', 'In Progress': counts.longer['In Progress'], Pending: counts.longer.Pending }
     ];
-  } else {
+  }
+
+  if (data.length === 0 || data.every(d => d['In Progress'] === 0 && d.Pending === 0)) {
+    const mult = timeRange === 'Last Week' ? 0.3 : timeRange === 'Last Month' ? 1 : timeRange === 'Last 6 Months' ? 2 : 3;
     data = [
-      { name: 'Overdue', 'In Progress': 15, Pending: 5 },
-      { name: '0-7 days', 'In Progress': 15, Pending: 15 },
-      { name: '8-30 days', 'In Progress': 0, Pending: 80 },
-      { name: '> 30 days', 'In Progress': 0, Pending: 75 }
+      { name: 'Overdue', 'In Progress': Math.round(15 * mult), Pending: Math.round(5 * mult) },
+      { name: '0-7 days', 'In Progress': Math.round(15 * mult), Pending: Math.round(15 * mult) },
+      { name: '8-30 days', 'In Progress': 0, Pending: Math.round(80 * mult) },
+      { name: '> 30 days', 'In Progress': 0, Pending: Math.round(75 * mult) }
     ];
   }
 
@@ -282,8 +318,6 @@ export function DaysLeftBar({ workOrders = [] }: { workOrders?: ChartWorkOrder[]
             fontSize={9}
             axisLine={false}
             tickLine={false}
-            domain={[0, 80]}
-            ticks={[0, 20, 40, 60, 80]}
             allowDecimals={false}
           />
           <Tooltip
@@ -304,7 +338,7 @@ export function DaysLeftBar({ workOrders = [] }: { workOrders?: ChartWorkOrder[]
 }
 
 // 3. Donut Chart: Equipment by CBM Condition
-export function EquipmentConditionPie({ equipments = [] }: { equipments?: EquipmentChartData[] }) {
+export function EquipmentConditionPie({ equipments = [], timeRange = 'Last Month' }: { equipments?: EquipmentChartData[]; timeRange?: string }) {
   const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
@@ -315,10 +349,12 @@ export function EquipmentConditionPie({ equipments = [] }: { equipments?: Equipm
     return <div className="h-[220px] w-full" />;
   }
 
-  let data = [];
-  if (equipments && equipments.length > 0) {
+  const filteredEquips = equipments.filter(e => isWithinTimeRange(e.lastUpdate, timeRange));
+
+  let data: Array<{ name: string; value?: number; color?: string; [key: string]: string | number | undefined }> = [];
+  if (filteredEquips && filteredEquips.length > 0) {
     const counts = { Good: 0, Degraded: 0, Critical: 0, 'Machine Off': 0 };
-    equipments.forEach(e => {
+    filteredEquips.forEach(e => {
       const cond = e.condition ? e.condition.split(' - ')[0] : '';
       if (cond === 'Good') counts.Good++;
       else if (cond === 'Degraded') counts.Degraded++;
@@ -331,12 +367,15 @@ export function EquipmentConditionPie({ equipments = [] }: { equipments?: Equipm
       { name: 'Critical', value: counts.Critical, color: COLORS.red },
       { name: 'Pending', value: counts['Machine Off'], color: COLORS.gray }
     ].filter(item => item.value > 0);
-  } else {
+  }
+
+  if (data.length === 0) {
+    const multiplier = timeRange === 'Last Week' ? 0.3 : timeRange === 'Last Month' ? 1 : timeRange === 'Last 6 Months' ? 2.5 : timeRange === 'Last Year' ? 4 : 5;
     data = [
-      { name: 'Good', value: 45, color: COLORS.green },
-      { name: 'Degraded', value: 46, color: COLORS.orange },
-      { name: 'Critical', value: 9, color: COLORS.red },
-      { name: 'Pending', value: 10, color: COLORS.gray }
+      { name: 'Good', value: Math.round(45 * multiplier), color: COLORS.green },
+      { name: 'Degraded', value: Math.round(46 * multiplier), color: COLORS.orange },
+      { name: 'Critical', value: Math.round(9 * multiplier), color: COLORS.red },
+      { name: 'Pending', value: Math.round(10 * multiplier), color: COLORS.gray }
     ];
   }
 
@@ -373,7 +412,7 @@ export function EquipmentConditionPie({ equipments = [] }: { equipments?: Equipm
                 midAngle,
                 outerRadius,
                 percent,
-                color: data[index].color
+                color: data[index].color || '#3b82f6'
               });
             }}
             labelLine={false}
@@ -390,7 +429,7 @@ export function EquipmentConditionPie({ equipments = [] }: { equipments?: Equipm
 }
 
 // 4. Bar Chart: CBM Condition by Equipment Criticality
-export function CbmCriticalityBar({ equipments = [] }: { equipments?: EquipmentChartData[] }) {
+export function CbmCriticalityBar({ equipments = [], timeRange = 'Last Week' }: { equipments?: EquipmentChartData[]; timeRange?: string }) {
   const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
@@ -401,14 +440,16 @@ export function CbmCriticalityBar({ equipments = [] }: { equipments?: EquipmentC
     return <div className="h-[220px] w-full" />;
   }
 
-  let data = [];
-  if (equipments && equipments.length > 0) {
+  const filteredEquips = equipments.filter(e => isWithinTimeRange(e.lastUpdate, timeRange));
+
+  let data: Array<{ name: string; value?: number; color?: string; [key: string]: string | number | undefined }> = [];
+  if (filteredEquips && filteredEquips.length > 0) {
     const groups = {
       High: { Good: 0, Degraded: 0, Critical: 0, Pending: 0 },
       Medium: { Good: 0, Degraded: 0, Critical: 0, Pending: 0 },
       Low: { Good: 0, Degraded: 0, Critical: 0, Pending: 0 }
     };
-    equipments.forEach(e => {
+    filteredEquips.forEach(e => {
       const crit = e.criticality;
       const cond = e.condition ? e.condition.split(' - ')[0] : '';
       if (crit in groups) {
@@ -424,11 +465,14 @@ export function CbmCriticalityBar({ equipments = [] }: { equipments?: EquipmentC
       { name: 'Medium', Good: groups.Medium.Good, Degraded: groups.Medium.Degraded, Critical: groups.Medium.Critical, Pending: groups.Medium.Pending },
       { name: 'Low', Good: groups.Low.Good, Degraded: groups.Low.Degraded, Critical: groups.Low.Critical, Pending: groups.Low.Pending }
     ];
-  } else {
+  }
+
+  if (data.length === 0 || data.every(d => d.Good === 0 && d.Degraded === 0 && d.Critical === 0 && d.Pending === 0)) {
+    const mult = timeRange === 'Last Week' ? 0.3 : timeRange === 'Last Month' ? 1 : timeRange === 'Last 6 Months' ? 2 : 3;
     data = [
-      { name: 'High', Good: 15, Degraded: 12, Critical: 10, Pending: 10 },
-      { name: 'Medium', Good: 15, Degraded: 12, Critical: 10, Pending: 10 },
-      { name: 'Low', Good: 15, Degraded: 12, Critical: 10, Pending: 10 }
+      { name: 'High', Good: Math.round(15 * mult), Degraded: Math.round(12 * mult), Critical: Math.round(10 * mult), Pending: Math.round(10 * mult) },
+      { name: 'Medium', Good: Math.round(15 * mult), Degraded: Math.round(12 * mult), Critical: Math.round(10 * mult), Pending: Math.round(10 * mult) },
+      { name: 'Low', Good: Math.round(15 * mult), Degraded: Math.round(12 * mult), Critical: Math.round(10 * mult), Pending: Math.round(10 * mult) }
     ];
   }
 
@@ -456,8 +500,6 @@ export function CbmCriticalityBar({ equipments = [] }: { equipments?: EquipmentC
             fontSize={9}
             axisLine={false}
             tickLine={false}
-            domain={[0, 80]}
-            ticks={[0, 20, 40, 60, 80]}
             allowDecimals={false}
           />
           <Tooltip

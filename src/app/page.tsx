@@ -130,6 +130,12 @@ export default function MainPage() {
   const [maximizedChart, setMaximizedChart] = useState<string | null>(null);
   const [mounted, setMounted] = useState(false);
 
+  // Per-chart time range states
+  const [woStatusTimeRange, setWoStatusTimeRange] = useState('Last Month');
+  const [daysLeftTimeRange, setDaysLeftTimeRange] = useState('Last Week');
+  const [equipCondTimeRange, setEquipCondTimeRange] = useState('Last Month');
+  const [cbmCritTimeRange, setCbmCritTimeRange] = useState('Last Week');
+
   // States for DB data
   const [equipments, setEquipments] = useState<Equipment[]>([]);
   const [loadingEquipments, setLoadingEquipments] = useState(true);
@@ -758,18 +764,20 @@ export default function MainPage() {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <DashboardCard
                 title="Work Order by Status"
-                filterText="Last Month"
+                timeRange={woStatusTimeRange}
+                onTimeRangeChange={setWoStatusTimeRange}
                 onMaximize={() => setMaximizedChart('wo-status')}
               >
-                <WorkOrderStatusPie workOrders={workOrders} />
+                <WorkOrderStatusPie workOrders={workOrders} timeRange={woStatusTimeRange} />
               </DashboardCard>
               
               <DashboardCard
                 title="Days Left to Due"
-                filterText="Last Week"
+                timeRange={daysLeftTimeRange}
+                onTimeRangeChange={setDaysLeftTimeRange}
                 onMaximize={() => setMaximizedChart('days-due')}
               >
-                <DaysLeftBar workOrders={workOrders} />
+                <DaysLeftBar workOrders={workOrders} timeRange={daysLeftTimeRange} />
               </DashboardCard>
             </div>
 
@@ -806,18 +814,20 @@ export default function MainPage() {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <DashboardCard
                 title="Equipment by CBM Condition"
-                filterText="Last Month"
+                timeRange={equipCondTimeRange}
+                onTimeRangeChange={setEquipCondTimeRange}
                 onMaximize={() => setMaximizedChart('equip-condition')}
               >
-                <EquipmentConditionPie equipments={equipments} />
+                <EquipmentConditionPie equipments={equipments} timeRange={equipCondTimeRange} />
               </DashboardCard>
               
               <DashboardCard
                 title="CBM Condition by Equipment Criticality"
-                filterText="Last Week"
+                timeRange={cbmCritTimeRange}
+                onTimeRangeChange={setCbmCritTimeRange}
                 onMaximize={() => setMaximizedChart('cbm-criticality')}
               >
-                <CbmCriticalityBar equipments={equipments} />
+                <CbmCriticalityBar equipments={equipments} timeRange={cbmCritTimeRange} />
               </DashboardCard>
             </div>
 
