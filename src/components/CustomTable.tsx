@@ -172,20 +172,20 @@ export default function CustomTable({ columns, data, title, onRowClick }: Custom
                       <span>{col.header}</span>
                     </div>
 
-                    {/* Filter Input & Icon Line */}
+                    {/* Filter Input & Icon Line (Underline style without box borders, icon on the right) */}
                     <div className="flex items-center gap-1.5 mt-1.5 w-full relative">
                       <div
                         onClick={() => setActiveFilterCol(isOpen ? null : col.key)}
-                        className={`flex items-center gap-1.5 w-full bg-[#111827] border rounded px-2 py-1 cursor-pointer transition-colors ${
+                        className={`flex items-center justify-between gap-1.5 w-full bg-transparent border-b py-1 cursor-pointer transition-colors ${
                           isOpen || summaryText
-                            ? 'border-accent-blue text-accent-blue'
-                            : 'border-border-panel/60 text-text-muted hover:border-border-panel'
+                            ? 'border-accent-blue text-accent-blue font-semibold'
+                            : 'border-border-panel/40 text-text-muted hover:border-border-panel'
                         }`}
                       >
-                        <SlidersHorizontal size={11} className="flex-shrink-0" />
-                        <span className="text-[10px] font-medium truncate flex-1 text-left">
+                        <span className="text-[10px] font-medium truncate flex-1 text-left min-h-[14px]">
                           {summaryText || ''}
                         </span>
+                        <SlidersHorizontal size={11} className="flex-shrink-0" />
                       </div>
 
                       {/* Multiselect Popover Dropdown */}
