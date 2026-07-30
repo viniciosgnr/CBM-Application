@@ -191,11 +191,15 @@ export default function MainPage() {
   const [equipments, setEquipments] = useState<Equipment[]>([]);
   const [loadingEquipments, setLoadingEquipments] = useState(true);
 
-  // Equipments filtered by active table column popover selections for feeding the KPI charts
+  // Equipments filtered by active table column popover selections for feeding the KPI charts (excluding unique text fields tag, name, observation)
   const equipmentsFilteredByTable = useMemo(() => {
+    const EXCLUDED_CHART_FILTER_KEYS = ['tag', 'name', 'observation'];
     return equipments.filter(equip => {
       return Object.entries(selectedEquipmentFilters).every(([colKey, setVals]) => {
         if (!setVals || setVals.size === 0) return true;
+        // Exclude unique text fields from affecting chart metrics
+        if (EXCLUDED_CHART_FILTER_KEYS.includes(colKey)) return true;
+        
         // Keep chart slices visible when chart click highlight is active
         if (colKey === 'condition' && selectedConditionChart) return true;
         if (colKey === 'criticality' && selectedCriticalityChart) return true;
