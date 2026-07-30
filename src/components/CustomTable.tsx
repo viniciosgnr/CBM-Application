@@ -220,12 +220,12 @@ export default function CustomTable({
         )}
       </div>
       
-      {/* Table Wrapper */}
-      <div className="overflow-x-auto bg-bg-card relative">
+      {/* Table Wrapper with dynamic padding to prevent popover clipping */}
+      <div className={`overflow-x-auto bg-bg-card relative transition-all ${activeFilterCol ? 'min-h-[320px] pb-36' : ''}`}>
         <table className="w-full text-left border-collapse">
-          <thead>
+          <thead className="relative z-30">
             <tr className="border-b border-border-panel bg-bg-panel/40 select-none">
-              {columns.map(col => {
+              {columns.map((col, colIdx) => {
                 const uniqueValues = getUniqueValues(col.key);
                 const selectedSet = getSelectedSet(col.key);
                 const query = searchQueries[col.key] || '';
@@ -239,6 +239,9 @@ export default function CustomTable({
                 const isSomeSelected = selectedSet.size > 0 && selectedSet.size < uniqueValues.length;
                 const summaryText = getHeaderSummary(col.key);
                 const isOpen = activeFilterCol === col.key;
+                
+                // Align rightmost column popovers to the right edge to avoid horizontal clipping
+                const isRightColumn = colIdx >= columns.length - 3;
 
                 return (
                   <th
@@ -269,7 +272,7 @@ export default function CustomTable({
                       {isOpen && (
                         <div
                           ref={popoverRef}
-                          className="absolute top-full left-0 mt-1 w-64 bg-[#0d121f] border border-border-panel rounded-lg shadow-2xl p-3 z-50 animate-fadeIn text-left normal-case font-normal text-xs text-text-primary"
+                          className={`absolute top-full ${isRightColumn ? 'right-0' : 'left-0'} mt-1 w-64 bg-[#0d121f] border border-border-panel rounded-lg shadow-2xl p-3 z-50 animate-fadeIn text-left normal-case font-normal text-xs text-text-primary`}
                         >
                           {/* Search Input */}
                           <div className="relative mb-2.5">
