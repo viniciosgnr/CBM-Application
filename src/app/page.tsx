@@ -1,5 +1,5 @@
 'use client';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import Header from '@/components/Header';
 import Sidebar from '@/components/Sidebar';
 import DashboardCard from '@/components/DashboardCard';
@@ -190,6 +190,24 @@ export default function MainPage() {
   // States for DB data
   const [equipments, setEquipments] = useState<Equipment[]>([]);
   const [loadingEquipments, setLoadingEquipments] = useState(true);
+
+  // Equipments filtered by active table column popover selections for feeding the KPI charts
+  const equipmentsFilteredByTable = useMemo(() => {
+    return equipments.filter(equip => {
+      return Object.entries(selectedEquipmentFilters).every(([colKey, setVals]) => {
+        if (!setVals || setVals.size === 0) return true;
+        // Keep chart slices visible when chart click highlight is active
+        if (colKey === 'condition' && selectedConditionChart) return true;
+        if (colKey === 'criticality' && selectedCriticalityChart) return true;
+        
+        let cellVal = String(equip[colKey as keyof Equipment] || '');
+        if (cellVal.includes(' - Tier ')) {
+          cellVal = cellVal.split(' - Tier ')[0];
+        }
+        return setVals.has(cellVal);
+      });
+    });
+  }, [equipments, selectedEquipmentFilters, selectedConditionChart, selectedCriticalityChart]);
 
   // Reports state
   const [reports, setReports] = useState<AnalysisReport[]>([]);
@@ -872,7 +890,7 @@ export default function MainPage() {
                 onMaximize={() => setMaximizedChart('equip-condition')}
               >
                 <EquipmentConditionPie
-                  equipments={equipments}
+                  equipments={equipmentsFilteredByTable}
                   timeRange={equipCondTimeRange}
                   onConditionClick={handleChartConditionClick}
                   selectedCondition={selectedConditionChart}
@@ -886,7 +904,7 @@ export default function MainPage() {
                 onMaximize={() => setMaximizedChart('cbm-criticality')}
               >
                 <CbmCriticalityBar
-                  equipments={equipments}
+                  equipments={equipmentsFilteredByTable}
                   timeRange={cbmCritTimeRange}
                   onCriticalityClick={handleChartCriticalityClick}
                   selectedCriticality={selectedCriticalityChart}
