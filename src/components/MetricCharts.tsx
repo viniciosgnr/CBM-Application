@@ -113,7 +113,7 @@ function parseDateString(str?: string | null): Date | null {
 }
 
 // Filter date helper
-function isWithinTimeRange(dateStr?: string | null, timeRange: string = 'Last Month'): boolean {
+export function isWithinTimeRange(dateStr?: string | null, timeRange: string = 'Last Month'): boolean {
   if (!timeRange || timeRange === 'All Time') return true;
   const d = parseDateString(dateStr);
   if (!d) return true; // Keep item if date parsing fails or missing
@@ -216,7 +216,7 @@ export function WorkOrderStatusPie({ workOrders = [], timeRange = 'Last Month' }
                 midAngle,
                 outerRadius,
                 percent,
-                color: data[index].color || '#3b82f6'
+                color: data[index]?.color || '#3b82f6'
               });
             }}
             labelLine={false}
@@ -338,7 +338,17 @@ export function DaysLeftBar({ workOrders = [], timeRange = 'Last Week' }: { work
 }
 
 // 3. Donut Chart: Equipment by CBM Condition
-export function EquipmentConditionPie({ equipments = [], timeRange = 'Last Month' }: { equipments?: EquipmentChartData[]; timeRange?: string }) {
+export function EquipmentConditionPie({
+  equipments = [],
+  timeRange = 'Last Month',
+  onConditionClick,
+  selectedCondition
+}: {
+  equipments?: EquipmentChartData[];
+  timeRange?: string;
+  onConditionClick?: (condition: string) => void;
+  selectedCondition?: string | null;
+}) {
   const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
@@ -399,6 +409,8 @@ export function EquipmentConditionPie({ equipments = [], timeRange = 'Last Month
             outerRadius={68}
             paddingAngle={3}
             dataKey="value"
+            onClick={(entry) => onConditionClick?.(entry.name || '')}
+            style={{ cursor: onConditionClick ? 'pointer' : 'default' }}
             label={(props: PieLabelRenderProps) => {
               const cx = props.cx ?? 0;
               const cy = props.cy ?? 0;
@@ -412,14 +424,24 @@ export function EquipmentConditionPie({ equipments = [], timeRange = 'Last Month
                 midAngle,
                 outerRadius,
                 percent,
-                color: data[index].color || '#3b82f6'
+                color: data[index]?.color || '#3b82f6'
               });
             }}
             labelLine={false}
           >
-            {data.map((entry, index) => (
-              <Cell key={`cell-${index}`} fill={entry.color} />
-            ))}
+            {data.map((entry, index) => {
+              const isSelected = selectedCondition === entry.name;
+              const isDimmed = selectedCondition && !isSelected;
+              return (
+                <Cell
+                  key={`cell-${index}`}
+                  fill={entry.color}
+                  opacity={isDimmed ? 0.35 : 1}
+                  stroke={isSelected ? '#ffffff' : 'none'}
+                  strokeWidth={isSelected ? 2 : 0}
+                />
+              );
+            })}
           </Pie>
           <Tooltip content={<CustomTooltip />} />
         </PieChart>
@@ -429,7 +451,17 @@ export function EquipmentConditionPie({ equipments = [], timeRange = 'Last Month
 }
 
 // 4. Bar Chart: CBM Condition by Equipment Criticality
-export function CbmCriticalityBar({ equipments = [], timeRange = 'Last Week' }: { equipments?: EquipmentChartData[]; timeRange?: string }) {
+export function CbmCriticalityBar({
+  equipments = [],
+  timeRange = 'Last Week',
+  onCriticalityClick,
+  selectedCriticality
+}: {
+  equipments?: EquipmentChartData[];
+  timeRange?: string;
+  onCriticalityClick?: (criticality: string) => void;
+  selectedCriticality?: string | null;
+}) {
   const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
@@ -487,7 +519,16 @@ export function CbmCriticalityBar({ equipments = [], timeRange = 'Last Week' }: 
     <div className="w-full flex flex-col">
       <TopLeftLegend items={legendItems} />
       <ResponsiveContainer width="100%" height={190}>
-        <BarChart data={data} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+        <BarChart
+          data={data}
+          margin={{ top: 10, right: 10, left: -20, bottom: 0 }}
+          onClick={(state) => {
+            if (state && state.activeLabel) {
+              onCriticalityClick?.(String(state.activeLabel));
+            }
+          }}
+          style={{ cursor: onCriticalityClick ? 'pointer' : 'default' }}
+        >
           <XAxis
             dataKey="name"
             stroke="var(--text-muted)"

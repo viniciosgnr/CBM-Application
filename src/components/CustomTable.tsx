@@ -20,14 +20,47 @@ interface CustomTableProps {
   data: Record<string, string>[];
   title: string;
   onRowClick?: (row: Record<string, string>) => void;
+  timeRange?: string;
+  onTimeRangeChange?: (range: string) => void;
+  selectedFiltersState?: Record<string, Set<string>>;
+  onFilterChange?: (filters: Record<string, Set<string>>) => void;
+  onClearFilters?: () => void;
 }
 
-export default function CustomTable({ columns, data, title, onRowClick }: CustomTableProps) {
+export const TIME_RANGE_OPTIONS = [
+  'Last Week',
+  'Last Month',
+  'Last 6 Months',
+  'Last Year',
+  'All Time'
+];
+
+export default function CustomTable({
+  columns,
+  data,
+  title,
+  onRowClick,
+  timeRange,
+  onTimeRangeChange,
+  selectedFiltersState,
+  onFilterChange,
+  onClearFilters
+}: CustomTableProps) {
   // Column popover state
   const [activeFilterCol, setActiveFilterCol] = useState<string | null>(null);
   
   // Selected filter values per column: key -> Set of allowed raw string values
-  const [selectedFilters, setSelectedFilters] = useState<Record<string, Set<string>>>({});
+  const [internalFilters, setInternalFilters] = useState<Record<string, Set<string>>>({});
+  
+  const selectedFilters = selectedFiltersState !== undefined ? selectedFiltersState : internalFilters;
+
+  const updateFilters = (newFilters: Record<string, Set<string>>) => {
+    if (onFilterChange) {
+      onFilterChange(newFilters);
+    } else {
+      setInternalFilters(newFilters);
+    }
+  };
   
   // Internal popover search input state per column
   const [searchQueries, setSearchQueries] = useState<Record<string, string>>({});
@@ -79,10 +112,10 @@ export default function CustomTable({ columns, data, title, onRowClick }: Custom
       currentSet.add(val);
     }
 
-    setSelectedFilters(prev => ({
-      ...prev,
+    updateFilters({
+      ...selectedFilters,
       [key]: currentSet
-    }));
+    });
     setCurrentPage(1);
   };
 
@@ -93,15 +126,15 @@ export default function CustomTable({ columns, data, title, onRowClick }: Custom
     
     // If all are currently selected, deselect all; else select all
     if (currentSet.size === allValues.length) {
-      setSelectedFilters(prev => ({
-        ...prev,
+      updateFilters({
+        ...selectedFilters,
         [key]: new Set()
-      }));
+      });
     } else {
-      setSelectedFilters(prev => ({
-        ...prev,
+      updateFilters({
+        ...selectedFilters,
         [key]: new Set(allValues)
-      }));
+      });
     }
     setCurrentPage(1);
   };
@@ -137,6 +170,13 @@ export default function CustomTable({ columns, data, title, onRowClick }: Custom
     });
   });
 
+  // Check if any column filter is active (subset of values selected)
+  const isAnyFilterActive = columns.some(col => {
+    const allValues = getUniqueValues(col.key);
+    const selectedSet = selectedFilters[col.key];
+    return selectedSet && selectedSet.size > 0 && selectedSet.size < allValues.length;
+  });
+
   // Pagination logic
   const totalRows = filteredData.length;
   const startIndex = (currentPage - 1) * rowsPerPage;
@@ -145,8 +185,39 @@ export default function CustomTable({ columns, data, title, onRowClick }: Custom
 
   return (
     <div className="w-full flex flex-col">
-      <div className="mb-4">
-        <h3 className="text-sm font-semibold text-text-primary">{title}</h3>
+      <div className="mb-4 flex items-center justify-between">
+        <div className="flex items-center gap-3">
+          <h3 className="text-sm font-semibold text-text-primary">{title}</h3>
+          {(isAnyFilterActive || onClearFilters) && (
+            <button
+              onClick={() => {
+                if (onClearFilters) onClearFilters();
+                else updateFilters({});
+              }}
+              className="text-[10px] bg-accent-blue/10 border border-accent-blue/30 text-accent-blue hover:bg-accent-blue/20 px-2 py-0.5 rounded font-semibold transition-colors cursor-pointer"
+            >
+              Reset Filters
+            </button>
+          )}
+        </div>
+
+        {/* Optional Time Range Dropdown in Table Header */}
+        {onTimeRangeChange && (
+          <div className="flex items-center gap-2">
+            <span className="text-[10px] text-text-muted font-medium">Time Window:</span>
+            <select
+              value={timeRange || 'Last Month'}
+              onChange={(e) => onTimeRangeChange(e.target.value)}
+              className="text-[10px] text-text-primary bg-[#111827] border border-border-panel/80 px-2 py-1 rounded cursor-pointer hover:border-accent-blue focus:border-accent-blue transition-colors font-medium outline-none"
+            >
+              {TIME_RANGE_OPTIONS.map((option) => (
+                <option key={option} value={option} className="bg-[#0b0f19] text-text-primary">
+                  {option}
+                </option>
+              ))}
+            </select>
+          </div>
+        )}
       </div>
       
       {/* Table Wrapper */}

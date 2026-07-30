@@ -20,7 +20,8 @@ import {
   WorkOrderStatusPie,
   DaysLeftBar,
   EquipmentConditionPie,
-  CbmCriticalityBar
+  CbmCriticalityBar,
+  isWithinTimeRange
 } from '@/components/MetricCharts';
 import {
   ResponsiveContainer,
@@ -134,7 +135,57 @@ export default function MainPage() {
   const [woStatusTimeRange, setWoStatusTimeRange] = useState('Last Month');
   const [daysLeftTimeRange, setDaysLeftTimeRange] = useState('Last Week');
   const [equipCondTimeRange, setEquipCondTimeRange] = useState('Last Month');
-  const [cbmCritTimeRange, setCbmCritTimeRange] = useState('Last Week');
+  const [cbmCritTimeRange, setCbmCritTimeRange] = useState('Last Month');
+
+  // Interactive bi-directional filter states for Equipment page
+  const [selectedEquipmentFilters, setSelectedEquipmentFilters] = useState<Record<string, Set<string>>>({});
+  const [selectedConditionChart, setSelectedConditionChart] = useState<string | null>(null);
+  const [selectedCriticalityChart, setSelectedCriticalityChart] = useState<string | null>(null);
+
+  // Global time range handler for Equipment page
+  const handleEquipGlobalTimeRangeChange = (newRange: string) => {
+    setEquipCondTimeRange(newRange);
+    setCbmCritTimeRange(newRange);
+  };
+
+  // Toggle chart condition selection (Donut -> Table sync)
+  const handleChartConditionClick = (conditionName: string) => {
+    const nextCondition = selectedConditionChart === conditionName ? null : conditionName;
+    setSelectedConditionChart(nextCondition);
+
+    setSelectedEquipmentFilters(prev => {
+      const next = { ...prev };
+      if (nextCondition) {
+        next['condition'] = new Set([nextCondition]);
+      } else {
+        delete next['condition'];
+      }
+      return next;
+    });
+  };
+
+  // Toggle chart criticality selection (Bar -> Table sync)
+  const handleChartCriticalityClick = (criticalityName: string) => {
+    const nextCrit = selectedCriticalityChart === criticalityName ? null : criticalityName;
+    setSelectedCriticalityChart(nextCrit);
+
+    setSelectedEquipmentFilters(prev => {
+      const next = { ...prev };
+      if (nextCrit) {
+        next['criticality'] = new Set([nextCrit]);
+      } else {
+        delete next['criticality'];
+      }
+      return next;
+    });
+  };
+
+  // Clear all equipment filters
+  const handleClearAllEquipFilters = () => {
+    setSelectedEquipmentFilters({});
+    setSelectedConditionChart(null);
+    setSelectedCriticalityChart(null);
+  };
 
   // States for DB data
   const [equipments, setEquipments] = useState<Equipment[]>([]);
@@ -656,19 +707,21 @@ export default function MainPage() {
     { key: 'woNumber', header: 'WO Number', render: (val: string) => val ? <span className="text-accent-blue font-semibold">{val}</span> : <span className="text-text-muted italic">None</span> },
   ];
 
-  const formattedEquipments = equipments.map(e => ({
-    id: String(e.id),
-    tag: e.tag,
-    fpso: e.fpso,
-    name: e.name,
-    class: e.class,
-    system: e.system,
-    criticality: e.criticality,
-    objectType: e.objectType,
-    condition: e.condition ? e.condition.split(' - ')[0] : e.condition,
-    lastUpdate: e.lastUpdate,
-    observation: e.observation || '',
-  }));
+  const formattedEquipments = equipments
+    .filter(e => isWithinTimeRange(e.lastUpdate, equipCondTimeRange))
+    .map(e => ({
+      id: String(e.id),
+      tag: e.tag,
+      fpso: e.fpso,
+      name: e.name,
+      class: e.class,
+      system: e.system,
+      criticality: e.criticality,
+      objectType: e.objectType,
+      condition: e.condition ? e.condition.split(' - ')[0] : e.condition,
+      lastUpdate: e.lastUpdate,
+      observation: e.observation || '',
+    }));
 
   const formattedReports = reports.map(r => ({
     id: String(r.id),
@@ -815,19 +868,29 @@ export default function MainPage() {
               <DashboardCard
                 title="Equipment by CBM Condition"
                 timeRange={equipCondTimeRange}
-                onTimeRangeChange={setEquipCondTimeRange}
+                onTimeRangeChange={handleEquipGlobalTimeRangeChange}
                 onMaximize={() => setMaximizedChart('equip-condition')}
               >
-                <EquipmentConditionPie equipments={equipments} timeRange={equipCondTimeRange} />
+                <EquipmentConditionPie
+                  equipments={equipments}
+                  timeRange={equipCondTimeRange}
+                  onConditionClick={handleChartConditionClick}
+                  selectedCondition={selectedConditionChart}
+                />
               </DashboardCard>
               
               <DashboardCard
                 title="CBM Condition by Equipment Criticality"
                 timeRange={cbmCritTimeRange}
-                onTimeRangeChange={setCbmCritTimeRange}
+                onTimeRangeChange={handleEquipGlobalTimeRangeChange}
                 onMaximize={() => setMaximizedChart('cbm-criticality')}
               >
-                <CbmCriticalityBar equipments={equipments} timeRange={cbmCritTimeRange} />
+                <CbmCriticalityBar
+                  equipments={equipments}
+                  timeRange={cbmCritTimeRange}
+                  onCriticalityClick={handleChartCriticalityClick}
+                  selectedCriticality={selectedCriticalityChart}
+                />
               </DashboardCard>
             </div>
 
@@ -844,6 +907,11 @@ export default function MainPage() {
                   columns={equipColumns} 
                   data={formattedEquipments} 
                   onRowClick={handleRowClick}
+                  timeRange={equipCondTimeRange}
+                  onTimeRangeChange={handleEquipGlobalTimeRangeChange}
+                  selectedFiltersState={selectedEquipmentFilters}
+                  onFilterChange={setSelectedEquipmentFilters}
+                  onClearFilters={handleClearAllEquipFilters}
                 />
               )}
             </div>
@@ -908,33 +976,37 @@ export default function MainPage() {
               <X size={18} />
             </button>
 
-            {/* Header da Modal */}
+            {/* Header da Modal SLB OptiSite Style */}
             <div className="mb-2">
-              <span className="text-[10px] bg-accent-blue/10 text-accent-blue px-2 py-0.5 rounded border border-accent-blue/20 font-semibold uppercase tracking-wider">
-                {selectedEquipment.system}
-              </span>
-              <h2 className="text-base font-bold text-text-primary mt-2">
-                {selectedEquipment.tag} - {selectedEquipment.name}
-              </h2>
-              <div className="flex items-center justify-between gap-2 text-[10px] text-text-muted mt-1.5 font-medium tracking-wide uppercase">
-                <div className="flex items-center gap-1.5">
-                  <span>Overall CBM Status:</span>
-                  <span className={`font-bold ${
-                    selectedEquipment.condition?.startsWith('Good') ? 'text-status-ok' :
-                    selectedEquipment.condition?.startsWith('Degraded') ? 'text-status-warn' :
-                    selectedEquipment.condition?.startsWith('Critical') ? 'text-status-error' : 'text-text-muted'
-                  }`}>
-                    {selectedEquipment.condition}
-                  </span>
-                </div>
+              {/* Linha 1: Título + Badge + Botão Fechar */}
+              <div className="flex items-center gap-2 pr-8">
+                <h2 className="text-base font-bold text-text-primary">
+                  {selectedEquipment.tag} - {selectedEquipment.name.charAt(0).toUpperCase() + selectedEquipment.name.slice(1).toLowerCase()}
+                </h2>
+                <span className="text-[10px] bg-[#222944] text-[#94a3b8] px-2 py-0.5 rounded border border-[#333e68] font-semibold uppercase tracking-wider flex-shrink-0">
+                  {selectedEquipment.system}
+                </span>
+              </div>
 
-                {/* Ação de Registro de Relatório */}
+              {/* Linha 2: Overall CBM status */}
+              <div className="flex items-center gap-2 text-xs text-text-muted mt-2 font-medium">
+                <span>Overall CBM status:</span>
+                <span className={`font-bold ${
+                  selectedEquipment.condition?.startsWith('Good') ? 'text-status-ok' :
+                  selectedEquipment.condition?.startsWith('Degraded') ? 'text-status-warn' :
+                  selectedEquipment.condition?.startsWith('Critical') ? 'text-status-error' : 'text-text-muted'
+                }`}>
+                  {selectedEquipment.condition}
+                </span>
+              </div>
+
+              {/* Linha 3: Botão Log new analysis alinhado à direita */}
+              <div className="flex justify-end mt-1">
                 <button
                   onClick={openReportForm}
-                  className="flex items-center gap-1.5 bg-accent-blue text-[#090d16] font-bold px-3 py-1.5 rounded text-[9px] hover:bg-[#38bdf8] transition-colors cursor-pointer uppercase shadow"
+                  className="border border-[#333e68] bg-[#121626] text-text-primary px-4 py-1.5 rounded-full text-xs font-medium whitespace-nowrap hover:border-accent-blue transition-colors cursor-pointer"
                 >
-                  <PlusCircle size={11} />
-                  Log New Analysis
+                  Log new analysis
                 </button>
               </div>
             </div>
@@ -942,31 +1014,29 @@ export default function MainPage() {
             {/* Override Condition and Observations Form & Chart */}
             <div className="flex flex-col gap-5 mt-4">
               {/* Override Condition and Observations Form */}
-              <div className="flex flex-col gap-4 bg-bg-panel/40 p-4 border border-border-panel rounded-xl text-xs">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div className="flex flex-col gap-1.5">
-                    <label className="text-text-muted font-semibold uppercase text-[9px]">Overall CBM Status</label>
-                    <select
-                      value={modalFormFields.condition}
-                      onChange={e => setModalFormFields({ ...modalFormFields, condition: e.target.value })}
-                      className="bg-[#111827] border border-border-panel rounded p-2 text-text-primary focus:border-accent-blue outline-none cursor-pointer text-xs"
-                    >
-                      <option value="Good - Tier 4">Good - Tier 4</option>
-                      <option value="Good - Tier 3">Good - Tier 3</option>
-                      <option value="Degraded - Tier 2">Degraded - Tier 2</option>
-                      <option value="Critical - Tier 1">Critical - Tier 1</option>
-                    </select>
-                  </div>
+              <div className="flex flex-col gap-4 bg-[#101422]/60 p-4 border border-[#202742] rounded-xl text-xs">
+                <div className="flex flex-col gap-1.5">
+                  <label className="text-text-muted font-semibold uppercase text-[9px] tracking-wider">OVERALL CBM STATUS</label>
+                  <select
+                    value={modalFormFields.condition}
+                    onChange={e => setModalFormFields({ ...modalFormFields, condition: e.target.value })}
+                    className="bg-[#121626] border border-[#2a3254] rounded-lg p-2.5 text-text-primary focus:border-accent-blue outline-none cursor-pointer text-xs w-full"
+                  >
+                    <option value="Good - Tier 4" className="bg-[#121626]">Good - Tier 4</option>
+                    <option value="Good - Tier 3" className="bg-[#121626]">Good - Tier 3</option>
+                    <option value="Degraded - Tier 2" className="bg-[#121626]">Degraded - Tier 2</option>
+                    <option value="Critical - Tier 1" className="bg-[#121626]">Critical - Tier 1</option>
+                  </select>
                 </div>
                 
                 <div className="flex flex-col gap-1.5">
-                  <label className="text-text-muted font-semibold uppercase text-[9px]">Observation</label>
+                  <label className="text-text-muted font-semibold uppercase text-[9px] tracking-wider">OBSERVATION</label>
                   <textarea
-                    rows={2}
-                    placeholder="Insert observations regarding the equipment..."
+                    rows={3}
+                    placeholder="Type..."
                     value={modalFormFields.observation}
                     onChange={e => setModalFormFields({ ...modalFormFields, observation: e.target.value })}
-                    className="bg-[#0b0f19] border border-border-panel rounded p-2 text-text-primary focus:border-accent-blue focus:outline-none transition-colors text-xs resize-none"
+                    className="bg-[#121626] border border-[#2a3254] rounded-lg p-2.5 text-text-primary focus:border-accent-blue focus:outline-none transition-colors text-xs resize-none"
                   />
                 </div>
 
@@ -975,27 +1045,27 @@ export default function MainPage() {
                     type="button"
                     onClick={handleEquipmentUpdate}
                     disabled={savingEquipment}
-                    className="bg-accent-blue text-[#090d16] font-bold px-4 py-2 rounded text-xs hover:bg-[#38bdf8] transition-colors cursor-pointer shadow disabled:opacity-50"
+                    className="bg-[#60a5fa] hover:bg-[#3b82f6] text-[#090d16] font-semibold px-5 py-1.5 rounded-full text-xs transition-colors cursor-pointer shadow disabled:opacity-50"
                   >
-                    {savingEquipment ? 'Saving...' : 'Save Changes'}
+                    {savingEquipment ? 'Saving...' : 'Save'}
                   </button>
                 </div>
               </div>
 
-              {/* Grafico: Historical Condition Trend */}
-              <div className="bg-bg-panel/20 border border-border-panel p-4 rounded-xl">
-                <h4 className="text-xs font-bold text-text-primary mb-3">Historical Condition Trend</h4>
+              {/* Grafico: Historical condition trend */}
+              <div className="bg-[#101422]/40 border border-[#202742] p-4 rounded-xl">
+                <h4 className="text-xs font-bold text-text-primary mb-3">Historical condition trend</h4>
                 
                 {mounted && history.length > 0 ? (
                   <ResponsiveContainer width="100%" height={180}>
                     <LineChart data={getChartData()} margin={{ top: 5, right: 10, left: -10, bottom: 0 }}>
-                      <CartesianGrid strokeDasharray="3 3" stroke="var(--border-panel)" vertical={false} opacity={0.3} />
+                      <CartesianGrid strokeDasharray="3 3" stroke="#202742" vertical={false} opacity={0.5} />
                       <XAxis
                         dataKey="name"
                         stroke="var(--text-muted)"
                         fontSize={8}
                         tickLine={false}
-                        axisLine={{ stroke: 'var(--border-panel)', strokeWidth: 1 }}
+                        axisLine={{ stroke: '#202742', strokeWidth: 1 }}
                       />
                       <YAxis
                         stroke="var(--text-muted)"
@@ -1006,11 +1076,11 @@ export default function MainPage() {
                         ticks={[0, 1, 2, 3, 4]}
                         tickFormatter={(val) => {
                           switch (val) {
-                            case 4: return 'GOOD - T4';
-                            case 3: return 'GOOD - T3';
-                            case 2: return 'WARN - T2';
-                            case 1: return 'CRIT - T1';
-                            case 0: return 'OFF';
+                            case 4: return 'Good T4';
+                            case 3: return 'Good T3';
+                            case 2: return 'Warn - T2';
+                            case 1: return 'Crit - T1';
+                            case 0: return 'Off';
                             default: return '';
                           }
                         }}
@@ -1020,10 +1090,10 @@ export default function MainPage() {
                         name="Overall CBM Status"
                         type="monotone"
                         dataKey="condition"
-                        stroke="#38bdf8"
+                        stroke="#60a5fa"
                         strokeWidth={2}
-                        dot={{ r: 3, fill: '#38bdf8', strokeWidth: 0 }}
-                        activeDot={{ r: 5 }}
+                        dot={{ r: 4, fill: '#60a5fa', strokeWidth: 0 }}
+                        activeDot={{ r: 6 }}
                       />
                     </LineChart>
                   </ResponsiveContainer>
@@ -1032,14 +1102,6 @@ export default function MainPage() {
                     No history data available for this equipment.
                   </div>
                 )}
-
-                {/* Legenda Customizada */}
-                <div className="flex items-center justify-center gap-6 mt-2 text-[9px] text-text-muted select-none">
-                  <span className="flex items-center gap-1.5">
-                    <span className="w-2.5 h-[2px] bg-accent-blue" />
-                    Overall CBM Status
-                  </span>
-                </div>
               </div>
             </div>
           </div>
