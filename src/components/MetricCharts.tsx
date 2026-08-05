@@ -455,7 +455,6 @@ export function CbmCriticalityBar({
   equipments = [],
   timeRange = 'Last Week',
   onCriticalityClick,
-  selectedCriticality
 }: {
   equipments?: EquipmentChartData[];
   timeRange?: string;
