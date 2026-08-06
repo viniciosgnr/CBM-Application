@@ -74,12 +74,13 @@ export async function POST(request: Request) {
     }
 
     // Use transaction to update equipment, history and save report
-    const result = await db.transaction(async (tx) => {
+    const result = db.transaction((tx) => {
       // Fetch current equipment status
-      const eqList = await tx
+      const eqList = tx
         .select()
         .from(equipments)
-        .where(eq(equipments.tag, equipmentTag));
+        .where(eq(equipments.tag, equipmentTag))
+        .all();
       
       if (eqList.length === 0) {
         throw new Error('Equipment not found');
@@ -109,8 +110,7 @@ export async function POST(request: Request) {
       const nowIso = new Date().toISOString();
 
       // 1. Update equipment active status
-      await tx
-        .update(equipments)
+      tx.update(equipments)
         .set({
           vibrationStatus: finalVibrationStatus,
           lubeOilStatus: finalLubeOilStatus,
@@ -118,20 +118,21 @@ export async function POST(request: Request) {
           condition: overallCondition,
           lastUpdate: nowStr,
         })
-        .where(eq(equipments.tag, equipmentTag));
+        .where(eq(equipments.tag, equipmentTag))
+        .run();
 
       // 2. Insert into equipment history
-      await tx.insert(equipmentHistory).values({
+      tx.insert(equipmentHistory).values({
         equipmentTag,
         vibrationStatus: finalVibrationStatus,
         lubeOilStatus: finalLubeOilStatus,
         thermographyStatus: finalThermographyStatus,
         overallCondition,
         changedAt: nowIso,
-      });
+      }).run();
 
       // 3. Insert into analysis reports
-      const inserted = await tx
+      const inserted = tx
         .insert(analysisReports)
         .values({
           equipmentTag,
@@ -160,9 +161,10 @@ export async function POST(request: Request) {
           imageUrl: imageUrl || null,
           createdAt: nowIso,
         })
-        .returning();
+        .returning()
+        .get();
 
-      return inserted[0];
+      return inserted;
     });
 
     return NextResponse.json(result);

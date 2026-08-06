@@ -1636,22 +1636,33 @@ export default function MainPage() {
         </div>
       )}
 
-      {/* Create Work Order Modal */}
+      {/* Create Work Order Modal SLB Style */}
       {workOrderFormOpen && selectedReportForWo && (
         <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[1000] flex items-center justify-center p-4">
-          <div className="bg-[#0b0f19] border border-border-panel rounded-card p-6 w-full max-w-[680px] relative animate-fadeIn shadow-2xl text-left flex flex-col max-h-[90vh]">
+          <div className="bg-[#0b0f19] border border-[#202742] rounded-xl p-6 w-full max-w-[700px] relative animate-fadeIn shadow-2xl text-left flex flex-col max-h-[90vh]">
             
-            {/* Header */}
-            <div className="flex items-center justify-between pb-4 border-b border-border-panel/40">
-              <div className="flex items-center gap-2">
-                <Wrench className="text-accent-blue" size={16} />
-                <h2 className="text-base font-bold text-text-primary uppercase tracking-wide">
-                  Raise Fault Report (Work Order)
-                </h2>
+            {/* Header Compacto SLB */}
+            <div className="flex items-center justify-between pb-4 border-b border-[#202742]">
+              <div className="flex items-center gap-3">
+                <div className="w-8 h-8 rounded-lg bg-[#60a5fa]/10 border border-[#60a5fa]/30 flex items-center justify-center text-[#60a5fa]">
+                  <Wrench size={16} />
+                </div>
+                <div>
+                  <h2 className="text-sm font-bold text-text-primary uppercase tracking-wide flex items-center gap-2">
+                    Raise Fault Report (Work Order)
+                  </h2>
+                  <div className="flex items-center gap-2 text-[10px] text-text-muted font-medium mt-0.5">
+                    <span className="bg-[#222944] text-[#60a5fa] px-2 py-0.5 rounded font-mono font-bold">{selectedReportForWo.equipmentTag}</span>
+                    <span>•</span>
+                    <span>{selectedReportForWo.facility}</span>
+                    <span>•</span>
+                    <span>{selectedReportForWo.system}</span>
+                  </div>
+                </div>
               </div>
               <button
                 onClick={() => setWorkOrderFormOpen(false)}
-                className="text-text-muted hover:text-text-primary transition-colors cursor-pointer"
+                className="text-text-muted hover:text-text-primary p-1 rounded hover:bg-[#202742] transition-colors cursor-pointer"
                 title="Close"
               >
                 <X size={18} />
@@ -1663,209 +1674,227 @@ export default function MainPage() {
               
               {/* Success Alert Banner inside Modal */}
               {woSuccessAlert && (
-                <div className="bg-status-ok/10 border border-status-ok/30 text-status-ok p-3 rounded flex items-center gap-2 font-medium animate-fadeIn">
+                <div className="bg-status-ok/10 border border-status-ok/30 text-status-ok p-3 rounded-lg flex items-center gap-2 font-medium animate-fadeIn">
                   <RefreshCw className="animate-spin" size={14} />
                   <span>{woSuccessAlert}</span>
                 </div>
               )}
 
-              {/* Grid 1: Prefilled Read-Only Details */}
-              <div className="grid grid-cols-2 gap-4 bg-[#090d16]/40 p-4 border border-border-panel/20 rounded">
-                <div className="flex flex-col gap-1">
-                  <label className="text-text-muted uppercase text-[9px] font-semibold">WO Site</label>
-                  <input
-                    type="text"
-                    value={woFormFields.woSite}
-                    disabled
-                    className="bg-[#0b0f19] border border-border-panel/40 rounded p-2 text-text-muted font-medium cursor-not-allowed"
-                  />
-                </div>
-                <div className="flex flex-col gap-1">
-                  <label className="text-text-muted uppercase text-[9px] font-semibold">Work Type</label>
-                  <input
-                    type="text"
-                    value={woFormFields.workType}
-                    disabled
-                    className="bg-[#0b0f19] border border-border-panel/40 rounded p-2 text-text-muted font-medium cursor-not-allowed"
-                  />
-                </div>
-                <div className="flex flex-col gap-1">
-                  <label className="text-text-muted uppercase text-[9px] font-semibold">External Source</label>
-                  <input
-                    type="text"
-                    value={woFormFields.externalSource}
-                    disabled
-                    className="bg-[#0b0f19] border border-border-panel/40 rounded p-2 text-text-muted font-medium cursor-not-allowed"
-                  />
-                </div>
-                <div className="flex flex-col gap-1">
-                  <label className="text-text-muted uppercase text-[9px] font-semibold">External Source ID</label>
-                  <input
-                    type="text"
-                    value={woFormFields.externalSourceId}
-                    onChange={(e) => setWoFormFields({ ...woFormFields, externalSourceId: e.target.value })}
-                    className="bg-[#0b0f19] border border-border-panel rounded p-2 text-text-primary focus:border-accent-blue focus:outline-none transition-colors"
-                  />
-                </div>
-                <div className="flex flex-col gap-1 col-span-2">
-                  <label className="text-text-muted uppercase text-[9px] font-semibold">Discovery</label>
-                  <input
-                    type="text"
-                    value={`${woFormFields.discovery} - Periodic condition monitoring`}
-                    disabled
-                    className="bg-[#0b0f19] border border-border-panel/40 rounded p-2 text-text-muted font-medium cursor-not-allowed"
-                  />
-                </div>
-              </div>
-
-              {/* Grid 2: Interactive Fields */}
-              <div className="grid grid-cols-2 gap-4">
-                <div className="flex flex-col gap-1 col-span-2">
-                  <label className="text-text-primary uppercase text-[9px] font-bold flex items-center gap-1">
-                    Directive <span className="text-status-error">*</span>
-                    <span className="text-[8px] text-text-muted normal-case font-normal">(Use capital letters, e.g. OIL REPLACE)</span>
-                  </label>
-                  <input
-                    type="text"
-                    placeholder="Enter directive title in CAPITAL letters"
-                    value={woFormFields.directive}
-                    onChange={(e) => {
-                      const val = e.target.value.toUpperCase();
-                      setWoFormFields({ ...woFormFields, directive: val });
-                      if (val.trim()) setWoFormFieldsError({ directive: '' });
-                    }}
-                    className={`bg-[#0b0f19] border rounded p-2 text-text-primary focus:border-accent-blue focus:outline-none transition-colors ${
-                      woFormFieldsError.directive ? 'border-status-error' : 'border-border-panel'
-                    }`}
-                  />
-                  {woFormFieldsError.directive && (
-                    <span className="text-status-error text-[10px] mt-0.5">{woFormFieldsError.directive}</span>
-                  )}
-                </div>
-
-                <div className="flex flex-col gap-1">
-                  <label className="text-text-muted uppercase text-[9px] font-semibold">Maint. Org.</label>
-                  <select
-                    value={woFormFields.maintOrg}
-                    onChange={(e) => setWoFormFields({ ...woFormFields, maintOrg: e.target.value })}
-                    className="bg-[#0b0f19] border border-border-panel rounded p-2 text-text-primary focus:border-accent-blue focus:outline-none cursor-pointer text-xs"
-                  >
-                    <option value="MECHTS">MECHTS - Mechanic - Topside</option>
-                    <option value="MECHER">MECHER - Mechanic - Engine Room</option>
-                    <option value="INSTR">INSTR - Instrument</option>
-                    <option value="ELEC">ELEC - Electrical</option>
-                    <option value="DCS">DCS - Distributed Control System</option>
-                    <option value="EX_INSP">EX_INSP - Ex Inspector</option>
-                    <option value="FABRIC">FABRIC - Fabric Maintenance</option>
-                    <option value="CARGO">CARGO - Cargo</option>
-                    <option value="MEDIC">MEDIC - Medic</option>
-                  </select>
-                </div>
-
-                <div className="flex flex-col gap-1">
-                  <label className="text-text-muted uppercase text-[9px] font-semibold">Symptom</label>
-                  <select
-                    value={woFormFields.symptom}
-                    onChange={(e) => setWoFormFields({ ...woFormFields, symptom: e.target.value })}
-                    className="bg-[#0b0f19] border border-border-panel rounded p-2 text-text-primary focus:border-accent-blue focus:outline-none cursor-pointer text-xs"
-                  >
-                    <option value="VIB">VIB - Vibration</option>
-                    <option value="ELU">ELU - External leakage - utility medium</option>
-                    <option value="ELP">ELP - External leakage - process medium</option>
-                    <option value="PLU">PLU - Plugged / Choked</option>
-                    <option value="STD">STD - Structural deficiency</option>
-                  </select>
-                </div>
-
-                <div className="flex flex-col gap-1">
-                  <label className="text-text-muted uppercase text-[9px] font-semibold">Action ID</label>
-                  <select
-                    value={woFormFields.actionId}
-                    onChange={(e) => setWoFormFields({ ...woFormFields, actionId: e.target.value })}
-                    className="bg-[#0b0f19] border border-border-panel rounded p-2 text-text-primary focus:border-accent-blue focus:outline-none cursor-pointer text-xs"
-                  >
-                    <option value="2">2 - Repair</option>
-                    <option value="3">3 - Modify</option>
-                    <option value="4">4 - Adjust</option>
-                    <option value="5">5 - Refit</option>
-                    <option value="6">6 - Check</option>
-                    <option value="7">7 - Service</option>
-                    <option value="8">8 - Test</option>
-                    <option value="9">9 - Inspection</option>
-                    <option value="10">10 - Overhaul</option>
-                    <option value="11">11 - Combination</option>
-                  </select>
-                </div>
-
-                <div className="flex flex-col gap-1">
-                  <label className="text-text-muted uppercase text-[9px] font-semibold">Operational Status</label>
-                  <select
-                    value={woFormFields.operationalStatus}
-                    onChange={(e) => setWoFormFields({ ...woFormFields, operationalStatus: e.target.value })}
-                    className="bg-[#0b0f19] border border-border-panel rounded p-2 text-text-primary focus:border-accent-blue focus:outline-none cursor-pointer text-xs"
-                  >
-                    <option value="01">01 - Non-intrusive / Non-obstructive</option>
-                    <option value="02">02 - Item Intrusive / Obstructive</option>
-                    <option value="03">03 - Package Intrusive / Obstructive</option>
-                  </select>
-                </div>
-
-                <div className="flex flex-col gap-1 col-span-2">
-                  <label className="text-text-muted uppercase text-[9px] font-semibold">Fault Description</label>
-                  <textarea
-                    value={woFormFields.faultDesc}
-                    onChange={(e) => setWoFormFields({ ...woFormFields, faultDesc: e.target.value })}
-                    rows={4}
-                    className="bg-[#0b0f19] border border-border-panel rounded p-2 text-text-primary focus:border-accent-blue focus:outline-none resize-y leading-relaxed text-xs"
-                  />
-                </div>
-
-                {/* Simulated File Upload Input */}
-                <div className="flex flex-col gap-1 col-span-2">
-                  <label className="text-text-muted uppercase text-[9px] font-semibold block mb-1">Attach the report file</label>
-                  <div className="border border-dashed border-border-panel/60 rounded-lg p-4 bg-[#090d16]/30 flex flex-col items-center justify-center gap-2 hover:bg-[#090d16]/50 transition-colors relative cursor-pointer">
+              {/* Bloco 1 SLB: Dados de Identificação do CMMS (Read-only Metadata) */}
+              <div className="bg-[#101422]/60 border border-[#202742] rounded-xl p-4 flex flex-col gap-3">
+                <span className="text-[10px] font-bold text-[#60a5fa] uppercase tracking-wider block border-b border-[#202742] pb-2">
+                  1. External CMMS Integration Details
+                </span>
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="flex flex-col gap-1">
+                    <label className="text-text-muted font-semibold uppercase text-[9px] tracking-wider">WO Site</label>
                     <input
-                      type="file"
-                      id="simulated-wo-file"
-                      className="absolute inset-0 opacity-0 cursor-pointer"
-                      onChange={(e) => {
-                        const file = e.target.files?.[0];
-                        if (file) {
-                          setWoFormFields({
-                            ...woFormFields,
-                            attachedFilename: file.name,
-                            attachedFileSize: file.size,
-                          });
-                        }
-                      }}
+                      type="text"
+                      value={woFormFields.woSite}
+                      disabled
+                      className="bg-[#121626] border border-[#2a3254]/50 rounded-lg p-2 text-text-muted font-medium cursor-not-allowed text-xs"
                     />
-                    <FileText size={20} className="text-accent-blue/60" />
-                    {woFormFields.attachedFilename ? (
-                      <div className="text-center">
-                        <span className="text-status-ok font-semibold block">✓ File Attached</span>
-                        <span className="text-text-muted text-[10px]">{woFormFields.attachedFilename} ({(woFormFields.attachedFileSize / 1024).toFixed(1)} KB)</span>
-                      </div>
-                    ) : (
-                      <span className="text-text-muted text-[10px]">Select PDF or spreadsheet analysis report to attach</span>
-                    )}
+                  </div>
+                  <div className="flex flex-col gap-1">
+                    <label className="text-text-muted font-semibold uppercase text-[9px] tracking-wider">Work Type</label>
+                    <input
+                      type="text"
+                      value={woFormFields.workType}
+                      disabled
+                      className="bg-[#121626] border border-[#2a3254]/50 rounded-lg p-2 text-text-muted font-medium cursor-not-allowed text-xs"
+                    />
+                  </div>
+                  <div className="flex flex-col gap-1">
+                    <label className="text-text-muted font-semibold uppercase text-[9px] tracking-wider">External Source</label>
+                    <input
+                      type="text"
+                      value={woFormFields.externalSource}
+                      disabled
+                      className="bg-[#121626] border border-[#2a3254]/50 rounded-lg p-2 text-text-muted font-medium cursor-not-allowed text-xs"
+                    />
+                  </div>
+                  <div className="flex flex-col gap-1">
+                    <label className="text-text-muted font-semibold uppercase text-[9px] tracking-wider">External Source ID</label>
+                    <input
+                      type="text"
+                      value={woFormFields.externalSourceId}
+                      onChange={(e) => setWoFormFields({ ...woFormFields, externalSourceId: e.target.value })}
+                      className="bg-[#121626] border border-[#2a3254] rounded-lg p-2 text-text-primary focus:border-accent-blue focus:outline-none transition-colors text-xs"
+                    />
+                  </div>
+                  <div className="flex flex-col gap-1 col-span-2">
+                    <label className="text-text-muted font-semibold uppercase text-[9px] tracking-wider">Discovery Context</label>
+                    <input
+                      type="text"
+                      value={`${woFormFields.discovery} - Periodic condition monitoring`}
+                      disabled
+                      className="bg-[#121626] border border-[#2a3254]/50 rounded-lg p-2 text-text-muted font-medium cursor-not-allowed text-xs"
+                    />
                   </div>
                 </div>
               </div>
 
-              {/* Submit Buttons */}
-              <div className="flex justify-end gap-3 pt-4 border-t border-border-panel/40 select-none mt-2">
+              {/* Bloco 2 SLB: Parâmetros Operacionais & Diretivas */}
+              <div className="bg-[#101422]/60 border border-[#202742] rounded-xl p-4 flex flex-col gap-3">
+                <span className="text-[10px] font-bold text-[#60a5fa] uppercase tracking-wider block border-b border-[#202742] pb-2">
+                  2. Directive & Maintenance Parameters
+                </span>
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="flex flex-col gap-1 col-span-2">
+                    <label className="text-text-primary font-bold uppercase text-[9px] tracking-wider flex items-center gap-1">
+                      Directive <span className="text-status-error">*</span>
+                      <span className="text-[8px] text-text-muted normal-case font-normal">(Use capital letters, e.g. OIL REPLACE)</span>
+                    </label>
+                    <input
+                      type="text"
+                      placeholder="Enter directive title in CAPITAL letters"
+                      value={woFormFields.directive}
+                      onChange={(e) => {
+                        const val = e.target.value.toUpperCase();
+                        setWoFormFields({ ...woFormFields, directive: val });
+                        if (val.trim()) setWoFormFieldsError({ directive: '' });
+                      }}
+                      className={`bg-[#121626] border rounded-lg p-2.5 text-text-primary focus:border-accent-blue focus:outline-none transition-colors text-xs ${
+                        woFormFieldsError.directive ? 'border-status-error' : 'border-[#2a3254]'
+                      }`}
+                    />
+                    {woFormFieldsError.directive && (
+                      <span className="text-status-error text-[10px] mt-0.5">{woFormFieldsError.directive}</span>
+                    )}
+                  </div>
+
+                  <div className="flex flex-col gap-1">
+                    <label className="text-text-muted font-semibold uppercase text-[9px] tracking-wider">Maint. Org.</label>
+                    <select
+                      value={woFormFields.maintOrg}
+                      onChange={(e) => setWoFormFields({ ...woFormFields, maintOrg: e.target.value })}
+                      className="bg-[#121626] border border-[#2a3254] rounded-lg p-2 text-text-primary focus:border-accent-blue focus:outline-none cursor-pointer text-xs"
+                    >
+                      <option value="MECHTS">MECHTS - Mechanic - Topside</option>
+                      <option value="MECHER">MECHER - Mechanic - Engine Room</option>
+                      <option value="INSTR">INSTR - Instrument</option>
+                      <option value="ELEC">ELEC - Electrical</option>
+                      <option value="DCS">DCS - Distributed Control System</option>
+                      <option value="EX_INSP">EX_INSP - Ex Inspector</option>
+                      <option value="FABRIC">FABRIC - Fabric Maintenance</option>
+                      <option value="CARGO">CARGO - Cargo</option>
+                      <option value="MEDIC">MEDIC - Medic</option>
+                    </select>
+                  </div>
+
+                  <div className="flex flex-col gap-1">
+                    <label className="text-text-muted font-semibold uppercase text-[9px] tracking-wider">Symptom</label>
+                    <select
+                      value={woFormFields.symptom}
+                      onChange={(e) => setWoFormFields({ ...woFormFields, symptom: e.target.value })}
+                      className="bg-[#121626] border border-[#2a3254] rounded-lg p-2 text-text-primary focus:border-accent-blue focus:outline-none cursor-pointer text-xs"
+                    >
+                      <option value="VIB">VIB - Vibration</option>
+                      <option value="ELU">ELU - External leakage - utility medium</option>
+                      <option value="ELP">ELP - External leakage - process medium</option>
+                      <option value="PLU">PLU - Plugged / Choked</option>
+                      <option value="STD">STD - Structural deficiency</option>
+                    </select>
+                  </div>
+
+                  <div className="flex flex-col gap-1">
+                    <label className="text-text-muted font-semibold uppercase text-[9px] tracking-wider">Action ID</label>
+                    <select
+                      value={woFormFields.actionId}
+                      onChange={(e) => setWoFormFields({ ...woFormFields, actionId: e.target.value })}
+                      className="bg-[#121626] border border-[#2a3254] rounded-lg p-2 text-text-primary focus:border-accent-blue focus:outline-none cursor-pointer text-xs"
+                    >
+                      <option value="2">2 - Repair</option>
+                      <option value="3">3 - Modify</option>
+                      <option value="4">4 - Adjust</option>
+                      <option value="5">5 - Refit</option>
+                      <option value="6">6 - Check</option>
+                      <option value="7">7 - Service</option>
+                      <option value="8">8 - Test</option>
+                      <option value="9">9 - Inspection</option>
+                      <option value="10">10 - Overhaul</option>
+                      <option value="11">11 - Combination</option>
+                    </select>
+                  </div>
+
+                  <div className="flex flex-col gap-1">
+                    <label className="text-text-muted font-semibold uppercase text-[9px] tracking-wider">Operational Status</label>
+                    <select
+                      value={woFormFields.operationalStatus}
+                      onChange={(e) => setWoFormFields({ ...woFormFields, operationalStatus: e.target.value })}
+                      className="bg-[#121626] border border-[#2a3254] rounded-lg p-2 text-text-primary focus:border-accent-blue focus:outline-none cursor-pointer text-xs"
+                    >
+                      <option value="01">01 - Non-intrusive / Non-obstructive</option>
+                      <option value="02">02 - Item Intrusive / Obstructive</option>
+                      <option value="03">03 - Package Intrusive / Obstructive</option>
+                    </select>
+                  </div>
+                </div>
+              </div>
+
+              {/* Bloco 3 SLB: Descrição da Falha & Anexo do Relatório */}
+              <div className="bg-[#101422]/60 border border-[#202742] rounded-xl p-4 flex flex-col gap-3">
+                <span className="text-[10px] font-bold text-[#60a5fa] uppercase tracking-wider block border-b border-[#202742] pb-2">
+                  3. Fault Description & Evidence Attachment
+                </span>
+                <div className="flex flex-col gap-3">
+                  <div className="flex flex-col gap-1">
+                    <label className="text-text-muted font-semibold uppercase text-[9px] tracking-wider">Fault Description</label>
+                    <textarea
+                      value={woFormFields.faultDesc}
+                      onChange={(e) => setWoFormFields({ ...woFormFields, faultDesc: e.target.value })}
+                      rows={3}
+                      className="bg-[#121626] border border-[#2a3254] rounded-lg p-2.5 text-text-primary focus:border-accent-blue focus:outline-none resize-none leading-relaxed text-xs"
+                    />
+                  </div>
+
+                  {/* File Upload Input */}
+                  <div className="flex flex-col gap-1">
+                    <label className="text-text-muted font-semibold uppercase text-[9px] tracking-wider block">Attach Technical Analysis File (Optional)</label>
+                    <div className="border border-dashed border-[#333e68] hover:border-accent-blue rounded-lg p-3 bg-[#121626] flex flex-col items-center justify-center gap-1.5 transition-colors relative cursor-pointer">
+                      <input
+                        type="file"
+                        id="simulated-wo-file"
+                        className="absolute inset-0 opacity-0 cursor-pointer"
+                        onChange={(e) => {
+                          const file = e.target.files?.[0];
+                          if (file) {
+                            setWoFormFields({
+                              ...woFormFields,
+                              attachedFilename: file.name,
+                              attachedFileSize: file.size,
+                            });
+                          }
+                        }}
+                      />
+                      <FileText size={18} className="text-[#60a5fa]/70" />
+                      {woFormFields.attachedFilename ? (
+                        <div className="text-center">
+                          <span className="text-status-ok font-semibold block text-xs">✓ File Attached</span>
+                          <span className="text-text-muted text-[10px]">{woFormFields.attachedFilename} ({(woFormFields.attachedFileSize / 1024).toFixed(1)} KB)</span>
+                        </div>
+                      ) : (
+                        <span className="text-text-muted text-[10px]">Select PDF or spreadsheet analysis report to attach</span>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Action Buttons SLB Style */}
+              <div className="flex justify-end gap-3 pt-3 border-t border-[#202742] select-none mt-1">
                 <button
                   type="button"
                   onClick={() => setWorkOrderFormOpen(false)}
                   disabled={isSubmittingWo}
-                  className="px-4 py-2 border border-border-panel/60 text-text-muted hover:text-text-primary hover:bg-border-panel/20 rounded cursor-pointer transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="border border-[#333e68] text-text-primary px-4 py-1.5 rounded-full text-xs font-medium hover:border-accent-blue transition-colors cursor-pointer disabled:opacity-50"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
                   disabled={isSubmittingWo}
-                  className="px-4 py-2 bg-accent-blue text-[#090d16] font-bold rounded cursor-pointer hover:bg-[#38bdf8] transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-1.5"
+                  className="bg-[#60a5fa] hover:bg-[#3b82f6] text-[#090d16] font-semibold px-5 py-1.5 rounded-full text-xs transition-colors cursor-pointer shadow disabled:opacity-50 flex items-center gap-1.5"
                 >
                   {isSubmittingWo ? (
                     <>
@@ -1873,7 +1902,7 @@ export default function MainPage() {
                       Submitting...
                     </>
                   ) : (
-                    'Submit Fault Report'
+                    'Submit Work Order'
                   )}
                 </button>
               </div>
