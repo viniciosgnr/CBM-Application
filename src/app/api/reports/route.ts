@@ -4,11 +4,12 @@ import { equipments, equipmentHistory, analysisReports } from '@/db/schema';
 import { desc, eq } from 'drizzle-orm';
 
 
-function getOverallCondition(vibration: string, lube: string): string {
-  const statuses = [vibration, lube];
-  if (statuses.includes('Critical')) return 'Critical';
-  if (statuses.includes('Degraded')) return 'Degraded';
-  if (statuses.includes('Good')) return 'Good';
+function getOverallCondition(vibration: string, lube: string, thermography: string = 'Good'): string {
+  const statuses = [vibration, lube, thermography];
+  if (statuses.some(s => s.includes('Critical'))) return 'Critical - Tier 1';
+  if (statuses.some(s => s.includes('Degraded'))) return 'Degraded - Tier 2';
+  if (statuses.some(s => s.includes('Tier 3'))) return 'Good - Tier 3';
+  if (statuses.some(s => s.includes('Good'))) return 'Good - Tier 4';
   return 'Machine Off';
 }
 
@@ -31,9 +32,11 @@ export async function POST(request: Request) {
     const body = await request.json();
     const {
       equipmentTag,
-      analysisType, // 'Vibration' | 'Lube Oil'
+      analysisType, // 'Vibration' | 'Lube Oil' | 'Thermography'
       vibrationStatus,
       lubeOilStatus,
+      thermographyStatus,
+      cbmStatus, // Unified status tier (e.g. 'Good - Tier 4', 'Degraded - Tier 2')
       facility,
       system,
       tagNumber,
@@ -52,6 +55,7 @@ export async function POST(request: Request) {
       woNumber,
       conditionAssessment,
       longDescription,
+      imageUrl,
     } = body;
 
     // Validate required fields
@@ -69,16 +73,6 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Missing required report fields' }, { status: 400 });
     }
 
-    if (analysisType === 'Vibration' && !vibrationStatus) {
-      return NextResponse.json({ error: 'Missing vibration status' }, { status: 400 });
-    }
-    if (analysisType === 'Lube Oil' && !lubeOilStatus) {
-      return NextResponse.json({ error: 'Missing lube oil status' }, { status: 400 });
-    }
-    if (!analysisType && (!vibrationStatus || !lubeOilStatus)) {
-      return NextResponse.json({ error: 'Missing vibrationStatus or lubeOilStatus' }, { status: 400 });
-    }
-
     // Use transaction to update equipment, history and save report
     const result = await db.transaction(async (tx) => {
       // Fetch current equipment status
@@ -94,18 +88,23 @@ export async function POST(request: Request) {
 
       let finalVibrationStatus = eqRecord.vibrationStatus;
       let finalLubeOilStatus = eqRecord.lubeOilStatus;
+      let finalThermographyStatus = eqRecord.thermographyStatus || 'Good';
+
+      const statusToApply = cbmStatus || vibrationStatus || lubeOilStatus || thermographyStatus || 'Good - Tier 4';
 
       if (analysisType === 'Vibration') {
-        finalVibrationStatus = vibrationStatus;
+        finalVibrationStatus = statusToApply;
       } else if (analysisType === 'Lube Oil') {
-        finalLubeOilStatus = lubeOilStatus;
+        finalLubeOilStatus = statusToApply;
+      } else if (analysisType === 'Thermography') {
+        finalThermographyStatus = statusToApply;
       } else {
-        // Fallback
         if (vibrationStatus) finalVibrationStatus = vibrationStatus;
         if (lubeOilStatus) finalLubeOilStatus = lubeOilStatus;
+        if (thermographyStatus) finalThermographyStatus = thermographyStatus;
       }
 
-      const overallCondition = getOverallCondition(finalVibrationStatus, finalLubeOilStatus);
+      const overallCondition = cbmStatus || getOverallCondition(finalVibrationStatus, finalLubeOilStatus, finalThermographyStatus);
       const nowStr = new Date().toLocaleString('en-GB'); // dd/mm/yyyy, hh:mm:ss
       const nowIso = new Date().toISOString();
 
@@ -115,6 +114,7 @@ export async function POST(request: Request) {
         .set({
           vibrationStatus: finalVibrationStatus,
           lubeOilStatus: finalLubeOilStatus,
+          thermographyStatus: finalThermographyStatus,
           condition: overallCondition,
           lastUpdate: nowStr,
         })
@@ -125,6 +125,7 @@ export async function POST(request: Request) {
         equipmentTag,
         vibrationStatus: finalVibrationStatus,
         lubeOilStatus: finalLubeOilStatus,
+        thermographyStatus: finalThermographyStatus,
         overallCondition,
         changedAt: nowIso,
       });
@@ -136,6 +137,7 @@ export async function POST(request: Request) {
           equipmentTag,
           vibrationStatus: finalVibrationStatus,
           lubeOilStatus: finalLubeOilStatus,
+          thermographyStatus: finalThermographyStatus,
           overallCondition,
           facility,
           system,
@@ -146,7 +148,7 @@ export async function POST(request: Request) {
           machineName: machineName || null,
           mcProtection: mcProtection || null,
           operatingContext: operatingContext || null,
-          technology: technology || null,
+          technology: technology || (analysisType === 'Thermography' ? 'Thermography Analysis' : analysisType === 'Vibration' ? 'Vibration Analysis' : 'Lube Oil Analysis'),
           component: component || null,
           raisedBy,
           raisedDate,
@@ -155,6 +157,7 @@ export async function POST(request: Request) {
           woNumber: woNumber || null,
           conditionAssessment,
           longDescription,
+          imageUrl: imageUrl || null,
           createdAt: nowIso,
         })
         .returning();
@@ -168,4 +171,30 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: 'Failed to create report' }, { status: 500 });
   }
 }
+
+export async function PUT(request: Request) {
+  try {
+    const body = await request.json();
+    const { id, imageUrl } = body;
+    if (!id) {
+      return NextResponse.json({ error: 'Missing report id' }, { status: 400 });
+    }
+
+    const updated = await db
+      .update(analysisReports)
+      .set({ imageUrl: imageUrl || null })
+      .where(eq(analysisReports.id, Number(id)))
+      .returning();
+
+    if (updated.length === 0) {
+      return NextResponse.json({ error: 'Report not found' }, { status: 404 });
+    }
+
+    return NextResponse.json(updated[0]);
+  } catch (error) {
+    console.error('Failed to update report image:', error);
+    return NextResponse.json({ error: 'Failed to update report image' }, { status: 500 });
+  }
+}
+
 export const dynamic = 'force-dynamic';

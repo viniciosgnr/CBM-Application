@@ -82,6 +82,7 @@ interface AnalysisReport {
   woNumber?: string | null;
   conditionAssessment: string;
   longDescription: string;
+  imageUrl?: string | null;
   createdAt: string;
 }
 
@@ -234,7 +235,7 @@ export default function MainPage() {
 
   // Report Creation Form state
   const [reportFormOpen, setReportFormOpen] = useState(false);
-  const [analysisType, setAnalysisType] = useState<'Vibration' | 'Lube Oil'>('Vibration');
+  const [analysisType, setAnalysisType] = useState<'Vibration' | 'Lube Oil' | 'Thermography'>('Vibration');
   const [formFields, setFormFields] = useState({
     facility: '',
     system: '',
@@ -256,6 +257,8 @@ export default function MainPage() {
     longDescription: '',
     vibrationStatus: 'Good',
     lubeOilStatus: 'Good',
+    cbmStatus: 'Good - Tier 4',
+    imageUrl: '',
   });
 
   // Report Detail Viewer state
@@ -517,6 +520,8 @@ export default function MainPage() {
       longDescription: '',
       vibrationStatus: selectedEquipment.vibrationStatus,
       lubeOilStatus: selectedEquipment.lubeOilStatus,
+      cbmStatus: selectedEquipment.condition || 'Good - Tier 4',
+      imageUrl: '',
     });
 
     setReportFormOpen(true);
@@ -568,59 +573,72 @@ export default function MainPage() {
     }
   };
 
+  // Handle uploading/updating image directly for a report
+  const handleReportImageUpload = async (reportId: number, file: File) => {
+    const reader = new FileReader();
+    reader.onloadend = async () => {
+      const base64Image = reader.result as string;
+      try {
+        const res = await fetch('/api/reports', {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ id: reportId, imageUrl: base64Image }),
+        });
+        if (res.ok) {
+          const updated = await res.json();
+          setSelectedReport(updated);
+          await fetchReports();
+        }
+      } catch (err) {
+        console.error('Failed to attach evidence image:', err);
+      }
+    };
+    reader.readAsDataURL(file);
+  };
+
   // Formatação das bolinhas coloridas de status (Priority / Condition / Status)
   const getStatusDot = (status: string) => {
-    const baseStatus = status ? status.split(' - ')[0] : '';
-    switch (baseStatus) {
-      case 'Accepted':
-      case 'Good':
-        return (
-          <span className="inline-flex items-center gap-1.5 font-medium text-[11px]">
-            <span className="w-1.5 h-1.5 rounded-full bg-status-ok" />
-            <span className="text-[#a2b4cd]">{baseStatus}</span>
-          </span>
-        );
-      case 'Rejected':
-      case 'Critical':
-        return (
-          <span className="inline-flex items-center gap-1.5 font-medium text-[11px]">
-            <span className="w-1.5 h-1.5 rounded-full bg-status-error" />
-            <span className="text-[#a2b4cd]">{baseStatus}</span>
-          </span>
-        );
-      case 'Degraded':
-        return (
-          <span className="inline-flex items-center gap-1.5 font-medium text-[11px]">
-            <span className="w-1.5 h-1.5 rounded-full bg-status-warn" />
-            <span className="text-[#a2b4cd]">{baseStatus}</span>
-          </span>
-        );
-      case 'Machine Off':
-        return (
-          <span className="inline-flex items-center gap-1.5 font-medium text-[11px]">
-            <span className="w-1.5 h-1.5 rounded-full bg-gray-500" />
-            <span className="text-[#a2b4cd]">{baseStatus}</span>
-          </span>
-        );
-      case 'Pending':
-      default:
-        // Handle cases like 'Accepted' that do not split with '-'
-        const checkStatus = baseStatus || status;
-        if (checkStatus === 'Accepted') {
-          return (
-            <span className="inline-flex items-center gap-1.5 font-medium text-[11px]">
-              <span className="w-1.5 h-1.5 rounded-full bg-status-ok" />
-              <span className="text-[#a2b4cd]">{checkStatus}</span>
-            </span>
-          );
-        }
-        return (
-          <span className="inline-flex items-center gap-1.5 font-medium text-[11px]">
-            <span className="w-1.5 h-1.5 rounded-full bg-text-muted" />
-            <span className="text-[#a2b4cd]">{checkStatus}</span>
-          </span>
-        );
+    if (!status) return null;
+    const baseStatus = status.split(' - ')[0];
+    
+    if (status.includes('Critical') || baseStatus === 'Rejected') {
+      return (
+        <span className="inline-flex items-center gap-1.5 font-medium text-[11px]">
+          <span className="w-1.5 h-1.5 rounded-full bg-status-error" />
+          <span className="text-text-primary font-medium">{status}</span>
+        </span>
+      );
     }
+    if (status.includes('Degraded')) {
+      return (
+        <span className="inline-flex items-center gap-1.5 font-medium text-[11px]">
+          <span className="w-1.5 h-1.5 rounded-full bg-status-warn" />
+          <span className="text-text-primary font-medium">{status}</span>
+        </span>
+      );
+    }
+    if (status.includes('Good') || baseStatus === 'Accepted') {
+      return (
+        <span className="inline-flex items-center gap-1.5 font-medium text-[11px]">
+          <span className="w-1.5 h-1.5 rounded-full bg-status-ok" />
+          <span className="text-text-primary font-medium">{status}</span>
+        </span>
+      );
+    }
+    if (status === 'Machine Off') {
+      return (
+        <span className="inline-flex items-center gap-1.5 font-medium text-[11px]">
+          <span className="w-1.5 h-1.5 rounded-full bg-gray-500" />
+          <span className="text-text-muted">{status}</span>
+        </span>
+      );
+    }
+    return (
+      <span className="inline-flex items-center gap-1.5 font-medium text-[11px]">
+        <span className="w-1.5 h-1.5 rounded-full bg-accent-blue" />
+        <span className="text-text-muted">{status}</span>
+      </span>
+    );
   };
 
   // Format history array chronologically for the trend chart
@@ -958,7 +976,7 @@ export default function MainPage() {
                 </div>
                 <span className="text-[10px] text-text-muted uppercase tracking-wider font-semibold">Active Warnings</span>
                 <span className="text-2xl font-bold text-status-error">
-                  {reports.filter(r => r.overallCondition === 'Critical' || r.overallCondition === 'Degraded').length}
+                  {reports.filter(r => r.overallCondition?.includes('Critical') || r.overallCondition?.includes('Degraded')).length}
                 </span>
                 <span className="text-[9px] text-[#a2b4cd] mt-2">Critical and Degraded conditions requiring attention</span>
               </div>
@@ -1137,193 +1155,232 @@ export default function MainPage() {
             onSubmit={handleReportSubmit}
             className="bg-bg-card border border-border-panel rounded-card w-full max-w-[760px] relative animate-fadeIn shadow-2xl text-left overflow-hidden flex flex-col max-h-[90vh]"
           >
-            {/* Header */}
-            <div className="p-5 border-b border-border-panel flex items-center justify-between">
-              <div>
-                <h3 className="text-sm font-bold text-text-primary">Log Analysis Outcome & CBM Report</h3>
-                <p className="text-[10px] text-text-muted mt-0.5">Recording operational status and recommendations for {selectedEquipment.tag}</p>
-              </div>
+            {/* Header da Modal SLB OptiSite Style */}
+            <div className="p-5 border-b border-border-panel relative">
               <button
                 type="button"
                 onClick={() => setReportFormOpen(false)}
-                className="text-text-muted hover:text-text-primary transition-colors cursor-pointer"
+                className="absolute top-4 right-4 text-text-muted hover:text-text-primary transition-colors cursor-pointer"
+                title="Close"
               >
                 <X size={18} />
               </button>
+
+              <div className="flex items-center gap-2 pr-8">
+                <h2 className="text-base font-bold text-text-primary">
+                  {selectedEquipment.tag} - {selectedEquipment.name.charAt(0).toUpperCase() + selectedEquipment.name.slice(1).toLowerCase()}
+                </h2>
+                <span className="text-[10px] bg-[#222944] text-[#94a3b8] px-2 py-0.5 rounded border border-[#333e68] font-semibold uppercase tracking-wider flex-shrink-0">
+                  {selectedEquipment.system}
+                </span>
+              </div>
+
+              <div className="flex items-center gap-2 text-xs text-text-muted mt-1.5 font-medium">
+                <span>Overall CBM status:</span>
+                <span className={`font-bold ${
+                  selectedEquipment.condition?.startsWith('Good') ? 'text-status-ok' :
+                  selectedEquipment.condition?.startsWith('Degraded') ? 'text-status-warn' :
+                  selectedEquipment.condition?.startsWith('Critical') ? 'text-status-error' : 'text-text-muted'
+                }`}>
+                  {selectedEquipment.condition}
+                </span>
+              </div>
             </div>
 
-            {/* Conteúdo do Form (Two-Column Layout) */}
-            <div className="p-5 flex-1 overflow-y-auto text-[11px] grid grid-cols-1 md:grid-cols-2 gap-5">
+            {/* Conteúdo do Form em 2 Blocos SLB */}
+            <div className="p-5 flex-1 overflow-y-auto text-xs flex flex-col gap-4">
               
-              {/* Coluna Esquerda: Inputs de Metadados e Status */}
-              <div className="flex flex-col gap-4">
-                {/* Analysis Type Dropdown */}
-                <div className="flex flex-col gap-1.5 bg-[#0b0f19]/40 p-3 rounded border border-border-panel/40">
-                  <label className="text-text-muted font-semibold uppercase text-[9px] tracking-wide">Analysis Type</label>
-                  <select
-                    value={analysisType}
-                    onChange={(e) => {
-                      const val = e.target.value as 'Vibration' | 'Lube Oil';
-                      setAnalysisType(val);
-                      setFormFields(prev => ({
-                        ...prev,
-                        technology: val === 'Vibration' ? 'Vibration Analysis' : 'Lube Oil Analysis',
-                        vibrationStatus: val === 'Vibration' ? (selectedEquipment?.vibrationStatus || 'Good') : prev.vibrationStatus,
-                        lubeOilStatus: val === 'Lube Oil' ? (selectedEquipment?.lubeOilStatus || 'Good') : prev.lubeOilStatus,
-                      }));
-                    }}
-                    className="bg-[#111827] border border-border-panel rounded p-2 text-text-primary focus:border-accent-blue outline-none cursor-pointer text-xs w-full mt-1"
-                  >
-                    <option value="Vibration">Vibration Analysis</option>
-                    <option value="Lube Oil">Lube Oil Analysis</option>
-                  </select>
-                </div>
-
-                <div className="grid grid-cols-2 gap-3">
-                  <div className="flex flex-col gap-1.5">
-                    <label className="text-text-muted font-semibold uppercase text-[9px]">
-                      {analysisType === 'Vibration' ? 'Vibration Status' : 'Vibration Status (Current)'}
-                    </label>
+              {/* Bloco 1: Parâmetros da Análise & Metadados */}
+              <div className="bg-[#101422]/60 p-4 border border-[#202742] rounded-xl flex flex-col gap-4">
+                <h4 className="text-[10px] font-bold text-text-muted uppercase tracking-wider">Analysis Parameters & Metadata</h4>
+                
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                  {/* Analysis Type Dropdown */}
+                  <div className="flex flex-col gap-1.5 md:col-span-1">
+                    <label className="text-text-muted font-semibold uppercase text-[9px] tracking-wider">Analysis Type</label>
                     <select
-                      value={formFields.vibrationStatus}
-                      onChange={e => setFormFields({ ...formFields, vibrationStatus: e.target.value })}
-                      disabled={analysisType !== 'Vibration'}
-                      className="bg-[#111827] border border-border-panel rounded p-2 text-text-primary focus:border-accent-blue outline-none cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+                      value={analysisType}
+                      onChange={(e) => {
+                        const val = e.target.value as 'Vibration' | 'Lube Oil' | 'Thermography';
+                        setAnalysisType(val);
+                        setFormFields(prev => ({
+                          ...prev,
+                          technology: val === 'Thermography' ? 'Thermography Analysis' : val === 'Vibration' ? 'Vibration Analysis' : 'Lube Oil Analysis',
+                        }));
+                      }}
+                      className="bg-[#121626] border border-[#2a3254] rounded-lg p-2.5 text-text-primary focus:border-accent-blue outline-none cursor-pointer text-xs w-full"
                     >
-                      <option value="Good">Good</option>
-                      <option value="Degraded">Degraded</option>
-                      <option value="Critical">Critical</option>
-                      <option value="Machine Off">Machine Off</option>
+                      <option value="Vibration">Vibration Analysis</option>
+                      <option value="Lube Oil">Lube Oil Analysis</option>
+                      <option value="Thermography">Thermography Analysis</option>
                     </select>
                   </div>
-                  <div className="flex flex-col gap-1.5">
-                    <label className="text-text-muted font-semibold uppercase text-[9px]">
-                      {analysisType === 'Lube Oil' ? 'Lube Oil Status' : 'Lube Oil Status (Current)'}
-                    </label>
+
+                  {/* Unified CBM Status Dropdown */}
+                  <div className="flex flex-col gap-1.5 md:col-span-2">
+                    <label className="text-text-muted font-semibold uppercase text-[9px] tracking-wider">CBM Status</label>
                     <select
-                      value={formFields.lubeOilStatus}
-                      onChange={e => setFormFields({ ...formFields, lubeOilStatus: e.target.value })}
-                      disabled={analysisType !== 'Lube Oil'}
-                      className="bg-[#111827] border border-border-panel rounded p-2 text-text-primary focus:border-accent-blue outline-none cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+                      value={formFields.cbmStatus}
+                      onChange={e => setFormFields({ ...formFields, cbmStatus: e.target.value })}
+                      className="bg-[#121626] border border-[#2a3254] rounded-lg p-2.5 text-text-primary focus:border-accent-blue outline-none cursor-pointer text-xs w-full"
                     >
-                      <option value="Good">Good</option>
-                      <option value="Degraded">Degraded</option>
-                      <option value="Critical">Critical</option>
-                      <option value="Machine Off">Machine Off</option>
+                      <option value="Good - Tier 4" className="bg-[#121626]">Good - Tier 4</option>
+                      <option value="Good - Tier 3" className="bg-[#121626]">Good - Tier 3</option>
+                      <option value="Degraded - Tier 2" className="bg-[#121626]">Degraded - Tier 2</option>
+                      <option value="Critical - Tier 1" className="bg-[#121626]">Critical - Tier 1</option>
                     </select>
                   </div>
                 </div>
 
-
-                <div className="flex flex-col gap-1.5">
-                  <label className="text-text-muted font-semibold uppercase text-[9px]">Component</label>
-                  <input
-                    type="text"
-                    required
-                    placeholder="e.g. Compressor"
-                    value={formFields.component}
-                    onChange={e => setFormFields({ ...formFields, component: e.target.value })}
-                    className="bg-[#0b0f19] border border-border-panel rounded p-2 text-text-primary focus:border-accent-blue focus:outline-none transition-colors"
-                  />
-                </div>
-
-                <div className="flex flex-col gap-1.5">
-                  <label className="text-text-muted font-semibold uppercase text-[9px]">Raised By</label>
-                  <input
-                    type="text"
-                    required
-                    value={formFields.raisedBy}
-                    onChange={e => setFormFields({ ...formFields, raisedBy: e.target.value })}
-                    className="bg-[#0b0f19] border border-border-panel rounded p-2 text-text-primary focus:border-accent-blue focus:outline-none transition-colors"
-                  />
-                </div>
-
-                <div className="grid grid-cols-2 gap-3">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                   <div className="flex flex-col gap-1.5">
-                    <label className="text-text-muted font-semibold uppercase text-[9px]">Raised Date</label>
+                    <label className="text-text-muted font-semibold uppercase text-[9px] tracking-wider">Component</label>
+                    <input
+                      type="text"
+                      required
+                      placeholder="e.g. Compressor"
+                      value={formFields.component}
+                      onChange={e => setFormFields({ ...formFields, component: e.target.value })}
+                      className="bg-[#121626] border border-[#2a3254] rounded-lg p-2.5 text-text-primary focus:border-accent-blue outline-none transition-colors text-xs"
+                    />
+                  </div>
+
+                  <div className="flex flex-col gap-1.5">
+                    <label className="text-text-muted font-semibold uppercase text-[9px] tracking-wider">Raised By</label>
+                    <input
+                      type="text"
+                      required
+                      value={formFields.raisedBy}
+                      onChange={e => setFormFields({ ...formFields, raisedBy: e.target.value })}
+                      className="bg-[#121626] border border-[#2a3254] rounded-lg p-2.5 text-text-primary focus:border-accent-blue outline-none transition-colors text-xs"
+                    />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                  <div className="flex flex-col gap-1.5">
+                    <label className="text-text-muted font-semibold uppercase text-[9px] tracking-wider">Raised Date</label>
                     <input
                       type="date"
                       required
                       value={formFields.raisedDate}
                       onChange={e => setFormFields({ ...formFields, raisedDate: e.target.value })}
-                      className="bg-[#0b0f19] border border-border-panel rounded p-2 text-text-primary focus:border-accent-blue focus:outline-none transition-colors cursor-pointer"
+                      className="bg-[#121626] border border-[#2a3254] rounded-lg p-2.5 text-text-primary focus:border-accent-blue outline-none transition-colors cursor-pointer text-xs"
                     />
                   </div>
                   <div className="flex flex-col gap-1.5">
-                    <label className="text-text-muted font-semibold uppercase text-[9px]">Target Date</label>
+                    <label className="text-text-muted font-semibold uppercase text-[9px] tracking-wider">Target Date</label>
                     <input
                       type="date"
                       required
                       value={formFields.targetDate}
                       onChange={e => setFormFields({ ...formFields, targetDate: e.target.value })}
-                      className="bg-[#0b0f19] border border-border-panel rounded p-2 text-text-primary focus:border-accent-blue focus:outline-none transition-colors cursor-pointer"
+                      className="bg-[#121626] border border-[#2a3254] rounded-lg p-2.5 text-text-primary focus:border-accent-blue outline-none transition-colors cursor-pointer text-xs"
                     />
                   </div>
                 </div>
 
-                <div className="flex flex-col gap-1.5">
-                  <label className="text-text-muted font-semibold uppercase text-[9px]">Short Description</label>
-                  <input
-                    type="text"
-                    required
-                    placeholder="e.g. Instrumentation Failure"
-                    value={formFields.shortDescription}
-                    onChange={e => setFormFields({ ...formFields, shortDescription: e.target.value })}
-                    className="bg-[#0b0f19] border border-border-panel rounded p-2 text-text-primary focus:border-accent-blue focus:outline-none transition-colors"
-                  />
-                </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                  <div className="flex flex-col gap-1.5">
+                    <label className="text-text-muted font-semibold uppercase text-[9px] tracking-wider">Short Description</label>
+                    <input
+                      type="text"
+                      required
+                      placeholder="e.g. Instrumentation Failure"
+                      value={formFields.shortDescription}
+                      onChange={e => setFormFields({ ...formFields, shortDescription: e.target.value })}
+                      className="bg-[#121626] border border-[#2a3254] rounded-lg p-2.5 text-text-primary focus:border-accent-blue outline-none transition-colors text-xs"
+                    />
+                  </div>
 
-                <div className="flex flex-col gap-1.5">
-                  <label className="text-text-muted font-semibold uppercase text-[9px]">Work Order Number (Optional)</label>
-                  <input
-                    type="text"
-                    placeholder="e.g. 1089487"
-                    value={formFields.woNumber}
-                    onChange={e => setFormFields({ ...formFields, woNumber: e.target.value })}
-                    className="bg-[#0b0f19] border border-border-panel rounded p-2 text-text-primary focus:border-accent-blue focus:outline-none transition-colors"
-                  />
+                  <div className="flex flex-col gap-1.5">
+                    <label className="text-text-muted font-semibold uppercase text-[9px] tracking-wider">Work Order Number (Optional)</label>
+                    <input
+                      type="text"
+                      placeholder="e.g. 1089487"
+                      value={formFields.woNumber}
+                      onChange={e => setFormFields({ ...formFields, woNumber: e.target.value })}
+                      className="bg-[#121626] border border-[#2a3254] rounded-lg p-2.5 text-text-primary focus:border-accent-blue outline-none transition-colors text-xs"
+                    />
+                  </div>
                 </div>
               </div>
 
-              {/* Coluna Direita: Observações e Recomendações */}
-              <div className="flex flex-col gap-4">
-                <div className="flex flex-col gap-1.5 flex-1 min-h-[160px]">
-                  <label className="text-text-muted font-semibold uppercase text-[9px]">Condition Assessment (Observations)</label>
+              {/* Bloco 2: Avaliação da Condição & Recomendações */}
+              <div className="bg-[#101422]/60 p-4 border border-[#202742] rounded-xl flex flex-col gap-4">
+                <h4 className="text-[10px] font-bold text-text-muted uppercase tracking-wider">Condition Assessment & Recommendations</h4>
+
+                <div className="flex flex-col gap-1.5">
+                  <label className="text-text-muted font-semibold uppercase text-[9px] tracking-wider">Condition Assessment (Observations)</label>
                   <textarea
+                    rows={3}
                     required
                     placeholder="Insert detailed observations regarding the equipment conditions..."
                     value={formFields.conditionAssessment}
                     onChange={e => setFormFields({ ...formFields, conditionAssessment: e.target.value })}
-                    className="bg-[#0b0f19] border border-border-panel rounded p-2.5 text-text-primary focus:border-accent-blue focus:outline-none transition-colors flex-1 resize-none h-full"
+                    className="bg-[#121626] border border-[#2a3254] rounded-lg p-2.5 text-text-primary focus:border-accent-blue focus:outline-none transition-colors text-xs resize-none"
                   />
                 </div>
 
-                <div className="flex flex-col gap-1.5 flex-1 min-h-[160px]">
-                  <label className="text-text-muted font-semibold uppercase text-[9px]">Long Description (Recommendations)</label>
+                <div className="flex flex-col gap-1.5">
+                  <label className="text-text-muted font-semibold uppercase text-[9px] tracking-wider">Long Description (Recommendations)</label>
                   <textarea
+                    rows={3}
                     required
                     placeholder="Insert recommended maintenance actions (e.g. Check connections, replace sensors, top up oil)..."
                     value={formFields.longDescription}
                     onChange={e => setFormFields({ ...formFields, longDescription: e.target.value })}
-                    className="bg-[#0b0f19] border border-border-panel rounded p-2.5 text-text-primary focus:border-accent-blue focus:outline-none transition-colors flex-1 resize-none h-full"
+                    className="bg-[#121626] border border-[#2a3254] rounded-lg p-2.5 text-text-primary focus:border-accent-blue focus:outline-none transition-colors text-xs resize-none"
                   />
+                </div>
+
+                <div className="flex flex-col gap-1.5">
+                  <label className="text-text-muted font-semibold uppercase text-[9px] tracking-wider">Attach Supporting Image / Screenshot</label>
+                  <input
+                    type="file"
+                    accept="image/*"
+                    onChange={(e) => {
+                      const file = e.target.files?.[0];
+                      if (file) {
+                        const reader = new FileReader();
+                        reader.onloadend = () => {
+                          setFormFields(prev => ({ ...prev, imageUrl: reader.result as string }));
+                        };
+                        reader.readAsDataURL(file);
+                      }
+                    }}
+                    className="bg-[#121626] border border-[#2a3254] rounded-lg p-2 text-text-primary text-xs file:mr-3 file:py-1 file:px-3 file:rounded-full file:border-0 file:text-xs file:font-semibold file:bg-[#60a5fa] file:text-[#090d16] hover:file:bg-[#3b82f6] cursor-pointer"
+                  />
+                  {formFields.imageUrl && (
+                    <div className="mt-2 relative w-32 h-20 border border-[#202742] rounded overflow-hidden">
+                      <img src={formFields.imageUrl} alt="Preview" className="w-full h-full object-cover" />
+                      <button
+                        type="button"
+                        onClick={() => setFormFields(prev => ({ ...prev, imageUrl: '' }))}
+                        className="absolute top-1 right-1 bg-black/70 text-white rounded-full p-0.5 hover:bg-red-600 cursor-pointer"
+                        title="Remove Image"
+                      >
+                        <X size={12} />
+                      </button>
+                    </div>
+                  )}
                 </div>
               </div>
 
             </div>
 
-            {/* Footer / Navigation Actions */}
-            <div className="p-4 border-t border-border-panel bg-bg-panel/10 flex items-center justify-end gap-3 select-none">
+            {/* Footer / Navigation Actions SLB Style */}
+            <div className="p-4 border-t border-[#202742] bg-[#101422]/60 flex items-center justify-end gap-3 select-none">
               <button
                 type="button"
                 onClick={() => setReportFormOpen(false)}
-                className="px-4 py-2 border border-border-panel rounded font-bold hover:bg-bg-panel/40 transition-colors text-text-muted hover:text-text-primary cursor-pointer text-xs"
+                className="border border-[#333e68] text-text-primary px-4 py-1.5 rounded-full text-xs font-medium hover:border-accent-blue transition-colors cursor-pointer"
               >
                 Cancel
               </button>
               <button
                 type="submit"
-                className="px-5 py-2 bg-status-ok text-[#090d16] font-bold rounded hover:bg-[#4ade80] transition-colors cursor-pointer text-xs"
+                className="bg-[#60a5fa] hover:bg-[#3b82f6] text-[#090d16] font-semibold px-5 py-1.5 rounded-full text-xs transition-colors cursor-pointer shadow"
               >
                 Submit Report
               </button>
@@ -1335,139 +1392,165 @@ export default function MainPage() {
       {/* Digital Excel Report Viewer Side-Overlay (Details of a Recommendations report) */}
       {reportDetailsOpen && selectedReport && (
         <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[999] flex items-center justify-end p-0">
-          <div className="bg-[#0b0f19] border-l border-border-panel w-full max-w-[680px] h-full flex flex-col animate-slideLeft shadow-2xl relative">
+          <div className="bg-[#0b0f19] border-l border-[#202742] w-full max-w-[680px] h-full flex flex-col animate-slideLeft shadow-2xl relative">
             
             {/* Top Bar Details close */}
-            <div className="p-4 border-b border-border-panel bg-bg-card flex items-center justify-between select-none">
+            <div className="p-4 border-b border-[#202742] bg-[#101422] flex items-center justify-between select-none">
               <span className="text-xs font-bold text-text-muted flex items-center gap-1.5">
                 <FileText size={14} className="text-accent-blue" />
                 CBM Analysis Report Details
               </span>
               <button
                 onClick={() => setReportDetailsOpen(false)}
-                className="p-1 text-text-muted hover:text-text-primary hover:bg-bg-panel/40 rounded transition-all cursor-pointer"
+                className="p-1 text-text-muted hover:text-text-primary hover:bg-[#202742] rounded transition-all cursor-pointer"
                 title="Close"
               >
                 <X size={16} />
               </button>
             </div>
 
-            {/* Excel Sheet Simulator container */}
-            <div className="flex-1 overflow-y-auto p-6 bg-[#0f172a] text-[#f1f5f9] select-text">
+            {/* Excel Sheet Simulator container SLB Style */}
+            <div className="flex-1 overflow-y-auto p-6 bg-[#0b0f19] text-[#f1f5f9] select-text">
               
               {/* simulated Excel Border wrapper */}
-              <div className="border border-[#334155] rounded-lg overflow-hidden bg-[#020617] shadow-lg max-w-[620px] mx-auto">
+              <div className="border border-[#202742] rounded-xl overflow-hidden bg-[#101422]/60 shadow-xl max-w-[620px] mx-auto">
                 
-                {/* Excel Row 1: Solid severity header banner */}
-                <div className={`p-4 text-center font-bold text-sm tracking-widest uppercase border-b border-[#334155] ${
-                  selectedReport.overallCondition === 'Good' ? 'bg-status-ok text-[#020617]' :
-                  selectedReport.overallCondition === 'Degraded' ? 'bg-status-warn text-[#020617]' :
-                  selectedReport.overallCondition === 'Critical' ? 'bg-status-error text-white' : 'bg-slate-700 text-[#020617]'
+                {/* Excel Row 1: Solid severity header banner SLB Category Colors */}
+                <div className={`p-3.5 text-center font-bold text-xs tracking-widest uppercase border-b border-[#202742] ${
+                  selectedReport.overallCondition?.includes('Critical') ? 'bg-[#ef4444]/20 text-[#ef4444] border-[#ef4444]/40' :
+                  selectedReport.overallCondition?.includes('Degraded') ? 'bg-[#f59e0b]/20 text-[#f59e0b] border-[#f59e0b]/40' :
+                  'bg-[#4ade80]/20 text-[#4ade80] border-[#4ade80]/40'
                 }`}>
                   {selectedReport.overallCondition}
                 </div>
 
                 {/* Row 1: FPSO & System */}
-                <div className="grid grid-cols-2 text-[10px] border-b border-[#334155] uppercase font-semibold">
-                  <div className="border-r border-[#334155] flex">
-                    <span className="bg-[#1e293b] text-text-muted p-2 w-[110px] flex-shrink-0 border-r border-[#334155] flex items-center">FPSO</span>
-                    <span className="p-2 text-text-primary flex-1 flex items-center">
+                <div className="grid grid-cols-2 text-[10px] border-b border-[#202742] uppercase font-semibold">
+                  <div className="border-r border-[#202742] flex">
+                    <span className="bg-[#121626] text-text-muted p-2.5 w-[110px] flex-shrink-0 border-r border-[#202742] flex items-center">FPSO</span>
+                    <span className="p-2.5 text-text-primary flex-1 flex items-center">
                       {equipments.find(e => e.tag === selectedReport.equipmentTag)?.fpso || selectedReport.facility}
                     </span>
                   </div>
                   <div className="flex">
-                    <span className="bg-[#1e293b] text-text-muted p-2 w-[110px] flex-shrink-0 border-r border-[#334155] flex items-center">System</span>
-                    <span className="p-2 text-text-primary flex-1 flex items-center">
+                    <span className="bg-[#121626] text-text-muted p-2.5 w-[110px] flex-shrink-0 border-r border-[#202742] flex items-center">System</span>
+                    <span className="p-2.5 text-text-primary flex-1 flex items-center">
                       {equipments.find(e => e.tag === selectedReport.equipmentTag)?.system || selectedReport.system}
                     </span>
                   </div>
                 </div>
 
                 {/* Row 2: Equipment Tag & Name */}
-                <div className="grid grid-cols-2 text-[10px] border-b border-[#334155] uppercase font-semibold">
-                  <div className="border-r border-[#334155] flex">
-                    <span className="bg-[#1e293b] text-text-muted p-2 w-[110px] flex-shrink-0 border-r border-[#334155] flex items-center">Equipment Tag</span>
-                    <span className="p-2 text-[#fbbf24] flex-1 flex items-center">
+                <div className="grid grid-cols-2 text-[10px] border-b border-[#202742] uppercase font-semibold">
+                  <div className="border-r border-[#202742] flex">
+                    <span className="bg-[#121626] text-text-muted p-2.5 w-[110px] flex-shrink-0 border-r border-[#202742] flex items-center">Equipment Tag</span>
+                    <span className="p-2.5 text-[#fbbf24] flex-1 flex items-center font-bold">
                       {selectedReport.equipmentTag}
                     </span>
                   </div>
                   <div className="flex">
-                    <span className="bg-[#1e293b] text-text-muted p-2 w-[110px] flex-shrink-0 border-r border-[#334155] flex items-center">Name</span>
-                    <span className="p-2 text-text-primary flex-1 flex items-center">
+                    <span className="bg-[#121626] text-text-muted p-2.5 w-[110px] flex-shrink-0 border-r border-[#202742] flex items-center">Name</span>
+                    <span className="p-2.5 text-text-primary flex-1 flex items-center">
                       {equipments.find(e => e.tag === selectedReport.equipmentTag)?.name || selectedReport.component}
                     </span>
                   </div>
                 </div>
 
                 {/* Row 3: Equipment Class & Criticality */}
-                <div className="grid grid-cols-2 text-[10px] border-b border-[#334155] uppercase font-semibold">
-                  <div className="border-r border-[#334155] flex">
-                    <span className="bg-[#1e293b] text-text-muted p-2 w-[110px] flex-shrink-0 border-r border-[#334155] flex items-center">Equipment Class</span>
-                    <span className="p-2 text-text-primary flex-1 flex items-center">
+                <div className="grid grid-cols-2 text-[10px] border-b border-[#202742] uppercase font-semibold">
+                  <div className="border-r border-[#202742] flex">
+                    <span className="bg-[#121626] text-text-muted p-2.5 w-[110px] flex-shrink-0 border-r border-[#202742] flex items-center">Equipment Class</span>
+                    <span className="p-2.5 text-text-primary flex-1 flex items-center">
                       {equipments.find(e => e.tag === selectedReport.equipmentTag)?.class || 'N/A'}
                     </span>
                   </div>
                   <div className="flex">
-                    <span className="bg-[#1e293b] text-text-muted p-2 w-[110px] flex-shrink-0 border-r border-[#334155] flex items-center">Criticality</span>
-                    <span className="p-2 text-text-primary flex-1 flex items-center">
+                    <span className="bg-[#121626] text-text-muted p-2.5 w-[110px] flex-shrink-0 border-r border-[#202742] flex items-center">Criticality</span>
+                    <span className="p-2.5 text-text-primary flex-1 flex items-center">
                       {equipments.find(e => e.tag === selectedReport.equipmentTag)?.criticality || selectedReport.cof || 'N/A'}
                     </span>
                   </div>
                 </div>
 
                 {/* Row 4: Object Type & Last Update */}
-                <div className="grid grid-cols-2 text-[10px] border-b border-[#334155] uppercase font-semibold">
-                  <div className="border-r border-[#334155] flex">
-                    <span className="bg-[#1e293b] text-text-muted p-2 w-[110px] flex-shrink-0 border-r border-[#334155] flex items-center">Object Type</span>
-                    <span className="p-2 text-text-primary flex-1 flex items-center">
+                <div className="grid grid-cols-2 text-[10px] border-b border-[#202742] uppercase font-semibold">
+                  <div className="border-r border-[#202742] flex">
+                    <span className="bg-[#121626] text-text-muted p-2.5 w-[110px] flex-shrink-0 border-r border-[#202742] flex items-center">Object Type</span>
+                    <span className="p-2.5 text-text-primary flex-1 flex items-center">
                       {equipments.find(e => e.tag === selectedReport.equipmentTag)?.objectType || 'N/A'}
                     </span>
                   </div>
                   <div className="flex">
-                    <span className="bg-[#1e293b] text-text-muted p-2 w-[110px] flex-shrink-0 border-r border-[#334155] flex items-center">Last Update</span>
-                    <span className="p-2 text-text-primary flex-1 flex items-center">
+                    <span className="bg-[#121626] text-text-muted p-2.5 w-[110px] flex-shrink-0 border-r border-[#202742] flex items-center">Last Update</span>
+                    <span className="p-2.5 text-text-primary flex-1 flex items-center">
                       {equipments.find(e => e.tag === selectedReport.equipmentTag)?.lastUpdate || selectedReport.raisedDate}
                     </span>
                   </div>
                 </div>
 
-                {/* Simulated Diagram Row */}
-                <div className="bg-[#0f172a] p-3 text-center border-b border-[#334155] select-none">
-                  <div className="border border-[#1e293b] rounded-lg p-6 bg-[#020617]/50 relative overflow-hidden flex flex-col items-center justify-center min-h-[140px] text-text-muted gap-2">
-                    <Wrench size={32} className="text-[#38bdf8]/30" />
-                    <span className="text-[10px] font-semibold uppercase tracking-wider text-[#a2b4cd]/60">Physical Equipment Diagram Simulation</span>
-                    <span className="text-[8px] text-text-muted italic">{selectedReport.tagNumber} layout mapped on optsite layout</span>
-                  </div>
-                </div>
-
                 {/* Condition Assessment / Observations */}
-                <div className="border-b border-[#334155] text-[10px]">
-                  <div className="bg-[#1e293b] text-text-muted p-2.5 font-bold uppercase tracking-wider border-b border-[#334155]">
+                <div className="border-b border-[#202742] text-[10px]">
+                  <div className="bg-[#121626] text-text-muted p-2.5 font-bold uppercase tracking-wider border-b border-[#202742]">
                     Condition Assessment (Observations)
                   </div>
-                  <div className="p-3 text-text-primary leading-relaxed text-[10.5px]">
+                  <div className="p-3.5 text-text-primary leading-relaxed text-[11px] bg-[#101422]/40">
                     {selectedReport.conditionAssessment}
                   </div>
                 </div>
 
-                {/* Supporting Images */}
-                <div className="border-b border-[#334155] text-[10px] bg-[#020617] p-3">
-                  <span className="text-text-muted font-bold uppercase tracking-wider block mb-2 text-center text-[9px]">Supporting Images</span>
-                  <div className="border border-[#1e293b] rounded p-10 bg-[#0f172a]/30 flex flex-col items-center justify-center text-text-muted italic text-[9px] gap-1">
-                    <Calendar size={20} className="opacity-30" />
-                    <span>No analytical screenshots uploaded for this log outcome</span>
+                {/* Supporting Images / Analytical Evidence */}
+                <div className="border-b border-[#202742] text-[10px] bg-[#101422]/60 p-4">
+                  <div className="flex items-center justify-between mb-2.5">
+                    <span className="text-text-muted font-bold uppercase tracking-wider text-[9px]">Supporting Images / Analytical Evidence</span>
+                    <label className="bg-[#121626] border border-[#333e68] hover:border-accent-blue text-text-primary px-3 py-1 rounded-full text-[9px] font-semibold cursor-pointer transition-colors flex items-center gap-1 select-none">
+                      <PlusCircle size={10} className="text-[#60a5fa]" />
+                      {selectedReport.imageUrl ? 'Change Image' : 'Attach Image'}
+                      <input
+                        type="file"
+                        accept="image/*"
+                        className="hidden"
+                        onChange={(e) => {
+                          const file = e.target.files?.[0];
+                          if (file) handleReportImageUpload(selectedReport.id, file);
+                        }}
+                      />
+                    </label>
                   </div>
+                  {selectedReport.imageUrl ? (
+                    <div className="border border-[#202742] rounded-lg overflow-hidden bg-[#0b0f19] p-2 flex flex-col items-center justify-center relative group">
+                      <img 
+                        src={selectedReport.imageUrl} 
+                        alt="Supporting Analytical Evidence" 
+                        className="max-h-[280px] w-auto object-contain rounded border border-[#202742]"
+                      />
+                    </div>
+                  ) : (
+                    <label className="border border-dashed border-[#333e68] hover:border-accent-blue rounded-lg p-6 bg-[#0b0f19] flex flex-col items-center justify-center text-text-muted italic text-[9px] gap-2 cursor-pointer transition-colors select-none">
+                      <FileText size={24} className="text-[#60a5fa]/50" />
+                      <span className="text-text-primary font-medium font-sans">Click to attach an evidence image / screenshot</span>
+                      <span className="text-text-muted text-[8px]">Supports PNG, JPG, WebP</span>
+                      <input
+                        type="file"
+                        accept="image/*"
+                        className="hidden"
+                        onChange={(e) => {
+                          const file = e.target.files?.[0];
+                          if (file) handleReportImageUpload(selectedReport.id, file);
+                        }}
+                      />
+                    </label>
+                  )}
                 </div>
 
                 {/* Technical Metadata info section */}
-                <div className="grid grid-cols-2 text-[10px] border-b border-[#334155] uppercase font-semibold">
-                  <div className="border-r border-[#334155] flex">
-                    <span className="bg-[#1e293b] text-text-muted p-2 w-[100px] flex-shrink-0 border-r border-[#334155] flex items-center">Component</span>
-                    <span className="p-2 text-text-primary flex-1 flex items-center">{selectedReport.component || 'N/A'}</span>
+                <div className="grid grid-cols-2 text-[10px] border-b border-[#202742] uppercase font-semibold">
+                  <div className="border-r border-[#202742] flex">
+                    <span className="bg-[#121626] text-text-muted p-2.5 w-[100px] flex-shrink-0 border-r border-[#202742] flex items-center">Component</span>
+                    <span className="p-2.5 text-text-primary flex-1 flex items-center">{selectedReport.component || 'N/A'}</span>
                   </div>
                   <div className="flex">
-                    <span className="bg-[#1e293b] text-text-muted p-2 w-[100px] flex-shrink-0 border-r border-[#334155] flex items-center">Raised By</span>
-                    <span className="p-2 text-[#38bdf8] flex-1 flex items-center flex-row gap-1">
+                    <span className="bg-[#121626] text-text-muted p-2.5 w-[100px] flex-shrink-0 border-r border-[#202742] flex items-center">Raised By</span>
+                    <span className="p-2.5 text-[#38bdf8] flex-1 flex items-center flex-row gap-1">
                       <User size={10} />
                       {selectedReport.raisedBy}
                     </span>
@@ -1475,17 +1558,17 @@ export default function MainPage() {
                 </div>
 
                 {/* Date metadata */}
-                <div className="grid grid-cols-2 text-[10px] border-b border-[#334155] uppercase font-semibold">
-                  <div className="border-r border-[#334155] flex">
-                    <span className="bg-[#1e293b] text-text-muted p-2 w-[100px] flex-shrink-0 border-r border-[#334155] flex items-center">Raised Date</span>
-                    <span className="p-2 text-text-primary flex-1 flex items-center flex-row gap-1">
+                <div className="grid grid-cols-2 text-[10px] border-b border-[#202742] uppercase font-semibold">
+                  <div className="border-r border-[#202742] flex">
+                    <span className="bg-[#121626] text-text-muted p-2.5 w-[100px] flex-shrink-0 border-r border-[#202742] flex items-center">Raised Date</span>
+                    <span className="p-2.5 text-text-primary flex-1 flex items-center flex-row gap-1">
                       <Calendar size={10} />
                       {selectedReport.raisedDate}
                     </span>
                   </div>
                   <div className="flex">
-                    <span className="bg-[#1e293b] text-text-muted p-2 w-[100px] flex-shrink-0 border-r border-[#334155] flex items-center">Target Date</span>
-                    <span className="p-2 text-text-primary flex-1 flex items-center flex-row gap-1">
+                    <span className="bg-[#121626] text-text-muted p-2.5 w-[100px] flex-shrink-0 border-r border-[#202742] flex items-center">Target Date</span>
+                    <span className="p-2.5 text-text-primary flex-1 flex items-center flex-row gap-1">
                       <Calendar size={10} />
                       {selectedReport.targetDate || 'N/A'}
                     </span>
@@ -1493,14 +1576,14 @@ export default function MainPage() {
                 </div>
 
                 {/* Description info */}
-                <div className="grid grid-cols-2 text-[10px] border-b border-[#334155] uppercase font-semibold">
-                  <div className="border-r border-[#334155] flex">
-                    <span className="bg-[#1e293b] text-text-muted p-2 w-[100px] flex-shrink-0 border-r border-[#334155] flex items-center">Description</span>
-                    <span className="p-2 text-text-primary flex-1 flex items-center">{selectedReport.shortDescription}</span>
+                <div className="grid grid-cols-2 text-[10px] border-b border-[#202742] uppercase font-semibold">
+                  <div className="border-r border-[#202742] flex">
+                    <span className="bg-[#121626] text-text-muted p-2.5 w-[100px] flex-shrink-0 border-r border-[#202742] flex items-center">Description</span>
+                    <span className="p-2.5 text-text-primary flex-1 flex items-center">{selectedReport.shortDescription}</span>
                   </div>
                   <div className="flex">
-                    <span className="bg-[#1e293b] text-[#f87171] p-2 w-[100px] flex-shrink-0 border-r border-[#334155] flex items-center">WO Number</span>
-                    <span className="p-2 text-text-primary flex-1 flex items-center flex-row gap-1 font-bold">
+                    <span className="bg-[#121626] text-[#f87171] p-2.5 w-[100px] flex-shrink-0 border-r border-[#202742] flex items-center">WO Number</span>
+                    <span className="p-2.5 text-text-primary flex-1 flex items-center flex-row gap-1 font-bold">
                       <Hash size={10} />
                       {selectedReport.woNumber ? (
                         <button
@@ -1518,39 +1601,36 @@ export default function MainPage() {
 
                 {/* Recommendations (Long Description) */}
                 <div className="text-[10px]">
-                  <div className="bg-[#1e293b] text-text-muted p-2.5 font-bold uppercase tracking-wider border-b border-[#334155] flex items-center gap-1.5">
+                  <div className="bg-[#121626] text-text-muted p-2.5 font-bold uppercase tracking-wider border-b border-[#202742] flex items-center gap-1.5">
                     <Wrench size={12} className="text-accent-blue" />
                     Long Description (Recommendations)
                   </div>
-                  <div className="p-3 text-text-primary leading-relaxed text-[10.5px] whitespace-pre-line bg-[#090d16]/30">
+                  <div className="p-3.5 text-text-primary leading-relaxed text-[11px] whitespace-pre-line bg-[#101422]/40">
                     {selectedReport.longDescription}
                   </div>
                 </div>
               </div>
 
-              {/* Action Buttons below Simulated Excel Sheet */}
-              <div className="max-w-[620px] mx-auto mt-6 flex justify-end gap-3 select-none">
+              {/* Action Buttons SLB Style */}
+              <div className="max-w-[620px] mx-auto mt-5 flex justify-end gap-3 select-none">
                 {selectedReport.woNumber ? (
                   <button
                     onClick={() => navigateToWorkOrder(selectedReport.woNumber!)}
-                    className="flex items-center gap-2 bg-[#1e293b] text-accent-blue font-bold px-4 py-2 rounded text-xs border border-accent-blue/30 hover:border-accent-blue/60 transition-all cursor-pointer uppercase shadow-lg active:scale-95"
+                    className="flex items-center gap-2 bg-[#60a5fa] hover:bg-[#3b82f6] text-[#090d16] font-semibold px-5 py-2 rounded-full text-xs transition-colors cursor-pointer shadow active:scale-95"
                   >
                     <FileText size={14} />
                     View Work Order ({selectedReport.woNumber})
                   </button>
                 ) : (
-                  (selectedReport.overallCondition === 'Critical' || selectedReport.overallCondition === 'Degraded') && (
-                    <button
-                      onClick={() => openWorkOrderForm(selectedReport)}
-                      className="flex items-center gap-2 bg-accent-blue text-[#090d16] font-bold px-4 py-2 rounded text-xs hover:bg-[#38bdf8] transition-all cursor-pointer uppercase shadow-lg active:scale-95"
-                    >
-                      <PlusCircle size={14} />
-                      Raise Work Order (Fault Report)
-                    </button>
-                  )
+                  <button
+                    onClick={() => openWorkOrderForm(selectedReport)}
+                    className="flex items-center gap-2 bg-[#60a5fa] hover:bg-[#3b82f6] text-[#090d16] font-semibold px-5 py-2 rounded-full text-xs transition-colors cursor-pointer shadow active:scale-95"
+                  >
+                    <PlusCircle size={14} />
+                    Generate Work Order (Fault Report)
+                  </button>
                 )}
               </div>
-
             </div>
           </div>
         </div>

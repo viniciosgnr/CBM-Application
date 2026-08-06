@@ -12,6 +12,7 @@ export const equipments = sqliteTable('equipments', {
   condition: text('condition').notNull(),
   vibrationStatus: text('vibration_status').notNull(),
   lubeOilStatus: text('lube_oil_status').notNull(),
+  thermographyStatus: text('thermography_status').notNull().default('Good'),
   lastUpdate: text('last_update').notNull(),
   observation: text('observation'),
 });
@@ -21,6 +22,7 @@ export const equipmentHistory = sqliteTable('equipment_history', {
   equipmentTag: text('equipment_tag').notNull(),
   vibrationStatus: text('vibration_status').notNull(),
   lubeOilStatus: text('lube_oil_status').notNull(),
+  thermographyStatus: text('thermography_status').notNull().default('Good'),
   overallCondition: text('overall_condition').notNull(),
   changedAt: text('changed_at').notNull(),
 });
@@ -30,6 +32,7 @@ export const analysisReports = sqliteTable('analysis_reports', {
   equipmentTag: text('equipment_tag').notNull(),
   vibrationStatus: text('vibration_status').notNull(),
   lubeOilStatus: text('lube_oil_status').notNull(),
+  thermographyStatus: text('thermography_status').notNull().default('Good'),
   overallCondition: text('overall_condition').notNull(),
   
   // Excel Report fields
@@ -53,6 +56,7 @@ export const analysisReports = sqliteTable('analysis_reports', {
   
   conditionAssessment: text('condition_assessment').notNull(), // Observation
   longDescription: text('long_description').notNull(), // Recommendation
+  imageUrl: text('image_url'),
   createdAt: text('created_at').notNull(),
 });
 
