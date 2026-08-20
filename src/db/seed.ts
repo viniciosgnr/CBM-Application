@@ -376,13 +376,20 @@ const initialEquipments = [
 ];
 
 const mockHistory = [
-  { equipmentTag: 'COCE_TIME_NRS_01', vibrationStatus: 'Good', lubeOilStatus: 'Good', overallCondition: 'Good - Tier 4', changedAt: '2026-03-26T12:00:00Z' },
-  { equipmentTag: 'COCE_TIME_NRS_01', vibrationStatus: 'Good', lubeOilStatus: 'Good', overallCondition: 'Good - Tier 3', changedAt: '2026-04-26T12:00:00Z' },
-  { equipmentTag: 'COCE_TIME_NRS_01', vibrationStatus: 'Good', lubeOilStatus: 'Good', overallCondition: 'Good - Tier 4', changedAt: '2026-07-23T12:47:04Z' },
+  { equipmentTag: 'COCE_TIME_NRS_01', vibrationStatus: 'Good - Tier 4', lubeOilStatus: 'Good - Tier 4', overallCondition: 'Good - Tier 4', changedAt: '2026-03-26T12:00:00Z' },
+  { equipmentTag: 'COCE_TIME_NRS_01', vibrationStatus: 'Good - Tier 3', lubeOilStatus: 'Good - Tier 4', overallCondition: 'Good - Tier 3', changedAt: '2026-04-26T12:00:00Z' },
+  { equipmentTag: 'COCE_TIME_NRS_01', vibrationStatus: 'Good - Tier 4', lubeOilStatus: 'Good - Tier 4', overallCondition: 'Good - Tier 4', changedAt: '2026-07-23T12:47:04Z' },
+  { equipmentTag: 'COCE_TIME_NRS_01', vibrationStatus: 'Good - Tier 4', lubeOilStatus: 'Good - Tier 4', overallCondition: 'Good - Tier 4', changedAt: '2026-07-27T12:47:04Z' },
+  { equipmentTag: 'COCE_TIME_NRS_01', vibrationStatus: 'Degraded - Tier 2', lubeOilStatus: 'Good - Tier 4', overallCondition: 'Degraded - Tier 2', changedAt: '2026-07-28T12:47:04Z' },
+  { equipmentTag: 'COCE_TIME_NRS_01', vibrationStatus: 'Good - Tier 4', lubeOilStatus: 'Good - Tier 4', overallCondition: 'Good - Tier 4', changedAt: '2026-07-30T12:47:04Z' },
+  { equipmentTag: 'COCE_TIME_NRS_01', vibrationStatus: 'Good - Tier 4', lubeOilStatus: 'Degraded - Tier 2', overallCondition: 'Degraded - Tier 2', changedAt: '2026-07-31T12:47:04Z' },
+  { equipmentTag: 'COCE_TIME_NRS_01', vibrationStatus: 'Good - Tier 4', lubeOilStatus: 'Good - Tier 4', overallCondition: 'Good - Tier 4', changedAt: '2026-08-03T12:47:04Z' },
+  { equipmentTag: 'COCE_TIME_NRS_01', vibrationStatus: 'Good - Tier 4', lubeOilStatus: 'Degraded - Tier 2', overallCondition: 'Degraded - Tier 2', changedAt: '2026-08-04T12:47:04Z' },
+  { equipmentTag: 'COCE_TIME_NRS_01', vibrationStatus: 'Good - Tier 4', lubeOilStatus: 'Good - Tier 4', overallCondition: 'Good - Tier 4', changedAt: '2026-08-06T12:47:04Z' },
 
-  { equipmentTag: 'COCE_TIME_NRS_02', vibrationStatus: 'Critical', lubeOilStatus: 'Good', overallCondition: 'Critical - Tier 1', changedAt: '2026-07-22T14:10:00Z' },
-  { equipmentTag: 'CDI_PUMP_OIL_02', vibrationStatus: 'Critical', lubeOilStatus: 'Critical', overallCondition: 'Critical - Tier 1', changedAt: '2026-07-24T13:20:00Z' },
-  { equipmentTag: 'SEP_SEP_HEATER_02', vibrationStatus: 'Critical', lubeOilStatus: 'Critical', overallCondition: 'Critical - Tier 1', changedAt: '2026-07-24T06:10:00Z' },
+  { equipmentTag: 'COCE_TIME_NRS_02', vibrationStatus: 'Critical - Tier 1', lubeOilStatus: 'Good - Tier 4', overallCondition: 'Critical - Tier 1', changedAt: '2026-07-22T14:10:00Z' },
+  { equipmentTag: 'CDI_PUMP_OIL_02', vibrationStatus: 'Critical - Tier 1', lubeOilStatus: 'Critical - Tier 1', overallCondition: 'Critical - Tier 1', changedAt: '2026-07-24T13:20:00Z' },
+  { equipmentTag: 'SEP_SEP_HEATER_02', vibrationStatus: 'Critical - Tier 1', lubeOilStatus: 'Critical - Tier 1', overallCondition: 'Critical - Tier 1', changedAt: '2026-07-24T06:10:00Z' },
 ];
 
 const mockReports = [

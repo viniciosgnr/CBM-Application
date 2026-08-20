@@ -105,7 +105,7 @@ export async function POST(request: Request) {
         if (thermographyStatus) finalThermographyStatus = thermographyStatus;
       }
 
-      const overallCondition = cbmStatus || getOverallCondition(finalVibrationStatus, finalLubeOilStatus, finalThermographyStatus);
+      const overallCondition = getOverallCondition(finalVibrationStatus, finalLubeOilStatus, finalThermographyStatus);
       const nowStr = new Date().toLocaleString('en-GB'); // dd/mm/yyyy, hh:mm:ss
       const nowIso = new Date().toISOString();
 
@@ -116,6 +116,7 @@ export async function POST(request: Request) {
           lubeOilStatus: finalLubeOilStatus,
           thermographyStatus: finalThermographyStatus,
           condition: overallCondition,
+          observation: conditionAssessment,
           lastUpdate: nowStr,
         })
         .where(eq(equipments.tag, equipmentTag))
