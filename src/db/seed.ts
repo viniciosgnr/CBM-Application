@@ -1,5 +1,6 @@
 import { db } from './index';
 import { equipments, equipmentHistory, analysisReports, workOrders } from './schema';
+import { sql } from 'drizzle-orm';
 
 const initialEquipments = [
   // FPSO UNY (Gas System)
@@ -416,6 +417,11 @@ const mockReports = [
     woNumber: '801021309',
     conditionAssessment: 'Based on System 1 trends, abrupt jumps indicate instrumentation failure in axial sensors of Main Gas Compressor C.',
     longDescription: 'Verify sensor fastening, check connection integrity, and perform channel cross-substitution.',
+    equipmentClass: 'Centrifugal Compressor',
+    subunit: 'Compression Stage 1',
+    maintainableItem: 'Axial Bearing / Sensor Set',
+    failureModeDescription: 'AIR - Abnormal Instrument Reading',
+    failureMechanismSubdivision: 'Mechanical Failure - Vibration',
     createdAt: '2026-07-22T14:10:00Z',
   },
   {
@@ -963,6 +969,24 @@ const mockWorkOrders = [
 
 export async function seed() {
   console.log('Clearing existing records for seed refresh...');
+
+  // Ensure analysis_reports has failure mode columns
+  try {
+    await db.run(sql`ALTER TABLE analysis_reports ADD COLUMN equipment_class TEXT;`);
+  } catch {}
+  try {
+    await db.run(sql`ALTER TABLE analysis_reports ADD COLUMN subunit TEXT;`);
+  } catch {}
+  try {
+    await db.run(sql`ALTER TABLE analysis_reports ADD COLUMN maintainable_item TEXT;`);
+  } catch {}
+  try {
+    await db.run(sql`ALTER TABLE analysis_reports ADD COLUMN failure_mode_description TEXT;`);
+  } catch {}
+  try {
+    await db.run(sql`ALTER TABLE analysis_reports ADD COLUMN failure_mechanism_subdivision TEXT;`);
+  } catch {}
+
   await db.delete(workOrders);
   await db.delete(analysisReports);
   await db.delete(equipmentHistory);

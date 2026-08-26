@@ -57,6 +57,13 @@ export const analysisReports = sqliteTable('analysis_reports', {
   conditionAssessment: text('condition_assessment').notNull(), // Observation
   longDescription: text('long_description').notNull(), // Recommendation
   imageUrl: text('image_url'),
+  // Failure Mode fields
+  equipmentClass: text('equipment_class'),
+  subunit: text('subunit'),
+  maintainableItem: text('maintainable_item'),
+  failureModeDescription: text('failure_mode_description'),
+  failureMechanismSubdivision: text('failure_mechanism_subdivision'),
+
   createdAt: text('created_at').notNull(),
 });
 

@@ -56,6 +56,11 @@ export async function POST(request: Request) {
       conditionAssessment,
       longDescription,
       imageUrl,
+      equipmentClass,
+      subunit,
+      maintainableItem,
+      failureModeDescription,
+      failureMechanismSubdivision,
     } = body;
 
     // Validate required fields
@@ -160,6 +165,11 @@ export async function POST(request: Request) {
           conditionAssessment,
           longDescription,
           imageUrl: imageUrl || null,
+          equipmentClass: equipmentClass || null,
+          subunit: subunit || null,
+          maintainableItem: maintainableItem || null,
+          failureModeDescription: failureModeDescription || null,
+          failureMechanismSubdivision: failureMechanismSubdivision || null,
           createdAt: nowIso,
         })
         .returning()

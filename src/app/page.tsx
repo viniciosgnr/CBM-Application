@@ -84,6 +84,11 @@ interface AnalysisReport {
   conditionAssessment: string;
   longDescription: string;
   imageUrl?: string | null;
+  equipmentClass?: string | null;
+  subunit?: string | null;
+  maintainableItem?: string | null;
+  failureModeDescription?: string | null;
+  failureMechanismSubdivision?: string | null;
   createdAt: string;
 }
 
@@ -126,6 +131,72 @@ const CHART_VALUE_MAP: Record<string, number> = {
   'Critical': 1,
   'Machine Off': 0,
 };
+
+const FAILURE_MODE_OPTIONS = [
+  'AIR - Abnormal Instrument Reading',
+  'BRD - Breakdown',
+  'ELP - External Leakage - process medium',
+  'ELU - External Leakage - Utility Medium',
+  'ERO - Erratic Output',
+  'FTS - Failure To Start On Demand',
+  'HIO - High Output',
+  'INL - Internal Leakage',
+  'LOO - Low Output',
+  'NOI - Noise',
+  'OHE - Overheating',
+  'PDE - Parameter Deviation',
+  'PLU - Plugged / Choked',
+  'STD - Structural Deficiency',
+  'STP - Failure To Stop On Demand',
+  'UST - Spurious Stop',
+  'VIB - Vibration',
+  'ELF - External Leakage - Fuel',
+];
+
+const FAILURE_MECHANISM_SUBDIVISION_OPTIONS = [
+  'Mechanical Failure - Leakage',
+  'Mechanical Failure - Vibration',
+  'Mechanical Failure - Clearance',
+  'Mechanical Failure - Unbalance',
+  'Mechanical Failure - Misalignment',
+  'Mechanical Failure - Deformation',
+  'Mechanical Failure - Looseness',
+  'Mechanical Failure - Sticking',
+  'Material Failure - Cavitation',
+  'Material Failure - Corrosion',
+  'Material Failure - Erosion',
+  'Material Failure - Wear',
+  'Material Failure - Breakage',
+  'Material Failure - Fatigue',
+  'Material Failure - Overheating',
+  'Material Failure - Burst',
+  'Instrument Failure - Control Failure',
+  'Instrument Failure - No Signal/Indication/Alarm',
+  'Instrument Failure - Faulty Signal/Indication/Alarm',
+  'Instrument Failure - Out of Adjustment',
+  'Instrument Failure - Software Error',
+  'Instrument Failure - Common Cause/Common Mode Failure',
+  'Electrical Failure - Short Circuiting',
+  'Electrical Failure - Open Circuit',
+  'Electrical Failure - No Power/Voltage',
+  'Electrical Failure - Faulty Power/Voltage',
+  'Electrical Failure - Earth/Isolation Fault',
+  'External Influence - Blockage/Plugged',
+  'External Influence - Contamination',
+  'External Influence - Miscellaneous External Influences',
+  'Miscellaneous - No Cause Found',
+  'Miscellaneous - Combined Causes',
+  'Miscellaneous - Other',
+  'Miscellaneous - Unknown',
+];
+
+const EQUIPMENT_CLASS_OPTIONS = [
+  'Centrifugal Compressor',
+  'Centrifugal Pump',
+  'Gas Turbine',
+  'Reciprocating Compressor',
+  'Screw Compressor',
+];
 
 
 export default function MainPage() {
@@ -256,6 +327,11 @@ export default function MainPage() {
     lubeOilStatus: 'Good',
     cbmStatus: 'Good - Tier 4',
     imageUrl: '',
+    equipmentClass: '',
+    subunit: '',
+    maintainableItem: '',
+    failureModeDescription: '',
+    failureMechanismSubdivision: '',
   });
 
   // Report Detail Viewer state
@@ -485,6 +561,11 @@ export default function MainPage() {
       lubeOilStatus: selectedEquipment.lubeOilStatus,
       cbmStatus: selectedEquipment.condition || 'Good - Tier 4',
       imageUrl: '',
+      equipmentClass: 'Centrifugal Compressor',
+      subunit: '',
+      maintainableItem: '',
+      failureModeDescription: 'VIB - Vibration',
+      failureMechanismSubdivision: 'Mechanical Failure - Vibration',
     });
 
     setReportFormOpen(true);
@@ -1306,6 +1387,82 @@ export default function MainPage() {
                 </div>
               </div>
 
+              {/* Bloco Failure Mode Details */}
+              <div className="bg-[#101422]/60 p-4 border border-[#202742] rounded-xl flex flex-col gap-4">
+                <h4 className="text-[10px] font-bold text-text-muted uppercase tracking-wider">Failure Mode Details</h4>
+                
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                  <div className="flex flex-col gap-1.5">
+                    <label className="text-text-muted font-semibold uppercase text-[9px] tracking-wider">Equipment Class</label>
+                    <select
+                      value={formFields.equipmentClass || 'Centrifugal Compressor'}
+                      onChange={e => setFormFields({ ...formFields, equipmentClass: e.target.value })}
+                      className="bg-[#121626] border border-[#2a3254] rounded-lg p-2.5 text-text-primary focus:border-accent-blue outline-none cursor-pointer text-xs w-full"
+                    >
+                      {EQUIPMENT_CLASS_OPTIONS.map((opt) => (
+                        <option key={opt} value={opt} className="bg-[#121626]">
+                          {opt}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <div className="flex flex-col gap-1.5">
+                    <label className="text-text-muted font-semibold uppercase text-[9px] tracking-wider">Subunit</label>
+                    <input
+                      type="text"
+                      placeholder="e.g. Compressor Unit"
+                      value={formFields.subunit || ''}
+                      onChange={e => setFormFields({ ...formFields, subunit: e.target.value })}
+                      className="bg-[#121626] border border-[#2a3254] rounded-lg p-2.5 text-text-primary focus:border-accent-blue outline-none transition-colors text-xs"
+                    />
+                  </div>
+
+                  <div className="flex flex-col gap-1.5">
+                    <label className="text-text-muted font-semibold uppercase text-[9px] tracking-wider">Maintainable Item</label>
+                    <input
+                      type="text"
+                      placeholder="e.g. Bearings / Seal"
+                      value={formFields.maintainableItem || ''}
+                      onChange={e => setFormFields({ ...formFields, maintainableItem: e.target.value })}
+                      className="bg-[#121626] border border-[#2a3254] rounded-lg p-2.5 text-text-primary focus:border-accent-blue outline-none transition-colors text-xs"
+                    />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                  <div className="flex flex-col gap-1.5">
+                    <label className="text-text-muted font-semibold uppercase text-[9px] tracking-wider">Failure Mode Description</label>
+                    <select
+                      value={formFields.failureModeDescription || 'VIB - Vibration'}
+                      onChange={e => setFormFields({ ...formFields, failureModeDescription: e.target.value })}
+                      className="bg-[#121626] border border-[#2a3254] rounded-lg p-2.5 text-text-primary focus:border-accent-blue outline-none cursor-pointer text-xs w-full"
+                    >
+                      {FAILURE_MODE_OPTIONS.map((opt) => (
+                        <option key={opt} value={opt} className="bg-[#121626]">
+                          {opt}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <div className="flex flex-col gap-1.5">
+                    <label className="text-text-muted font-semibold uppercase text-[9px] tracking-wider">Failure Mechanism Subdivision</label>
+                    <select
+                      value={formFields.failureMechanismSubdivision || 'Mechanical Failure - Vibration'}
+                      onChange={e => setFormFields({ ...formFields, failureMechanismSubdivision: e.target.value })}
+                      className="bg-[#121626] border border-[#2a3254] rounded-lg p-2.5 text-text-primary focus:border-accent-blue outline-none cursor-pointer text-xs w-full"
+                    >
+                      {FAILURE_MECHANISM_SUBDIVISION_OPTIONS.map((opt) => (
+                        <option key={opt} value={opt} className="bg-[#121626]">
+                          {opt}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+              </div>
+
               {/* Bloco 2: Avaliação da Condição & Recomendações */}
               <div className="bg-[#101422]/60 p-4 border border-[#202742] rounded-xl flex flex-col gap-4">
                 <h4 className="text-[10px] font-bold text-text-muted uppercase tracking-wider">Condition Assessment & Recommendations</h4>
@@ -1596,6 +1753,36 @@ export default function MainPage() {
                         <span className="text-text-muted italic">PENDING</span>
                       )}
                     </span>
+                  </div>
+                </div>
+
+                {/* Failure Mode Information Section */}
+                <div className="border-b border-[#202742]">
+                  <div className="bg-[#121626] text-text-muted p-2.5 font-bold uppercase tracking-wider text-[10px] border-b border-[#202742] flex items-center gap-1.5">
+                    <AlertCircle size={12} className="text-status-warn" />
+                    Failure Mode Information
+                  </div>
+                  <div className="grid grid-cols-2 text-[10px] uppercase font-semibold">
+                    <div className="border-r border-b border-[#202742] flex">
+                      <span className="bg-[#121626] text-text-muted p-2.5 w-[130px] flex-shrink-0 border-r border-[#202742] flex items-center">Equipment Class</span>
+                      <span className="p-2.5 text-text-primary flex-1 flex items-center">{selectedReport.equipmentClass || equipments.find(e => e.tag === selectedReport.equipmentTag)?.class || 'N/A'}</span>
+                    </div>
+                    <div className="border-b border-[#202742] flex">
+                      <span className="bg-[#121626] text-text-muted p-2.5 w-[130px] flex-shrink-0 border-r border-[#202742] flex items-center">Subunit</span>
+                      <span className="p-2.5 text-text-primary flex-1 flex items-center">{selectedReport.subunit || 'N/A'}</span>
+                    </div>
+                    <div className="border-r border-b border-[#202742] flex">
+                      <span className="bg-[#121626] text-text-muted p-2.5 w-[130px] flex-shrink-0 border-r border-[#202742] flex items-center">Maintainable Item</span>
+                      <span className="p-2.5 text-text-primary flex-1 flex items-center">{selectedReport.maintainableItem || 'N/A'}</span>
+                    </div>
+                    <div className="border-b border-[#202742] flex">
+                      <span className="bg-[#121626] text-text-muted p-2.5 w-[130px] flex-shrink-0 border-r border-[#202742] flex items-center">Mechanism Subdivision</span>
+                      <span className="p-2.5 text-text-primary flex-1 flex items-center">{selectedReport.failureMechanismSubdivision || 'N/A'}</span>
+                    </div>
+                    <div className="col-span-2 flex">
+                      <span className="bg-[#121626] text-text-muted p-2.5 w-[130px] flex-shrink-0 border-r border-[#202742] flex items-center">Failure Mode Desc.</span>
+                      <span className="p-2.5 text-text-primary flex-1 flex items-center font-bold text-[#f59e0b]">{selectedReport.failureModeDescription || 'N/A'}</span>
+                    </div>
                   </div>
                 </div>
 
