@@ -15,6 +15,8 @@ export const equipments = sqliteTable('equipments', {
   thermographyStatus: text('thermography_status').notNull().default('Good'),
   lastUpdate: text('last_update').notNull(),
   observation: text('observation'),
+  frequency: text('frequency').notNull().default('Monthly'),
+  collectionMethod: text('collection_method').notNull().default('Online'),
 });
 
 export const equipmentHistory = sqliteTable('equipment_history', {

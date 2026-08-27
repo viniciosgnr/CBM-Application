@@ -3,164 +3,21 @@ import { equipments, equipmentHistory, analysisReports, workOrders } from './sch
 import { sql } from 'drizzle-orm';
 
 const initialEquipments = [
-  // FPSO UNY (Gas System)
   {
-    tag: 'COCE_TIME_NRS_01',
-    fpso: 'UNY',
-    name: 'Compressor Performance',
-    class: 'COCE - Compressor, Centrifugal',
-    system: 'Gas',
+    tag: 'DNY_111-PKPD-0100',
+    fpso: 'DNY',
+    name: 'Emergency Diesel Generator',
+    class: 'Gas Turbine',
+    system: 'Power Generation',
     criticality: 'High',
     objectType: 'SECE',
-    condition: 'Good',
-    vibrationStatus: 'Good',
-    lubeOilStatus: 'Good',
+    condition: 'Good - Tier 4',
+    vibrationStatus: 'Good - Tier 4',
+    lubeOilStatus: 'Good - Tier 4',
     lastUpdate: '23/07/2026, 12:47:04',
-    observation: 'Operating normally.',
-  },
-  {
-    tag: 'COCE_TIME_NRS_02',
-    fpso: 'UNY',
-    name: 'Compressor Performance',
-    class: 'COCE - Compressor, Centrifugal',
-    system: 'Gas',
-    criticality: 'High',
-    objectType: 'NCE',
-    condition: 'Critical - Tier 1',
-    vibrationStatus: 'Critical',
-    lubeOilStatus: 'Good',
-    lastUpdate: '22/07/2026, 14:10:00',
-    observation: 'High vibration alarm triggered on axial sensors.',
-  },
-  {
-    tag: 'COCE_TIME_NRS_03',
-    fpso: 'UNY',
-    name: 'Compressor Performance',
-    class: 'COCE - Compressor, Centrifugal',
-    system: 'Gas',
-    criticality: 'Medium',
-    objectType: 'SECE',
-    condition: 'Degraded - Tier 2',
-    vibrationStatus: 'Good',
-    lubeOilStatus: 'Degraded',
-    lastUpdate: '20/07/2026, 09:30:00',
-    observation: 'Lube oil level slightly below nominal.',
-  },
-  {
-    tag: 'COCE_TIME_NRS_04',
-    fpso: 'UNY',
-    name: 'Compressor Performance',
-    class: 'COCE - Compressor, Centrifugal',
-    system: 'Gas',
-    criticality: 'Medium',
-    objectType: 'NCE',
-    condition: 'Good - Tier 4',
-    vibrationStatus: 'Good',
-    lubeOilStatus: 'Good',
-    lastUpdate: '18/07/2026, 16:20:00',
-    observation: 'Inspection scheduled for upcoming maintenance window.',
-  },
-  {
-    tag: 'COCE_TIME_NRS_05',
-    fpso: 'UNY',
-    name: 'Compressor Performance',
-    class: 'COCE - Compressor, Centrifugal',
-    system: 'Gas',
-    criticality: 'Low',
-    objectType: 'NCE',
-    condition: 'Good - Tier 3',
-    vibrationStatus: 'Good',
-    lubeOilStatus: 'Good',
-    lastUpdate: '15/07/2026, 11:05:00',
-    observation: 'No issues reported.',
-  },
-  
-  // FPSO UNY (Turbines & Pumps)
-  {
-    tag: 'TURB_METH_GDS_01',
-    fpso: 'UNY',
-    name: 'Turbine Performance',
-    class: 'TURB - Turbine, Gas',
-    system: 'Gas',
-    criticality: 'High',
-    objectType: 'SECE',
-    condition: 'Good - Tier 4',
-    vibrationStatus: 'Good',
-    lubeOilStatus: 'Good',
-    lastUpdate: '24/07/2026, 10:20:15',
-    observation: 'Operating under normal parameters.',
-  },
-  {
-    tag: 'TURB_METH_GDS_02',
-    fpso: 'UNY',
-    name: 'Turbine Performance',
-    class: 'TURB - Turbine, Gas',
-    system: 'Gas',
-    criticality: 'Medium',
-    objectType: 'SECE',
-    condition: 'Degraded - Tier 2',
-    vibrationStatus: 'Good',
-    lubeOilStatus: 'Degraded',
-    lastUpdate: '21/07/2026, 11:35:40',
-    observation: 'Increased exhaust temperature readings.',
-  },
-  {
-    tag: 'PUMP_COOL_AUX_01',
-    fpso: 'UNY',
-    name: 'Cooling Water Pump',
-    class: 'PUMP - Centrifugal Pump',
-    system: 'Water',
-    criticality: 'Low',
-    objectType: 'NCE',
-    condition: 'Good - Tier 3',
-    vibrationStatus: 'Good',
-    lubeOilStatus: 'Good',
-    lastUpdate: '19/07/2026, 08:00:00',
-    observation: 'Seal oil pressure stable.',
-  },
-  {
-    tag: 'PUMP_COOL_AUX_02',
-    fpso: 'UNY',
-    name: 'Cooling Water Pump',
-    class: 'PUMP - Centrifugal Pump',
-    system: 'Water',
-    criticality: 'Medium',
-    objectType: 'SECE',
-    condition: 'Critical - Tier 1',
-    vibrationStatus: 'Critical',
-    lubeOilStatus: 'Degraded',
-    lastUpdate: '23/07/2026, 07:15:00',
-    observation: 'Cavitation noise detected in primary impeller.',
-  },
-
-  // FPSO CDI (Gas, Oil & Water Systems)
-  {
-    tag: 'CDI_COMP_MAIN_01',
-    fpso: 'CDI',
-    name: 'Main Gas Compressor A',
-    class: 'COCE - Compressor, Centrifugal',
-    system: 'Gas',
-    criticality: 'High',
-    objectType: 'SECE',
-    condition: 'Good - Tier 4',
-    vibrationStatus: 'Good',
-    lubeOilStatus: 'Good',
-    lastUpdate: '22/07/2026, 15:45:00',
-    observation: 'Recommissioned after scheduled overhaul.',
-  },
-  {
-    tag: 'CDI_COMP_MAIN_02',
-    fpso: 'CDI',
-    name: 'Main Gas Compressor B',
-    class: 'COCE - Compressor, Centrifugal',
-    system: 'Gas',
-    criticality: 'High',
-    objectType: 'SECE',
-    condition: 'Degraded - Tier 2',
-    vibrationStatus: 'Degraded',
-    lubeOilStatus: 'Good',
-    lastUpdate: '20/07/2026, 18:10:00',
-    observation: 'Vibration frequency spectral spike at 2X RPM.',
+    observation: 'Operating normally under scheduled CBM surveillance.',
+    frequency: 'Quarterly',
+    collectionMethod: 'Offline/Manual'
   },
   {
     tag: 'CDI_PUMP_OIL_01',
@@ -1005,6 +862,14 @@ const mockWorkOrders = [
 export async function seed() {
   console.log('Clearing existing records for seed refresh...');
 
+  // Ensure equipments table has frequency and collection_method columns
+  try {
+    await db.run(sql`ALTER TABLE equipments ADD COLUMN frequency TEXT DEFAULT 'Monthly';`);
+  } catch {}
+  try {
+    await db.run(sql`ALTER TABLE equipments ADD COLUMN collection_method TEXT DEFAULT 'Online';`);
+  } catch {}
+
   // Ensure analysis_reports has failure mode columns
   try {
     await db.run(sql`ALTER TABLE analysis_reports ADD COLUMN equipment_class TEXT;`);
@@ -1028,12 +893,32 @@ export async function seed() {
   await db.delete(equipments);
 
   console.log('Seeding database with expanded datasets (25+ items per table)...');
-  const sanitizedEquipments = initialEquipments.map(eq => ({
-    ...eq,
-    condition: eq.condition.includes(' - ') ? eq.condition : eq.condition === 'Critical' ? 'Critical - Tier 1' : eq.condition === 'Degraded' ? 'Degraded - Tier 2' : 'Good - Tier 4',
-    vibrationStatus: eq.vibrationStatus.includes(' - ') ? eq.vibrationStatus : eq.vibrationStatus === 'Critical' ? 'Critical - Tier 1' : eq.vibrationStatus === 'Degraded' ? 'Degraded - Tier 2' : 'Good - Tier 4',
-    lubeOilStatus: eq.lubeOilStatus.includes(' - ') ? eq.lubeOilStatus : eq.lubeOilStatus === 'Critical' ? 'Critical - Tier 1' : eq.lubeOilStatus === 'Degraded' ? 'Degraded - Tier 2' : 'Good - Tier 4',
-  }));
+  const now = new Date();
+  const getRelativeDateStr = (daysAgo: number) => {
+    const d = new Date(now);
+    d.setDate(d.getDate() - daysAgo);
+    const day = String(d.getDate()).padStart(2, '0');
+    const month = String(d.getMonth() + 1).padStart(2, '0');
+    const year = d.getFullYear();
+    return `${day}/${month}/${year}, 10:30:00`;
+  };
+
+  const sanitizedEquipments = initialEquipments.map((eq, index) => {
+    // Distribute dates: 14 items within last 30 days (1 to 27 days ago), rest 35+ days ago
+    const daysAgo = index < 14 ? (index * 2) + 1 : 35 + (index * 3);
+    const dynamicLastUpdate = getRelativeDateStr(daysAgo);
+
+    return {
+      ...eq,
+      fpso: eq.tag.includes('_') ? eq.tag.split('_')[0] : eq.fpso,
+      frequency: (eq as { frequency?: string }).frequency || 'Monthly',
+      collectionMethod: (eq as { collectionMethod?: string }).collectionMethod || 'Online',
+      lastUpdate: dynamicLastUpdate,
+      condition: eq.condition.includes(' - ') ? eq.condition : eq.condition === 'Critical' ? 'Critical - Tier 1' : eq.condition === 'Degraded' ? 'Degraded - Tier 2' : 'Good - Tier 4',
+      vibrationStatus: eq.vibrationStatus.includes(' - ') ? eq.vibrationStatus : eq.vibrationStatus === 'Critical' ? 'Critical - Tier 1' : eq.vibrationStatus === 'Degraded' ? 'Degraded - Tier 2' : 'Good - Tier 4',
+      lubeOilStatus: eq.lubeOilStatus.includes(' - ') ? eq.lubeOilStatus : eq.lubeOilStatus === 'Critical' ? 'Critical - Tier 1' : eq.lubeOilStatus === 'Degraded' ? 'Degraded - Tier 2' : 'Good - Tier 4',
+    };
+  });
 
   const expandedHistory = sanitizedEquipments.flatMap((eq) => {
     const existing = mockHistory.filter(h => h.equipmentTag === eq.tag);

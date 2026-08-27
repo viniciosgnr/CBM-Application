@@ -14,7 +14,8 @@ import {
   User,
   Hash,
   Wrench,
-  AlertCircle
+  AlertCircle,
+  ChevronDown
 } from 'lucide-react';
 import {
   WorkOrderStatusPie,
@@ -48,6 +49,8 @@ interface Equipment {
   lubeOilStatus: string;
   lastUpdate: string;
   observation?: string | null;
+  frequency?: string | null;
+  collectionMethod?: string | null;
 }
 
 interface HistoryEntry {
@@ -1024,6 +1027,43 @@ export default function MainPage() {
     reader.readAsDataURL(file);
   };
 
+  function parseDate(dateStr?: string | null): Date | null {
+    if (!dateStr) return null;
+    if (dateStr.includes('/')) {
+      const parts = dateStr.split(',')[0].trim().split('/');
+      if (parts.length === 3) {
+        return new Date(parseInt(parts[2]), parseInt(parts[1]) - 1, parseInt(parts[0]));
+      }
+    }
+    const d = new Date(dateStr);
+    return isNaN(d.getTime()) ? null : d;
+  }
+
+  function getFrequencyDays(frequency?: string | null): number {
+    const freq = (frequency || '').toLowerCase();
+    if (freq.includes('quart')) return 90;
+    if (freq.includes('semi')) return 180;
+    if (freq.includes('ann')) return 365;
+    return 30; // Monthly default
+  }
+
+  function calculateNextPlannedDate(lastUpdateStr?: string | null, frequency?: string | null): { plannedDateStr: string; isOverdue: boolean } {
+    const lastDate = parseDate(lastUpdateStr) || new Date(2026, 6, 23);
+    const freqDays = getFrequencyDays(frequency);
+    const plannedDate = new Date(lastDate);
+    plannedDate.setDate(plannedDate.getDate() + freqDays);
+
+    const day = String(plannedDate.getDate()).padStart(2, '0');
+    const month = String(plannedDate.getMonth() + 1).padStart(2, '0');
+    const year = plannedDate.getFullYear();
+    const plannedDateStr = `${day}/${month}/${year}`;
+
+    const today = new Date();
+    const isOverdue = today > plannedDate;
+
+    return { plannedDateStr, isOverdue };
+  }
+
   const formatSurveillanceTier = (status: string | undefined | null) => {
     if (!status) return 'Good - Tier 4';
     if (status.includes(' - Tier ')) return status;
@@ -1191,6 +1231,23 @@ export default function MainPage() {
     { key: 'system', header: 'System' },
     { key: 'criticality', header: 'Criticality' },
     { key: 'objectType', header: 'Object Type' },
+    {
+      key: 'collectionStatus',
+      header: 'Collection Status',
+      render: (val: string) => (
+        val === 'Overdue' ? (
+          <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-status-error/15 text-status-error border border-status-error/30">
+            <span className="w-1.5 h-1.5 rounded-full bg-status-error animate-pulse" />
+            Overdue
+          </span>
+        ) : (
+          <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-status-ok/15 text-status-ok border border-status-ok/30">
+            <span className="w-1.5 h-1.5 rounded-full bg-status-ok" />
+            On Time
+          </span>
+        )
+      )
+    },
     { key: 'condition', header: 'Equip. CBM Condition', render: (val: string) => getStatusDot(val) },
     { key: 'lastUpdate', header: 'Last Update' },
     { key: 'observation', header: 'Observation' },
@@ -1225,19 +1282,25 @@ export default function MainPage() {
 
   const formattedEquipments = equipments
     .filter(e => isWithinTimeRange(e.lastUpdate, equipCondTimeRange))
-    .map(e => ({
-      id: String(e.id),
-      tag: e.tag,
-      fpso: e.fpso ? e.fpso.replace(/^FPSO\s+/i, '') : e.fpso,
-      name: e.name,
-      class: e.class,
-      system: e.system,
-      criticality: e.criticality,
-      objectType: e.objectType,
-      condition: e.condition ? e.condition.split(' - ')[0] : e.condition,
-      lastUpdate: e.lastUpdate,
-      observation: e.observation || '',
-    }));
+    .map(e => {
+      const { plannedDateStr, isOverdue } = calculateNextPlannedDate(e.lastUpdate, e.frequency);
+      return {
+        id: String(e.id),
+        tag: e.tag,
+        fpso: e.fpso ? e.fpso.replace(/^FPSO\s+/i, '') : e.fpso,
+        name: e.name,
+        class: e.class,
+        system: e.system,
+        criticality: e.criticality,
+        objectType: e.objectType,
+        condition: e.condition ? e.condition.split(' - ')[0] : e.condition,
+        lastUpdate: e.lastUpdate,
+        frequency: e.frequency || 'Monthly',
+        collectionStatus: isOverdue ? 'Overdue' : 'On Time',
+        plannedNextDate: plannedDateStr,
+        observation: e.observation || '',
+      };
+    });
 
   const formattedReports = reports.map(r => {
     const techniqueStatus = r.technology === 'Lube Oil Analysis'
@@ -1516,73 +1579,110 @@ export default function MainPage() {
                 </span>
               </div>
 
-              {/* Linha 2: Overall CBM status */}
-              <div className="flex items-center gap-2 text-xs text-text-muted mt-2 font-medium">
-                <span>Overall CBM status:</span>
-                <span className={`font-bold ${
-                  selectedEquipment.condition?.startsWith('Good') ? 'text-status-ok' :
-                  selectedEquipment.condition?.startsWith('Degraded') ? 'text-status-warn' :
-                  selectedEquipment.condition?.startsWith('Critical') ? 'text-status-error' : 'text-text-muted'
-                }`}>
-                  {selectedEquipment.condition}
-                </span>
-              </div>
+              {/* Linha 2: Overall CBM status (left) + FREQUENCY Dropdown (right) */}
+              <div className="flex items-center justify-between text-xs text-text-muted mt-3 font-medium">
+                <div className="flex items-center gap-2">
+                  <span>Overall CBM status:</span>
+                  <span className={`font-bold ${
+                    selectedEquipment.condition?.startsWith('Good') ? 'text-status-ok' :
+                    selectedEquipment.condition?.startsWith('Degraded') ? 'text-status-warn' :
+                    selectedEquipment.condition?.startsWith('Critical') ? 'text-status-error' : 'text-text-muted'
+                  }`}>
+                    {selectedEquipment.condition}
+                  </span>
+                </div>
 
-              {/* Linha 3: Botão Log new analysis alinhado à direita */}
-              <div className="flex justify-end mt-1">
-                <button
-                  onClick={openReportForm}
-                  className="border border-[#333e68] bg-[#121626] text-text-primary px-4 py-1.5 rounded-full text-xs font-medium whitespace-nowrap hover:border-accent-blue transition-colors cursor-pointer"
-                >
-                  Log new analysis
-                </button>
+                <div className="flex items-center gap-2">
+                  <span className="text-[10px] text-text-muted font-bold uppercase tracking-wider">FREQUENCY:</span>
+                  <div className="relative inline-block">
+                    <select
+                      value={selectedEquipment.frequency || 'Monthly'}
+                      onChange={async (e) => {
+                        const newFreq = e.target.value;
+                        setSelectedEquipment((prev: Equipment | null) => prev ? { ...prev, frequency: newFreq } : prev);
+                        try {
+                          await fetch(`/api/equipments/${selectedEquipment.tag}`, {
+                            method: 'PUT',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ frequency: newFreq }),
+                          });
+                          fetchEquipments();
+                        } catch (err) {
+                          console.error('Failed to update frequency:', err);
+                        }
+                      }}
+                      className="bg-[#121626] border border-[#2a3556] text-text-primary text-xs font-semibold rounded-full px-3.5 py-1 pr-7 appearance-none cursor-pointer focus:outline-none focus:border-accent-blue"
+                    >
+                      <option value="Monthly" className="bg-[#121626]">Monthly</option>
+                      <option value="Quarterly" className="bg-[#121626]">Quarterly</option>
+                      <option value="Semi-Annual" className="bg-[#121626]">Semi-Annual</option>
+                      <option value="Annual" className="bg-[#121626]">Annual</option>
+                    </select>
+                    <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-text-muted">
+                      <ChevronDown size={13} />
+                    </div>
+                  </div>
+                </div>
               </div>
             </div>
 
             {/* Illustrative Read-Only Status & Observation Overview */}
             <div className="flex flex-col gap-4 mt-4">
               {/* Individual Technique Status Cards */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-xs">
-                {/* Vibration Status Card */}
-                <div className="bg-[#101422]/60 p-3.5 border border-[#202742] rounded-xl flex items-center justify-between gap-3">
-                  <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-xl bg-[#161c30] border border-[#263152] flex items-center justify-center text-[#3b82f6] shrink-0">
-                      <svg className="w-5 h-5 stroke-current" fill="none" viewBox="0 0 24 24" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                        <path d="M2 12h3l3-8 4 16 3-10 2 4h3" />
-                      </svg>
-                    </div>
-                    <div className="flex flex-col gap-1">
-                      <span className="text-text-muted font-semibold uppercase text-[9px] tracking-wider">Vibration Analysis Status</span>
-                      <div className="flex items-center gap-2 font-bold text-xs">
-                        {getStatusDot(formatSurveillanceTier(selectedEquipment.vibrationStatus))}
+              {(() => {
+                const { plannedDateStr, isOverdue } = calculateNextPlannedDate(selectedEquipment.lastUpdate, selectedEquipment.frequency);
+                const lastDateStr = selectedEquipment.lastUpdate ? selectedEquipment.lastUpdate.split(',')[0] : '20/08/2026';
+                
+                return (
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-xs">
+                    {/* Vibration Status Card */}
+                    <div className="bg-[#101422]/60 p-3.5 border border-[#202742] rounded-xl flex items-center justify-between gap-3">
+                      <div className="flex items-center gap-3">
+                        <div className="w-10 h-10 rounded-xl bg-[#161c30] border border-[#263152] flex items-center justify-center text-[#3b82f6] shrink-0">
+                          <svg className="w-5 h-5 stroke-current" fill="none" viewBox="0 0 24 24" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                            <path d="M2 12h3l3-8 4 16 3-10 2 4h3" />
+                          </svg>
+                        </div>
+                        <div className="flex flex-col gap-1">
+                          <span className="text-text-muted font-semibold uppercase text-[9px] tracking-wider">Vibration Analysis Status</span>
+                          <div className="flex items-center gap-2 font-bold text-xs">
+                            {getStatusDot(formatSurveillanceTier(selectedEquipment.vibrationStatus))}
+                          </div>
+                        </div>
+                      </div>
+                      <div className="text-[10px] text-text-muted font-medium shrink-0 flex flex-col items-end gap-0.5 self-start pt-0.5">
+                        <span>Last: {lastDateStr}</span>
+                        <span className={isOverdue ? "text-status-error font-bold" : "text-status-ok font-semibold"}>
+                          Next: {plannedDateStr}
+                        </span>
                       </div>
                     </div>
-                  </div>
-                  <div className="text-[10px] text-text-muted font-medium shrink-0 self-start pt-0.5">
-                    {selectedEquipment.lastUpdate ? selectedEquipment.lastUpdate.split(',')[0] : '20/08/2026'}
-                  </div>
-                </div>
 
-                {/* Lube Oil Status Card */}
-                <div className="bg-[#101422]/60 p-3.5 border border-[#202742] rounded-xl flex items-center justify-between gap-3">
-                  <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-xl bg-[#161c30] border border-[#263152] flex items-center justify-center text-[#3b82f6] shrink-0">
-                      <svg className="w-5 h-5 stroke-current" fill="none" viewBox="0 0 24 24" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                        <path d="M12 2.69l5.66 5.66a8 8 0 1 1-11.31 0z" />
-                      </svg>
-                    </div>
-                    <div className="flex flex-col gap-1">
-                      <span className="text-text-muted font-semibold uppercase text-[9px] tracking-wider">Lube Oil Analysis Status</span>
-                      <div className="flex items-center gap-2 font-bold text-xs">
-                        {getStatusDot(formatSurveillanceTier(selectedEquipment.lubeOilStatus))}
+                    {/* Lube Oil Status Card */}
+                    <div className="bg-[#101422]/60 p-3.5 border border-[#202742] rounded-xl flex items-center justify-between gap-3">
+                      <div className="flex items-center gap-3">
+                        <div className="w-10 h-10 rounded-xl bg-[#161c30] border border-[#263152] flex items-center justify-center text-[#3b82f6] shrink-0">
+                          <svg className="w-5 h-5 stroke-current" fill="none" viewBox="0 0 24 24" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                            <path d="M12 2.69l5.66 5.66a8 8 0 1 1-11.31 0z" />
+                          </svg>
+                        </div>
+                        <div className="flex flex-col gap-1">
+                          <span className="text-text-muted font-semibold uppercase text-[9px] tracking-wider">Lube Oil Analysis Status</span>
+                          <div className="flex items-center gap-2 font-bold text-xs">
+                            {getStatusDot(formatSurveillanceTier(selectedEquipment.lubeOilStatus))}
+                          </div>
+                        </div>
+                      </div>
+                      <div className="text-[10px] text-text-muted font-medium shrink-0 flex flex-col items-end gap-0.5 self-start pt-0.5">
+                        <span>Last: {lastDateStr}</span>
+                        <span className={isOverdue ? "text-status-error font-bold" : "text-status-ok font-semibold"}>
+                          Next: {plannedDateStr}
+                        </span>
                       </div>
                     </div>
                   </div>
-                  <div className="text-[10px] text-text-muted font-medium shrink-0 self-start pt-0.5">
-                    {selectedEquipment.lastUpdate ? selectedEquipment.lastUpdate.split(',')[0] : '20/08/2026'}
-                  </div>
-                </div>
-              </div>
+                );
+              })()}
 
               {/* Read-only Observation Card */}
               <div className="bg-[#101422]/60 p-3.5 border border-[#202742] rounded-xl flex flex-col gap-1.5 text-xs">
@@ -1655,6 +1755,18 @@ export default function MainPage() {
                     No history data available for this equipment.
                   </div>
                 )}
+              </div>
+
+              {/* Modal Footer with Log New Analysis action button */}
+              <div className="flex items-center justify-end pt-3 border-t border-[#202742]">
+                <button
+                  type="button"
+                  onClick={openReportForm}
+                  className="border border-[#2a3556] bg-[#121626] text-text-primary hover:border-accent-blue hover:text-accent-blue px-4 py-1.5 rounded-full text-xs font-medium whitespace-nowrap transition-colors cursor-pointer flex items-center gap-1.5"
+                >
+                  <PlusCircle size={13} />
+                  Log new analysis
+                </button>
               </div>
             </div>
           </div>

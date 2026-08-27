@@ -40,24 +40,27 @@ export async function PUT(request: Request, { params }: { params: { tag: string 
   try {
     const { tag } = params;
     const body = await request.json();
-    const { vibrationStatus, lubeOilStatus, condition, observation } = body;
+    const { vibrationStatus, lubeOilStatus, condition, observation, frequency, collectionMethod } = body;
     
     const nowStr = new Date().toLocaleString('en-GB'); // dd/mm/yyyy, hh:mm:ss
     const nowIso = new Date().toISOString();
     
+    const updateData: Record<string, string | null> = {};
+    if (frequency !== undefined) updateData.frequency = frequency;
+    if (collectionMethod !== undefined) updateData.collectionMethod = collectionMethod;
+    
     if (condition !== undefined) {
       // Direct override of condition and observation (supporting tiers)
       const baseCondition = condition ? condition.split(' - ')[0] : 'Good';
+      updateData.condition = condition;
+      updateData.observation = observation || null;
+      updateData.lastUpdate = nowStr;
+      updateData.vibrationStatus = baseCondition;
+      updateData.lubeOilStatus = baseCondition;
       
       const updated = await db
         .update(equipments)
-        .set({
-          condition,
-          observation: observation || null,
-          lastUpdate: nowStr,
-          vibrationStatus: baseCondition,
-          lubeOilStatus: baseCondition,
-        })
+        .set(updateData)
         .where(eq(equipments.tag, tag))
         .returning();
         
@@ -74,6 +77,17 @@ export async function PUT(request: Request, { params }: { params: { tag: string 
         changedAt: nowIso,
       });
       
+      return NextResponse.json(updated[0]);
+    } else if (frequency !== undefined || collectionMethod !== undefined) {
+      const updated = await db
+        .update(equipments)
+        .set(updateData)
+        .where(eq(equipments.tag, tag))
+        .returning();
+        
+      if (updated.length === 0) {
+        return NextResponse.json({ error: 'Equipment not found' }, { status: 404 });
+      }
       return NextResponse.json(updated[0]);
     } else {
       // Legacy flow
