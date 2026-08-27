@@ -64,6 +64,7 @@ interface AnalysisReport {
   equipmentTag: string;
   vibrationStatus: string;
   lubeOilStatus: string;
+  thermographyStatus?: string | null;
   overallCondition: string;
   facility: string;
   system: string;
@@ -197,6 +198,389 @@ const EQUIPMENT_CLASS_OPTIONS = [
   'Reciprocating Compressor',
   'Screw Compressor',
 ];
+
+const TAXONOMY_DATA: Record<string, Record<string, string[]>> = {
+  'Centrifugal Compressor': {
+    'Power Transmission': [
+      'Coupling to the Driver',
+      'Coupling to the Driven Unit',
+      'Lubrication',
+      'Seals',
+      'Bearings',
+      'Gearbox / Variable Drive',
+      'Belt / Sheave',
+    ],
+    'Compressor': [
+      'Casing',
+      'Rotor with Impellers',
+      'Balance Piston',
+      'Interstage Seals',
+      'Thrust Bearing',
+      'Radial Bearing',
+      'Shaft Seals',
+      'Internal Piping',
+      'Valves',
+      'Antysurge System',
+    ],
+    'Control and Monitoring': [
+      'Actuating Device',
+      'Control Unit',
+      'Cables and Junction Boxes',
+      'Internal Power Supply',
+      'Monitoring',
+      'Sensors',
+      'Valves',
+      'Wiring',
+      'Piping',
+      'Seals',
+    ],
+    'Lubrication System': [
+      'Oil Tank with Heating System',
+      'Pump',
+      'Motor',
+      'Check Valves',
+      'Coolers',
+      'Filters',
+      'Piping',
+      'Valves',
+      'Lube Oil',
+    ],
+    'Shaft Seal System': [
+      'Oil Tank with Heating',
+      'Reservoir',
+      'Pump',
+      'Motor',
+      'Gear',
+      'Filters',
+      'Valves',
+      'Seal Oil',
+      'Dry Gas Seal',
+      'Mechanical Seal',
+      'Scrubber',
+    ],
+    'Miscellaneous': [
+      'Base Frame',
+      'Piping, Pipe Support and Bellows',
+      'Control Valves',
+      'Isolation Valves',
+      'Check Valves',
+      'Coolers',
+      'Silencers',
+      'Purge Air',
+      'Flange Joints',
+    ],
+  },
+  'Screw Compressor': {
+    'Power Transmission': [
+      'Coupling to the Driver',
+      'Coupling to the Driven Unit',
+      'Lubrication',
+      'Seals',
+      'Bearings',
+      'Gearbox / Variable Drive',
+      'Belt / Sheave',
+    ],
+    'Compressor': [
+      'Casing',
+      'Female Rotor',
+      'Male Rotor',
+      'Thrust Bearing',
+      'Radial Bearing',
+      'Shaft Seals',
+      'Internal Piping',
+      'Valves',
+      'Spillback System',
+    ],
+    'Control and Monitoring': [
+      'Actuating Device',
+      'Control Unit',
+      'Cables and Junction Boxes',
+      'Internal Power Supply',
+      'Monitoring',
+      'Sensors',
+      'Valves',
+      'Wiring',
+      'Piping',
+      'Seals',
+    ],
+    'Lubrication System': [
+      'Oil Tank with Heating System',
+      'Pump',
+      'Motor',
+      'Check Valves',
+      'Coolers',
+      'Filters',
+      'Piping',
+      'Valves',
+      'Lube Oil',
+    ],
+    'Shaft Seal System': [
+      'Oil Tank with Heating',
+      'Reservoir',
+      'Pump',
+      'Motor',
+      'Gear',
+      'Filters',
+      'Valves',
+      'Seal Oil',
+      'Dry Gas Seal',
+      'Mechanical Seal',
+      'Scrubber',
+    ],
+    'Miscellaneous': [
+      'Base Frame',
+      'Piping, Pipe Support and Bellows',
+      'Control Valves',
+      'Isolation Valves',
+      'Check Valves',
+      'Coolers',
+      'Silencers',
+      'Purge Air',
+      'Flange Joints',
+    ],
+  },
+  'Reciprocating Compressor': {
+    'Power Transmission': [
+      'Coupling to the Driver',
+      'Coupling to the Driven Unit',
+      'Lubrication',
+      'Seals',
+      'Bearings',
+      'Gearbox / Variable Drive',
+      'Belt / Sheave',
+    ],
+    'Compressor': [
+      'Casing',
+      'Piston',
+      'Cylinder Line',
+      'Packing',
+      'Bearing',
+      'Shaft Seals',
+      'Internal Piping',
+      'Valves',
+      'Spillback System',
+    ],
+    'Control and Monitoring': [
+      'Actuating Device',
+      'Control Unit',
+      'Cables and Junction Boxes',
+      'Internal Power Supply',
+      'Monitoring',
+      'Sensors',
+      'Valves',
+      'Wiring',
+      'Piping',
+      'Seals',
+    ],
+    'Lubrication System': [
+      'Oil Tank with Heating System',
+      'Pump',
+      'Motor',
+      'Check Valves',
+      'Coolers',
+      'Filters',
+      'Piping',
+      'Valves',
+      'Lube Oil',
+    ],
+    'Shaft Seal System': [
+      'Oil Tank with Heating',
+      'Reservoir',
+      'Pump',
+      'Motor',
+      'Gear',
+      'Filters',
+      'Valves',
+      'Seal Oil',
+      'Dry Gas Seal',
+      'Mechanical Seal',
+      'Scrubber',
+    ],
+    'Miscellaneous': [
+      'Base Frame',
+      'Piping, Pipe Support and Bellows',
+      'Control Valves',
+      'Isolation Valves',
+      'Check Valves',
+      'Coolers',
+      'Silencers',
+      'Purge Air',
+      'Flange Joints',
+    ],
+  },
+  'Centrifugal Pump': {
+    'Power Transmission': [
+      'Coupling to the Driver',
+      'Coupling to the Driven Unit',
+      'Lubrication',
+      'Seals',
+      'Bearings',
+      'Gearbox / Variable Drive',
+      'Belt / Sheave',
+    ],
+    'Pump Unit': [
+      'Support',
+      'Casing',
+      'Impeller',
+      'Shaft',
+      'Thrust Bearing',
+      'Radial Bearing',
+      'Seals',
+      'Piping',
+      'Valves',
+    ],
+    'Control and Monitoring': [
+      'Actuating Device',
+      'Control Unit',
+      'Cables and Junction Boxes',
+      'Internal Power Supply',
+      'Monitoring',
+      'Sensors',
+      'Valves',
+      'Wiring',
+      'Piping',
+      'Seals',
+    ],
+    'Lubrication System': [
+      'Reservoir',
+      'Pump',
+      'Motor',
+      'Cooler',
+      'Filter',
+      'Piping',
+      'Valves',
+      'Lube Oil',
+      'Seals',
+    ],
+    'Miscellaneous': [
+      'Cyclone Separator',
+      'Cooling/Heating System',
+      'Purge Air',
+      'Flange Joints',
+    ],
+  },
+  'Gas Turbine': {
+    'Starting System': [
+      'Starting Motor',
+      'Start Control',
+      'Piping',
+      'Filter',
+      'Valve',
+      'Pump',
+      'Start Energy - Battery, Air',
+    ],
+    'Air Intake': [
+      'Air Cooling',
+      'Anti-icing',
+      'Filters',
+      'Intake Duct',
+      'Inlet Vanes',
+    ],
+    'Combustion System': [
+      'Combustor',
+      'Fuel Nozzles',
+      'Seals',
+    ],
+    'Compressor': [
+      'Rotor',
+      'Stator',
+      'Cooling System',
+      'VGV System',
+      'Anti-surge Valve',
+      'Aux. Bleeding System',
+      'Anti-icing Valve',
+      'Casing',
+      'Radial Bearing',
+      'Thrust Bearing',
+      'Seals',
+      'Piping',
+    ],
+    'Power Turbine HP Turbine': [
+      'Rotor',
+      'Stator',
+      'Casing',
+      'Radial Bearing',
+      'Thrust Bearing',
+      'Seals',
+      'Valves',
+      'Piping',
+    ],
+    'Control and Monitoring': [
+      'Control Unit',
+      'Sensors',
+      'Wires',
+      'Actuating Device',
+      'Monitoring',
+      'Valves',
+      'Internal Power Supply',
+      'Seals',
+    ],
+    'Lubrication System': [
+      'Heater',
+      'Reservoir',
+      'Pump',
+      'Motor',
+      'Filter',
+      'Temperature Control',
+      'Valves',
+      'Piping',
+      'Oil Cooler',
+      'Oil',
+      'Sensors',
+      'Wires',
+    ],
+    'Fuel System': [
+      'Fuel Control',
+      'Piping',
+      'Valves',
+      'Pump/Gas Compressor',
+      'Filters/Separators',
+      'Wires',
+      'Fuel Properties Measurement',
+    ],
+    'Water/Steam Injection': [
+      'Pump',
+      'Piping',
+      'Valves',
+      'Filters',
+      'Seals',
+      'Wires',
+    ],
+    'Fire and Gas Protection': [
+      'Control Unit',
+      'Pipes',
+      'Valves',
+      'Sensors',
+      'Wires',
+      'Tanks/Storage',
+    ],
+    'Acessory Drive': [
+      'Gearbox',
+      'Bearing',
+      'Seals',
+      'Casing',
+    ],
+    'Exhaust': [
+      'Diffuser',
+      'Exhaust collector',
+      'Compensator/bellows',
+      'Ducting',
+      'Emission monitoring',
+      'Silencer',
+      'Thrust Bearing',
+      'Valves',
+      'Waste Heat Recovery Unit',
+    ],
+    'Miscellaneous': [
+      'Enclosure',
+      'Hood',
+      'Purge air',
+      'Flange Joints',
+      'Ventilation Fan',
+      'Water-wash System',
+    ],
+  },
+};
 
 
 export default function MainPage() {
@@ -562,8 +946,8 @@ export default function MainPage() {
       cbmStatus: selectedEquipment.condition || 'Good - Tier 4',
       imageUrl: '',
       equipmentClass: 'Centrifugal Compressor',
-      subunit: '',
-      maintainableItem: '',
+      subunit: 'Power Transmission',
+      maintainableItem: 'Coupling to the Driver',
       failureModeDescription: 'VIB - Vibration',
       failureMechanismSubdivision: 'Mechanical Failure - Vibration',
     });
@@ -638,6 +1022,15 @@ export default function MainPage() {
       }
     };
     reader.readAsDataURL(file);
+  };
+
+  const formatSurveillanceTier = (status: string | undefined | null) => {
+    if (!status) return 'Good - Tier 4';
+    if (status.includes(' - Tier ')) return status;
+    if (status.includes('Good')) return 'Good - Tier 4';
+    if (status.includes('Degraded')) return 'Degraded - Tier 2';
+    if (status.includes('Critical')) return 'Critical - Tier 1';
+    return status;
   };
 
   // Formatação das bolinhas coloridas de status (Priority / Condition / Status)
@@ -803,19 +1196,31 @@ export default function MainPage() {
     { key: 'observation', header: 'Observation' },
   ];
 
-  // Definição de colunas para Tabela de Recomendações (Reports)
+  // Definição de colunas para Tabela de Recomendações (Reports) - 11 colunas conforme ISO 14224
   const reportColumns = [
+    { key: 'fpso', header: 'FPSO' },
     {
       key: 'tagNumber',
       header: 'Tag Number',
       render: (val: string) => <span className="font-semibold text-text-primary">{val}</span>
     },
-    { key: 'component', header: 'Component' },
+    { key: 'name', header: 'Name' },
+    { key: 'equipmentClass', header: 'Equipment Class' },
+    { key: 'analysisType', header: 'Analysis Type' },
     { key: 'shortDescription', header: 'Short Description' },
-    { key: 'overallCondition', header: 'Overall Condition', render: (val: string) => getStatusDot(val) },
+    { key: 'cbmStatus', header: 'CBM Status', render: (val: string) => getStatusDot(val) },
+    { key: 'failureModeDescription', header: 'Failure Mode Description' },
     { key: 'raisedDate', header: 'Raised Date' },
     { key: 'raisedBy', header: 'Raised By' },
-    { key: 'woNumber', header: 'WO Number', render: (val: string) => val ? <span className="text-accent-blue font-semibold">{val}</span> : <span className="text-text-muted italic">None</span> },
+    {
+      key: 'recommendation',
+      header: 'Recommendation',
+      render: (val: string) => (
+        <span className="text-[11px] text-text-muted font-medium max-w-[280px] line-clamp-2" title={val}>
+          {val}
+        </span>
+      )
+    },
   ];
 
   const formattedEquipments = equipments
@@ -823,7 +1228,7 @@ export default function MainPage() {
     .map(e => ({
       id: String(e.id),
       tag: e.tag,
-      fpso: e.fpso,
+      fpso: e.fpso ? e.fpso.replace(/^FPSO\s+/i, '') : e.fpso,
       name: e.name,
       class: e.class,
       system: e.system,
@@ -834,16 +1239,28 @@ export default function MainPage() {
       observation: e.observation || '',
     }));
 
-  const formattedReports = reports.map(r => ({
-    id: String(r.id),
-    tagNumber: r.tagNumber,
-    component: r.component || '',
-    shortDescription: r.shortDescription,
-    overallCondition: r.overallCondition,
-    raisedDate: r.raisedDate,
-    raisedBy: r.raisedBy,
-    woNumber: r.woNumber || '',
-  }));
+  const formattedReports = reports.map(r => {
+    const techniqueStatus = r.technology === 'Lube Oil Analysis'
+      ? r.lubeOilStatus
+      : r.technology === 'Thermography Analysis'
+      ? r.thermographyStatus
+      : r.vibrationStatus || r.overallCondition;
+
+    return {
+      id: String(r.id),
+      fpso: (r.facility || 'UNY').replace(/^FPSO\s+/i, ''),
+      tagNumber: r.tagNumber,
+      name: r.machineName || r.component || 'Compressor Performance',
+      equipmentClass: r.equipmentClass || 'Centrifugal Compressor',
+      analysisType: r.technology || 'Vibration Analysis',
+      shortDescription: r.shortDescription,
+      cbmStatus: formatSurveillanceTier(techniqueStatus),
+      failureModeDescription: r.failureModeDescription || '-',
+      raisedDate: r.raisedDate,
+      raisedBy: r.raisedBy,
+      recommendation: r.longDescription || '',
+    };
+  });
 
   const formattedWorkOrders = workOrders
     .filter(w => {
@@ -1125,20 +1542,44 @@ export default function MainPage() {
             {/* Illustrative Read-Only Status & Observation Overview */}
             <div className="flex flex-col gap-4 mt-4">
               {/* Individual Technique Status Cards */}
-              <div className="grid grid-cols-2 gap-3 text-xs">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-xs">
                 {/* Vibration Status Card */}
-                <div className="bg-[#101422]/60 p-3.5 border border-[#202742] rounded-xl flex flex-col gap-1.5">
-                  <span className="text-text-muted font-semibold uppercase text-[9px] tracking-wider">Vibration Analysis Status</span>
-                  <div className="flex items-center gap-2 font-bold text-xs">
-                    {getStatusDot(selectedEquipment.vibrationStatus || 'Good - Tier 4')}
+                <div className="bg-[#101422]/60 p-3.5 border border-[#202742] rounded-xl flex items-center justify-between gap-3">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-xl bg-[#161c30] border border-[#263152] flex items-center justify-center text-[#3b82f6] shrink-0">
+                      <svg className="w-5 h-5 stroke-current" fill="none" viewBox="0 0 24 24" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <path d="M2 12h3l3-8 4 16 3-10 2 4h3" />
+                      </svg>
+                    </div>
+                    <div className="flex flex-col gap-1">
+                      <span className="text-text-muted font-semibold uppercase text-[9px] tracking-wider">Vibration Analysis Status</span>
+                      <div className="flex items-center gap-2 font-bold text-xs">
+                        {getStatusDot(formatSurveillanceTier(selectedEquipment.vibrationStatus))}
+                      </div>
+                    </div>
+                  </div>
+                  <div className="text-[10px] text-text-muted font-medium shrink-0 self-start pt-0.5">
+                    {selectedEquipment.lastUpdate ? selectedEquipment.lastUpdate.split(',')[0] : '20/08/2026'}
                   </div>
                 </div>
 
                 {/* Lube Oil Status Card */}
-                <div className="bg-[#101422]/60 p-3.5 border border-[#202742] rounded-xl flex flex-col gap-1.5">
-                  <span className="text-text-muted font-semibold uppercase text-[9px] tracking-wider">Lube Oil Analysis Status</span>
-                  <div className="flex items-center gap-2 font-bold text-xs">
-                    {getStatusDot(selectedEquipment.lubeOilStatus || 'Good - Tier 4')}
+                <div className="bg-[#101422]/60 p-3.5 border border-[#202742] rounded-xl flex items-center justify-between gap-3">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-xl bg-[#161c30] border border-[#263152] flex items-center justify-center text-[#3b82f6] shrink-0">
+                      <svg className="w-5 h-5 stroke-current" fill="none" viewBox="0 0 24 24" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <path d="M12 2.69l5.66 5.66a8 8 0 1 1-11.31 0z" />
+                      </svg>
+                    </div>
+                    <div className="flex flex-col gap-1">
+                      <span className="text-text-muted font-semibold uppercase text-[9px] tracking-wider">Lube Oil Analysis Status</span>
+                      <div className="flex items-center gap-2 font-bold text-xs">
+                        {getStatusDot(formatSurveillanceTier(selectedEquipment.lubeOilStatus))}
+                      </div>
+                    </div>
+                  </div>
+                  <div className="text-[10px] text-text-muted font-medium shrink-0 self-start pt-0.5">
+                    {selectedEquipment.lastUpdate ? selectedEquipment.lastUpdate.split(',')[0] : '20/08/2026'}
                   </div>
                 </div>
               </div>
@@ -1187,15 +1628,6 @@ export default function MainPage() {
                       <RechartsTooltip content={<CustomTooltip />} />
                       <Legend wrapperStyle={{ fontSize: '10px', paddingTop: '8px' }} />
                       
-                      <Line
-                        name="Overall CBM Status"
-                        type="monotone"
-                        dataKey="overall"
-                        stroke="#60a5fa"
-                        strokeWidth={2}
-                        dot={{ r: 3, fill: '#60a5fa', strokeWidth: 0 }}
-                        activeDot={{ r: 5 }}
-                      />
                       <Line
                         name="Vibration Analysis"
                         type="monotone"
@@ -1388,80 +1820,123 @@ export default function MainPage() {
               </div>
 
               {/* Bloco Failure Mode Details */}
-              <div className="bg-[#101422]/60 p-4 border border-[#202742] rounded-xl flex flex-col gap-4">
-                <h4 className="text-[10px] font-bold text-text-muted uppercase tracking-wider">Failure Mode Details</h4>
-                
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-                  <div className="flex flex-col gap-1.5">
-                    <label className="text-text-muted font-semibold uppercase text-[9px] tracking-wider">Equipment Class</label>
-                    <select
-                      value={formFields.equipmentClass || 'Centrifugal Compressor'}
-                      onChange={e => setFormFields({ ...formFields, equipmentClass: e.target.value })}
-                      className="bg-[#121626] border border-[#2a3254] rounded-lg p-2.5 text-text-primary focus:border-accent-blue outline-none cursor-pointer text-xs w-full"
-                    >
-                      {EQUIPMENT_CLASS_OPTIONS.map((opt) => (
-                        <option key={opt} value={opt} className="bg-[#121626]">
-                          {opt}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
+              {(() => {
+                const currentClass = formFields.equipmentClass || 'Centrifugal Compressor';
+                const availableSubunits = Object.keys(TAXONOMY_DATA[currentClass] || {});
+                const currentSubunit = formFields.subunit && availableSubunits.includes(formFields.subunit)
+                  ? formFields.subunit
+                  : availableSubunits[0] || '';
+                const availableMaintainableItems = TAXONOMY_DATA[currentClass]?.[currentSubunit] || [];
+                const currentMaintainableItem = formFields.maintainableItem && availableMaintainableItems.includes(formFields.maintainableItem)
+                  ? formFields.maintainableItem
+                  : availableMaintainableItems[0] || '';
 
-                  <div className="flex flex-col gap-1.5">
-                    <label className="text-text-muted font-semibold uppercase text-[9px] tracking-wider">Subunit</label>
-                    <input
-                      type="text"
-                      placeholder="e.g. Compressor Unit"
-                      value={formFields.subunit || ''}
-                      onChange={e => setFormFields({ ...formFields, subunit: e.target.value })}
-                      className="bg-[#121626] border border-[#2a3254] rounded-lg p-2.5 text-text-primary focus:border-accent-blue outline-none transition-colors text-xs"
-                    />
-                  </div>
+                return (
+                  <div className="bg-[#101422]/60 p-4 border border-[#202742] rounded-xl flex flex-col gap-4">
+                    <h4 className="text-[10px] font-bold text-text-muted uppercase tracking-wider">Failure Mode Details</h4>
+                    
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                      <div className="flex flex-col gap-1.5">
+                        <label className="text-text-muted font-semibold uppercase text-[9px] tracking-wider">Equipment Class</label>
+                        <select
+                          value={currentClass}
+                          onChange={e => {
+                            const newClass = e.target.value;
+                            const newSubunits = Object.keys(TAXONOMY_DATA[newClass] || {});
+                            const firstSubunit = newSubunits[0] || '';
+                            const newItems = TAXONOMY_DATA[newClass]?.[firstSubunit] || [];
+                            const firstItem = newItems[0] || '';
+                            setFormFields({
+                              ...formFields,
+                              equipmentClass: newClass,
+                              subunit: firstSubunit,
+                              maintainableItem: firstItem,
+                            });
+                          }}
+                          className="bg-[#121626] border border-[#2a3254] rounded-lg p-2.5 text-text-primary focus:border-accent-blue outline-none cursor-pointer text-xs w-full"
+                        >
+                          {EQUIPMENT_CLASS_OPTIONS.map((opt) => (
+                            <option key={opt} value={opt} className="bg-[#121626]">
+                              {opt}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
 
-                  <div className="flex flex-col gap-1.5">
-                    <label className="text-text-muted font-semibold uppercase text-[9px] tracking-wider">Maintainable Item</label>
-                    <input
-                      type="text"
-                      placeholder="e.g. Bearings / Seal"
-                      value={formFields.maintainableItem || ''}
-                      onChange={e => setFormFields({ ...formFields, maintainableItem: e.target.value })}
-                      className="bg-[#121626] border border-[#2a3254] rounded-lg p-2.5 text-text-primary focus:border-accent-blue outline-none transition-colors text-xs"
-                    />
-                  </div>
-                </div>
+                      <div className="flex flex-col gap-1.5">
+                        <label className="text-text-muted font-semibold uppercase text-[9px] tracking-wider">Subunit</label>
+                        <select
+                          value={currentSubunit}
+                          onChange={e => {
+                            const newSubunit = e.target.value;
+                            const newItems = TAXONOMY_DATA[currentClass]?.[newSubunit] || [];
+                            const firstItem = newItems[0] || '';
+                            setFormFields({
+                              ...formFields,
+                              subunit: newSubunit,
+                              maintainableItem: firstItem,
+                            });
+                          }}
+                          className="bg-[#121626] border border-[#2a3254] rounded-lg p-2.5 text-text-primary focus:border-accent-blue outline-none cursor-pointer text-xs w-full"
+                        >
+                          {availableSubunits.map((sub) => (
+                            <option key={sub} value={sub} className="bg-[#121626]">
+                              {sub}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                  <div className="flex flex-col gap-1.5">
-                    <label className="text-text-muted font-semibold uppercase text-[9px] tracking-wider">Failure Mode Description</label>
-                    <select
-                      value={formFields.failureModeDescription || 'VIB - Vibration'}
-                      onChange={e => setFormFields({ ...formFields, failureModeDescription: e.target.value })}
-                      className="bg-[#121626] border border-[#2a3254] rounded-lg p-2.5 text-text-primary focus:border-accent-blue outline-none cursor-pointer text-xs w-full"
-                    >
-                      {FAILURE_MODE_OPTIONS.map((opt) => (
-                        <option key={opt} value={opt} className="bg-[#121626]">
-                          {opt}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
+                      <div className="flex flex-col gap-1.5">
+                        <label className="text-text-muted font-semibold uppercase text-[9px] tracking-wider">Maintainable Item</label>
+                        <select
+                          value={currentMaintainableItem}
+                          onChange={e => setFormFields({ ...formFields, maintainableItem: e.target.value })}
+                          className="bg-[#121626] border border-[#2a3254] rounded-lg p-2.5 text-text-primary focus:border-accent-blue outline-none cursor-pointer text-xs w-full"
+                        >
+                          {availableMaintainableItems.map((item) => (
+                            <option key={item} value={item} className="bg-[#121626]">
+                              {item}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+                    </div>
 
-                  <div className="flex flex-col gap-1.5">
-                    <label className="text-text-muted font-semibold uppercase text-[9px] tracking-wider">Failure Mechanism Subdivision</label>
-                    <select
-                      value={formFields.failureMechanismSubdivision || 'Mechanical Failure - Vibration'}
-                      onChange={e => setFormFields({ ...formFields, failureMechanismSubdivision: e.target.value })}
-                      className="bg-[#121626] border border-[#2a3254] rounded-lg p-2.5 text-text-primary focus:border-accent-blue outline-none cursor-pointer text-xs w-full"
-                    >
-                      {FAILURE_MECHANISM_SUBDIVISION_OPTIONS.map((opt) => (
-                        <option key={opt} value={opt} className="bg-[#121626]">
-                          {opt}
-                        </option>
-                      ))}
-                    </select>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                      <div className="flex flex-col gap-1.5">
+                        <label className="text-text-muted font-semibold uppercase text-[9px] tracking-wider">Failure Mode Description</label>
+                        <select
+                          value={formFields.failureModeDescription || 'VIB - Vibration'}
+                          onChange={e => setFormFields({ ...formFields, failureModeDescription: e.target.value })}
+                          className="bg-[#121626] border border-[#2a3254] rounded-lg p-2.5 text-text-primary focus:border-accent-blue outline-none cursor-pointer text-xs w-full"
+                        >
+                          {FAILURE_MODE_OPTIONS.map((opt) => (
+                            <option key={opt} value={opt} className="bg-[#121626]">
+                              {opt}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+
+                      <div className="flex flex-col gap-1.5">
+                        <label className="text-text-muted font-semibold uppercase text-[9px] tracking-wider">Failure Mechanism Subdivision</label>
+                        <select
+                          value={formFields.failureMechanismSubdivision || 'Mechanical Failure - Vibration'}
+                          onChange={e => setFormFields({ ...formFields, failureMechanismSubdivision: e.target.value })}
+                          className="bg-[#121626] border border-[#2a3254] rounded-lg p-2.5 text-text-primary focus:border-accent-blue outline-none cursor-pointer text-xs w-full"
+                        >
+                          {FAILURE_MECHANISM_SUBDIVISION_OPTIONS.map((opt) => (
+                            <option key={opt} value={opt} className="bg-[#121626]">
+                              {opt}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+                    </div>
                   </div>
-                </div>
-              </div>
+                );
+              })()}
 
               {/* Bloco 2: Avaliação da Condição & Recomendações */}
               <div className="bg-[#101422]/60 p-4 border border-[#202742] rounded-xl flex flex-col gap-4">
@@ -1493,21 +1968,30 @@ export default function MainPage() {
 
                 <div className="flex flex-col gap-1.5">
                   <label className="text-text-muted font-semibold uppercase text-[9px] tracking-wider">Attach Supporting Image / Screenshot</label>
-                  <input
-                    type="file"
-                    accept="image/*"
-                    onChange={(e) => {
-                      const file = e.target.files?.[0];
-                      if (file) {
-                        const reader = new FileReader();
-                        reader.onloadend = () => {
-                          setFormFields(prev => ({ ...prev, imageUrl: reader.result as string }));
-                        };
-                        reader.readAsDataURL(file);
-                      }
-                    }}
-                    className="bg-[#121626] border border-[#2a3254] rounded-lg p-2 text-text-primary text-xs file:mr-3 file:py-1 file:px-3 file:rounded-full file:border-0 file:text-xs file:font-semibold file:bg-[#60a5fa] file:text-[#090d16] hover:file:bg-[#3b82f6] cursor-pointer"
-                  />
+                  <div className="bg-[#121626] border border-[#2a3254] rounded-lg p-2 flex items-center gap-3">
+                    <label htmlFor="modal-file-upload" className="px-3 py-1 rounded-full text-xs font-semibold bg-[#60a5fa] text-[#090d16] hover:bg-[#3b82f6] cursor-pointer transition-colors shrink-0">
+                      Choose File
+                    </label>
+                    <span className="text-xs text-text-muted truncate">
+                      {formFields.imageUrl ? 'Image attached' : 'No file chosen'}
+                    </span>
+                    <input
+                      id="modal-file-upload"
+                      type="file"
+                      accept="image/*"
+                      onChange={(e) => {
+                        const file = e.target.files?.[0];
+                        if (file) {
+                          const reader = new FileReader();
+                          reader.onloadend = () => {
+                            setFormFields(prev => ({ ...prev, imageUrl: reader.result as string }));
+                          };
+                          reader.readAsDataURL(file);
+                        }
+                      }}
+                      className="hidden"
+                    />
+                  </div>
                   {formFields.imageUrl && (
                     <div className="mt-2 relative w-32 h-20 border border-[#202742] rounded overflow-hidden">
                       <img src={formFields.imageUrl} alt="Preview" className="w-full h-full object-cover" />

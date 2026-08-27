@@ -396,8 +396,8 @@ const mockHistory = [
 const mockReports = [
   {
     equipmentTag: 'COCE_TIME_NRS_02',
-    vibrationStatus: 'Critical',
-    lubeOilStatus: 'Good',
+    vibrationStatus: 'Critical - Tier 1',
+    lubeOilStatus: 'Good - Tier 4',
     overallCondition: 'Critical - Tier 1',
     facility: 'FPSO UNY',
     system: 'Gas',
@@ -405,7 +405,7 @@ const mockReports = [
     cmmsNumber: 'CMMS-9082',
     cof: 'Medium',
     location: 'Module 3',
-    machineName: 'MIGC B',
+    machineName: 'Compressor Performance',
     mcProtection: 'Vibration Trip',
     operatingContext: 'Continuous Gas Export',
     technology: 'Vibration Analysis',
@@ -418,16 +418,16 @@ const mockReports = [
     conditionAssessment: 'Based on System 1 trends, abrupt jumps indicate instrumentation failure in axial sensors of Main Gas Compressor C.',
     longDescription: 'Verify sensor fastening, check connection integrity, and perform channel cross-substitution.',
     equipmentClass: 'Centrifugal Compressor',
-    subunit: 'Compression Stage 1',
-    maintainableItem: 'Axial Bearing / Sensor Set',
+    subunit: 'Compressor',
+    maintainableItem: 'Radial Bearing',
     failureModeDescription: 'AIR - Abnormal Instrument Reading',
     failureMechanismSubdivision: 'Mechanical Failure - Vibration',
     createdAt: '2026-07-22T14:10:00Z',
   },
   {
     equipmentTag: 'CDI_PUMP_OIL_02',
-    vibrationStatus: 'Critical',
-    lubeOilStatus: 'Critical',
+    vibrationStatus: 'Critical - Tier 1',
+    lubeOilStatus: 'Critical - Tier 1',
     overallCondition: 'Critical - Tier 1',
     facility: 'FPSO CDI',
     system: 'Oil',
@@ -435,10 +435,10 @@ const mockReports = [
     cmmsNumber: 'CMMS-9104',
     cof: 'High',
     location: 'Module 5',
-    machineName: 'Crude Pump B',
+    machineName: 'Crude Oil Pump B',
     mcProtection: 'Temp & Vib Trip',
     operatingContext: 'Crude Offloading',
-    technology: 'Vibration Analysis',
+    technology: 'Lube Oil Analysis',
     component: 'Thrust Bearing',
     raisedBy: 'Julia Mendes',
     raisedDate: '2026-07-24',
@@ -447,7 +447,42 @@ const mockReports = [
     woNumber: '801021320',
     conditionAssessment: 'Bearing temperature exceeded 95C under load with high metallic particle density.',
     longDescription: 'Perform emergency bearing replacement and lube oil flush.',
+    equipmentClass: 'Centrifugal Pump',
+    subunit: 'Lubrication System',
+    maintainableItem: 'Lube Oil',
+    failureModeDescription: 'OHE - Overheating',
+    failureMechanismSubdivision: 'Material Failure - Wear',
     createdAt: '2026-07-24T13:20:00Z',
+  },
+  {
+    equipmentTag: 'TURB_GEN_A_01',
+    vibrationStatus: 'Degraded - Tier 2',
+    lubeOilStatus: 'Good - Tier 4',
+    overallCondition: 'Degraded - Tier 2',
+    facility: 'FPSO UNY',
+    system: 'Power Generation',
+    tagNumber: 'TURB_GEN_A_01',
+    cmmsNumber: 'CMMS-9115',
+    cof: 'High',
+    location: 'Module 1',
+    machineName: 'Gas Turbine Generator A',
+    mcProtection: 'Overspeed & Vib Trip',
+    operatingContext: 'Power Generation',
+    technology: 'Vibration Analysis',
+    component: 'Power Turbine',
+    raisedBy: 'Roberto Santos',
+    raisedDate: '2026-08-05',
+    targetDate: '2026-08-25',
+    shortDescription: '1X harmonic peak increase on turbine drive shaft',
+    woNumber: '801021335',
+    conditionAssessment: 'Spectral analysis shows unbalance growth on power turbine rotor.',
+    longDescription: 'Schedule laser alignment check and dynamic balancing of power turbine rotor.',
+    equipmentClass: 'Gas Turbine',
+    subunit: 'Power Turbine HP Turbine',
+    maintainableItem: 'Rotor',
+    failureModeDescription: 'VIB - Vibration',
+    failureMechanismSubdivision: 'Mechanical Failure - Unbalance',
+    createdAt: '2026-08-05T10:15:00Z',
   }
 ];
 
@@ -993,8 +1028,27 @@ export async function seed() {
   await db.delete(equipments);
 
   console.log('Seeding database with expanded datasets (25+ items per table)...');
-  await db.insert(equipments).values(initialEquipments);
-  await db.insert(equipmentHistory).values(mockHistory);
+  const sanitizedEquipments = initialEquipments.map(eq => ({
+    ...eq,
+    condition: eq.condition.includes(' - ') ? eq.condition : eq.condition === 'Critical' ? 'Critical - Tier 1' : eq.condition === 'Degraded' ? 'Degraded - Tier 2' : 'Good - Tier 4',
+    vibrationStatus: eq.vibrationStatus.includes(' - ') ? eq.vibrationStatus : eq.vibrationStatus === 'Critical' ? 'Critical - Tier 1' : eq.vibrationStatus === 'Degraded' ? 'Degraded - Tier 2' : 'Good - Tier 4',
+    lubeOilStatus: eq.lubeOilStatus.includes(' - ') ? eq.lubeOilStatus : eq.lubeOilStatus === 'Critical' ? 'Critical - Tier 1' : eq.lubeOilStatus === 'Degraded' ? 'Degraded - Tier 2' : 'Good - Tier 4',
+  }));
+
+  const expandedHistory = sanitizedEquipments.flatMap((eq) => {
+    const existing = mockHistory.filter(h => h.equipmentTag === eq.tag);
+    if (existing.length > 0) return existing;
+
+    return [
+      { equipmentTag: eq.tag, vibrationStatus: 'Good - Tier 4', lubeOilStatus: 'Good - Tier 4', overallCondition: 'Good - Tier 4', changedAt: '2026-03-15T10:00:00Z' },
+      { equipmentTag: eq.tag, vibrationStatus: 'Good - Tier 3', lubeOilStatus: 'Good - Tier 4', overallCondition: 'Good - Tier 3', changedAt: '2026-05-10T11:00:00Z' },
+      { equipmentTag: eq.tag, vibrationStatus: eq.vibrationStatus, lubeOilStatus: eq.lubeOilStatus, overallCondition: eq.condition, changedAt: '2026-07-20T14:30:00Z' },
+      { equipmentTag: eq.tag, vibrationStatus: eq.vibrationStatus, lubeOilStatus: eq.lubeOilStatus, overallCondition: eq.condition, changedAt: '2026-08-15T09:15:00Z' },
+    ];
+  });
+
+  await db.insert(equipments).values(sanitizedEquipments);
+  await db.insert(equipmentHistory).values(expandedHistory);
   
   // Insert reports first and get their inserted IDs
   const insertedReports = await db.insert(analysisReports).values(mockReports).returning();
