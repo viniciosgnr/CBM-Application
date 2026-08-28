@@ -114,16 +114,24 @@ export async function POST(request: Request) {
       const nowStr = new Date().toLocaleString('en-GB'); // dd/mm/yyyy, hh:mm:ss
       const nowIso = new Date().toISOString();
 
+      const updatePayload: Record<string, string | null> = {
+        vibrationStatus: finalVibrationStatus,
+        lubeOilStatus: finalLubeOilStatus,
+        thermographyStatus: finalThermographyStatus,
+        condition: overallCondition,
+        observation: conditionAssessment,
+        lastUpdate: nowStr,
+      };
+
+      if (analysisType === 'Vibration') {
+        updatePayload.lastVibrationUpdate = nowStr;
+      } else if (analysisType === 'Lube Oil') {
+        updatePayload.lastLubeOilUpdate = nowStr;
+      }
+
       // 1. Update equipment active status
       tx.update(equipments)
-        .set({
-          vibrationStatus: finalVibrationStatus,
-          lubeOilStatus: finalLubeOilStatus,
-          thermographyStatus: finalThermographyStatus,
-          condition: overallCondition,
-          observation: conditionAssessment,
-          lastUpdate: nowStr,
-        })
+        .set(updatePayload)
         .where(eq(equipments.tag, equipmentTag))
         .run();
 

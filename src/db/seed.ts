@@ -869,6 +869,18 @@ export async function seed() {
   try {
     await db.run(sql`ALTER TABLE equipments ADD COLUMN collection_method TEXT DEFAULT 'Online';`);
   } catch {}
+  try {
+    await db.run(sql`ALTER TABLE equipments ADD COLUMN vibration_frequency TEXT DEFAULT 'Monthly';`);
+  } catch {}
+  try {
+    await db.run(sql`ALTER TABLE equipments ADD COLUMN lube_oil_frequency TEXT DEFAULT 'Monthly';`);
+  } catch {}
+  try {
+    await db.run(sql`ALTER TABLE equipments ADD COLUMN last_vibration_update TEXT;`);
+  } catch {}
+  try {
+    await db.run(sql`ALTER TABLE equipments ADD COLUMN last_lube_oil_update TEXT;`);
+  } catch {}
 
   // Ensure analysis_reports has failure mode columns
   try {
@@ -904,16 +916,26 @@ export async function seed() {
   };
 
   const sanitizedEquipments = initialEquipments.map((eq, index) => {
-    // Distribute dates: 14 items within last 30 days (1 to 27 days ago), rest 35+ days ago
-    const daysAgo = index < 14 ? (index * 2) + 1 : 35 + (index * 3);
-    const dynamicLastUpdate = getRelativeDateStr(daysAgo);
+    // Generate distinct relative dates & frequencies for Vibration and Lube Oil
+    const vibDaysAgo = index < 14 ? (index * 2) + 1 : 35 + (index * 3);
+    const oilDaysAgo = index < 14 ? (index * 2) + 5 : 40 + (index * 3);
+
+    const vibDateStr = getRelativeDateStr(vibDaysAgo);
+    const oilDateStr = getRelativeDateStr(oilDaysAgo);
+
+    const vibFreq = index % 2 === 0 ? 'Monthly' : 'Quarterly';
+    const oilFreq = index % 3 === 0 ? 'Quarterly' : 'Monthly';
 
     return {
       ...eq,
       fpso: eq.tag.includes('_') ? eq.tag.split('_')[0] : eq.fpso,
       frequency: (eq as { frequency?: string }).frequency || 'Monthly',
+      vibrationFrequency: (eq as { vibrationFrequency?: string }).vibrationFrequency || vibFreq,
+      lubeOilFrequency: (eq as { lubeOilFrequency?: string }).lubeOilFrequency || oilFreq,
+      lastVibrationUpdate: vibDateStr,
+      lastLubeOilUpdate: oilDateStr,
+      lastUpdate: vibDateStr,
       collectionMethod: (eq as { collectionMethod?: string }).collectionMethod || 'Online',
-      lastUpdate: dynamicLastUpdate,
       condition: eq.condition.includes(' - ') ? eq.condition : eq.condition === 'Critical' ? 'Critical - Tier 1' : eq.condition === 'Degraded' ? 'Degraded - Tier 2' : 'Good - Tier 4',
       vibrationStatus: eq.vibrationStatus.includes(' - ') ? eq.vibrationStatus : eq.vibrationStatus === 'Critical' ? 'Critical - Tier 1' : eq.vibrationStatus === 'Degraded' ? 'Degraded - Tier 2' : 'Good - Tier 4',
       lubeOilStatus: eq.lubeOilStatus.includes(' - ') ? eq.lubeOilStatus : eq.lubeOilStatus === 'Critical' ? 'Critical - Tier 1' : eq.lubeOilStatus === 'Degraded' ? 'Degraded - Tier 2' : 'Good - Tier 4',

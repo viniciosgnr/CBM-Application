@@ -40,13 +40,28 @@ export async function PUT(request: Request, { params }: { params: { tag: string 
   try {
     const { tag } = params;
     const body = await request.json();
-    const { vibrationStatus, lubeOilStatus, condition, observation, frequency, collectionMethod } = body;
+    const { 
+      vibrationStatus, 
+      lubeOilStatus, 
+      condition, 
+      observation, 
+      frequency, 
+      vibrationFrequency,
+      lubeOilFrequency,
+      lastVibrationUpdate,
+      lastLubeOilUpdate,
+      collectionMethod 
+    } = body;
     
     const nowStr = new Date().toLocaleString('en-GB'); // dd/mm/yyyy, hh:mm:ss
     const nowIso = new Date().toISOString();
     
     const updateData: Record<string, string | null> = {};
     if (frequency !== undefined) updateData.frequency = frequency;
+    if (vibrationFrequency !== undefined) updateData.vibrationFrequency = vibrationFrequency;
+    if (lubeOilFrequency !== undefined) updateData.lubeOilFrequency = lubeOilFrequency;
+    if (lastVibrationUpdate !== undefined) updateData.lastVibrationUpdate = lastVibrationUpdate;
+    if (lastLubeOilUpdate !== undefined) updateData.lastLubeOilUpdate = lastLubeOilUpdate;
     if (collectionMethod !== undefined) updateData.collectionMethod = collectionMethod;
     
     if (condition !== undefined) {
@@ -78,7 +93,14 @@ export async function PUT(request: Request, { params }: { params: { tag: string 
       });
       
       return NextResponse.json(updated[0]);
-    } else if (frequency !== undefined || collectionMethod !== undefined) {
+    } else if (
+      frequency !== undefined || 
+      vibrationFrequency !== undefined || 
+      lubeOilFrequency !== undefined ||
+      lastVibrationUpdate !== undefined ||
+      lastLubeOilUpdate !== undefined ||
+      collectionMethod !== undefined
+    ) {
       const updated = await db
         .update(equipments)
         .set(updateData)

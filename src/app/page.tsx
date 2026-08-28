@@ -50,6 +50,10 @@ interface Equipment {
   lastUpdate: string;
   observation?: string | null;
   frequency?: string | null;
+  vibrationFrequency?: string | null;
+  lubeOilFrequency?: string | null;
+  lastVibrationUpdate?: string | null;
+  lastLubeOilUpdate?: string | null;
   collectionMethod?: string | null;
 }
 
@@ -1283,7 +1287,15 @@ export default function MainPage() {
   const formattedEquipments = equipments
     .filter(e => isWithinTimeRange(e.lastUpdate, equipCondTimeRange))
     .map(e => {
-      const { plannedDateStr, isOverdue } = calculateNextPlannedDate(e.lastUpdate, e.frequency);
+      const vibDate = e.lastVibrationUpdate || e.lastUpdate;
+      const oilDate = e.lastLubeOilUpdate || e.lastUpdate;
+      const vibFreq = e.vibrationFrequency || e.frequency || 'Monthly';
+      const oilFreq = e.lubeOilFrequency || e.frequency || 'Monthly';
+
+      const nextVib = calculateNextPlannedDate(vibDate, vibFreq);
+      const nextOil = calculateNextPlannedDate(oilDate, oilFreq);
+      const isOverdue = nextVib.isOverdue || nextOil.isOverdue;
+
       return {
         id: String(e.id),
         tag: e.tag,
@@ -1295,9 +1307,13 @@ export default function MainPage() {
         objectType: e.objectType,
         condition: e.condition ? e.condition.split(' - ')[0] : e.condition,
         lastUpdate: e.lastUpdate,
-        frequency: e.frequency || 'Monthly',
+        lastVibrationUpdate: vibDate,
+        lastLubeOilUpdate: oilDate,
+        vibrationFrequency: vibFreq,
+        lubeOilFrequency: oilFreq,
         collectionStatus: isOverdue ? 'Overdue' : 'On Time',
-        plannedNextDate: plannedDateStr,
+        plannedNextVibrationDate: nextVib.plannedDateStr,
+        plannedNextOilDate: nextOil.plannedDateStr,
         observation: e.observation || '',
       };
     });
@@ -1579,8 +1595,8 @@ export default function MainPage() {
                 </span>
               </div>
 
-              {/* Linha 2: Overall CBM status (left) + FREQUENCY Dropdown (right) */}
-              <div className="flex items-center justify-between text-xs text-text-muted mt-3 font-medium">
+              {/* Linha 2: Overall CBM status */}
+              <div className="flex items-center text-xs text-text-muted mt-2.5 font-medium">
                 <div className="flex items-center gap-2">
                   <span>Overall CBM status:</span>
                   <span className={`font-bold ${
@@ -1591,38 +1607,6 @@ export default function MainPage() {
                     {selectedEquipment.condition}
                   </span>
                 </div>
-
-                <div className="flex items-center gap-2">
-                  <span className="text-[10px] text-text-muted font-bold uppercase tracking-wider">FREQUENCY:</span>
-                  <div className="relative inline-block">
-                    <select
-                      value={selectedEquipment.frequency || 'Monthly'}
-                      onChange={async (e) => {
-                        const newFreq = e.target.value;
-                        setSelectedEquipment((prev: Equipment | null) => prev ? { ...prev, frequency: newFreq } : prev);
-                        try {
-                          await fetch(`/api/equipments/${selectedEquipment.tag}`, {
-                            method: 'PUT',
-                            headers: { 'Content-Type': 'application/json' },
-                            body: JSON.stringify({ frequency: newFreq }),
-                          });
-                          fetchEquipments();
-                        } catch (err) {
-                          console.error('Failed to update frequency:', err);
-                        }
-                      }}
-                      className="bg-[#121626] border border-[#2a3556] text-text-primary text-xs font-semibold rounded-full px-3.5 py-1 pr-7 appearance-none cursor-pointer focus:outline-none focus:border-accent-blue"
-                    >
-                      <option value="Monthly" className="bg-[#121626]">Monthly</option>
-                      <option value="Quarterly" className="bg-[#121626]">Quarterly</option>
-                      <option value="Semi-Annual" className="bg-[#121626]">Semi-Annual</option>
-                      <option value="Annual" className="bg-[#121626]">Annual</option>
-                    </select>
-                    <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-text-muted">
-                      <ChevronDown size={13} />
-                    </div>
-                  </div>
-                </div>
               </div>
             </div>
 
@@ -1630,53 +1614,127 @@ export default function MainPage() {
             <div className="flex flex-col gap-4 mt-4">
               {/* Individual Technique Status Cards */}
               {(() => {
-                const { plannedDateStr, isOverdue } = calculateNextPlannedDate(selectedEquipment.lastUpdate, selectedEquipment.frequency);
-                const lastDateStr = selectedEquipment.lastUpdate ? selectedEquipment.lastUpdate.split(',')[0] : '20/08/2026';
+                const vibDate = selectedEquipment.lastVibrationUpdate || selectedEquipment.lastUpdate;
+                const oilDate = selectedEquipment.lastLubeOilUpdate || selectedEquipment.lastUpdate;
+                const vibFreq = selectedEquipment.vibrationFrequency || selectedEquipment.frequency || 'Monthly';
+                const oilFreq = selectedEquipment.lubeOilFrequency || selectedEquipment.frequency || 'Monthly';
+
+                const vibNext = calculateNextPlannedDate(vibDate, vibFreq);
+                const oilNext = calculateNextPlannedDate(oilDate, oilFreq);
+
+                const vibLastDateStr = vibDate ? vibDate.split(',')[0] : '26/08/2026';
+                const oilLastDateStr = oilDate ? oilDate.split(',')[0] : '26/08/2026';
                 
                 return (
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-xs">
                     {/* Vibration Status Card */}
-                    <div className="bg-[#101422]/60 p-3.5 border border-[#202742] rounded-xl flex items-center justify-between gap-3">
-                      <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 rounded-xl bg-[#161c30] border border-[#263152] flex items-center justify-center text-[#3b82f6] shrink-0">
-                          <svg className="w-5 h-5 stroke-current" fill="none" viewBox="0 0 24 24" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                            <path d="M2 12h3l3-8 4 16 3-10 2 4h3" />
-                          </svg>
+                    <div className="bg-[#101422]/60 p-3.5 border border-[#202742] rounded-xl flex flex-col gap-2.5">
+                      <div className="flex items-center justify-between gap-2">
+                        <div className="flex items-center gap-2.5">
+                          <div className="w-8 h-8 rounded-lg bg-[#161c30] border border-[#263152] flex items-center justify-center text-[#3b82f6] shrink-0">
+                            <svg className="w-4 h-4 stroke-current" fill="none" viewBox="0 0 24 24" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                              <path d="M2 12h3l3-8 4 16 3-10 2 4h3" />
+                            </svg>
+                          </div>
+                          <div className="flex flex-col gap-0.5">
+                            <span className="text-text-muted font-semibold uppercase text-[9px] tracking-wider">Vibration Analysis</span>
+                            <div className="flex items-center gap-1.5 font-bold text-xs">
+                              {getStatusDot(formatSurveillanceTier(selectedEquipment.vibrationStatus))}
+                            </div>
+                          </div>
                         </div>
-                        <div className="flex flex-col gap-1">
-                          <span className="text-text-muted font-semibold uppercase text-[9px] tracking-wider">Vibration Analysis Status</span>
-                          <div className="flex items-center gap-2 font-bold text-xs">
-                            {getStatusDot(formatSurveillanceTier(selectedEquipment.vibrationStatus))}
+
+                        {/* Vibration Frequency Selector */}
+                        <div className="relative inline-block">
+                          <select
+                            value={selectedEquipment.vibrationFrequency || 'Monthly'}
+                            onChange={async (e) => {
+                              const newFreq = e.target.value;
+                              setSelectedEquipment((prev: Equipment | null) => prev ? { ...prev, vibrationFrequency: newFreq } : prev);
+                              try {
+                                await fetch(`/api/equipments/${selectedEquipment.tag}`, {
+                                  method: 'PUT',
+                                  headers: { 'Content-Type': 'application/json' },
+                                  body: JSON.stringify({ vibrationFrequency: newFreq }),
+                                });
+                                fetchEquipments();
+                              } catch (err) {
+                                console.error('Failed to update vibration frequency:', err);
+                              }
+                            }}
+                            className="bg-[#121626] border border-[#2a3556] text-text-primary text-[10px] font-semibold rounded-full px-2.5 py-0.5 pr-5 appearance-none cursor-pointer focus:outline-none focus:border-accent-blue"
+                          >
+                            <option value="Monthly" className="bg-[#121626]">Monthly</option>
+                            <option value="Quarterly" className="bg-[#121626]">Quarterly</option>
+                            <option value="Semi-Annual" className="bg-[#121626]">Semi-Annual</option>
+                            <option value="Annual" className="bg-[#121626]">Annual</option>
+                          </select>
+                          <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-1.5 text-text-muted">
+                            <ChevronDown size={11} />
                           </div>
                         </div>
                       </div>
-                      <div className="text-[10px] text-text-muted font-medium shrink-0 flex flex-col items-end gap-0.5 self-start pt-0.5">
-                        <span>Last: {lastDateStr}</span>
-                        <span className={isOverdue ? "text-status-error font-bold" : "text-status-ok font-semibold"}>
-                          Next: {plannedDateStr}
+
+                      <div className="flex items-center justify-between text-[10px] text-text-muted font-medium pt-1.5 border-t border-[#1a2035]">
+                        <span>Last: <strong className="text-text-primary">{vibLastDateStr}</strong></span>
+                        <span className={vibNext.isOverdue ? "text-status-error font-bold" : "text-status-ok font-semibold"}>
+                          Next: {vibNext.plannedDateStr}
                         </span>
                       </div>
                     </div>
 
                     {/* Lube Oil Status Card */}
-                    <div className="bg-[#101422]/60 p-3.5 border border-[#202742] rounded-xl flex items-center justify-between gap-3">
-                      <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 rounded-xl bg-[#161c30] border border-[#263152] flex items-center justify-center text-[#3b82f6] shrink-0">
-                          <svg className="w-5 h-5 stroke-current" fill="none" viewBox="0 0 24 24" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                            <path d="M12 2.69l5.66 5.66a8 8 0 1 1-11.31 0z" />
-                          </svg>
+                    <div className="bg-[#101422]/60 p-3.5 border border-[#202742] rounded-xl flex flex-col gap-2.5">
+                      <div className="flex items-center justify-between gap-2">
+                        <div className="flex items-center gap-2.5">
+                          <div className="w-8 h-8 rounded-lg bg-[#161c30] border border-[#263152] flex items-center justify-center text-[#3b82f6] shrink-0">
+                            <svg className="w-4 h-4 stroke-current" fill="none" viewBox="0 0 24 24" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                              <path d="M12 2.69l5.66 5.66a8 8 0 1 1-11.31 0z" />
+                            </svg>
+                          </div>
+                          <div className="flex flex-col gap-0.5">
+                            <span className="text-text-muted font-semibold uppercase text-[9px] tracking-wider">Lube Oil Analysis</span>
+                            <div className="flex items-center gap-1.5 font-bold text-xs">
+                              {getStatusDot(formatSurveillanceTier(selectedEquipment.lubeOilStatus))}
+                            </div>
+                          </div>
                         </div>
-                        <div className="flex flex-col gap-1">
-                          <span className="text-text-muted font-semibold uppercase text-[9px] tracking-wider">Lube Oil Analysis Status</span>
-                          <div className="flex items-center gap-2 font-bold text-xs">
-                            {getStatusDot(formatSurveillanceTier(selectedEquipment.lubeOilStatus))}
+
+                        {/* Lube Oil Frequency Selector */}
+                        <div className="relative inline-block">
+                          <select
+                            value={selectedEquipment.lubeOilFrequency || 'Monthly'}
+                            onChange={async (e) => {
+                              const newFreq = e.target.value;
+                              setSelectedEquipment((prev: Equipment | null) => prev ? { ...prev, lubeOilFrequency: newFreq } : prev);
+                              try {
+                                await fetch(`/api/equipments/${selectedEquipment.tag}`, {
+                                  method: 'PUT',
+                                  headers: { 'Content-Type': 'application/json' },
+                                  body: JSON.stringify({ lubeOilFrequency: newFreq }),
+                                });
+                                fetchEquipments();
+                              } catch (err) {
+                                console.error('Failed to update lube oil frequency:', err);
+                              }
+                            }}
+                            className="bg-[#121626] border border-[#2a3556] text-text-primary text-[10px] font-semibold rounded-full px-2.5 py-0.5 pr-5 appearance-none cursor-pointer focus:outline-none focus:border-accent-blue"
+                          >
+                            <option value="Monthly" className="bg-[#121626]">Monthly</option>
+                            <option value="Quarterly" className="bg-[#121626]">Quarterly</option>
+                            <option value="Semi-Annual" className="bg-[#121626]">Semi-Annual</option>
+                            <option value="Annual" className="bg-[#121626]">Annual</option>
+                          </select>
+                          <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-1.5 text-text-muted">
+                            <ChevronDown size={11} />
                           </div>
                         </div>
                       </div>
-                      <div className="text-[10px] text-text-muted font-medium shrink-0 flex flex-col items-end gap-0.5 self-start pt-0.5">
-                        <span>Last: {lastDateStr}</span>
-                        <span className={isOverdue ? "text-status-error font-bold" : "text-status-ok font-semibold"}>
-                          Next: {plannedDateStr}
+
+                      <div className="flex items-center justify-between text-[10px] text-text-muted font-medium pt-1.5 border-t border-[#1a2035]">
+                        <span>Last: <strong className="text-text-primary">{oilLastDateStr}</strong></span>
+                        <span className={oilNext.isOverdue ? "text-status-error font-bold" : "text-status-ok font-semibold"}>
+                          Next: {oilNext.plannedDateStr}
                         </span>
                       </div>
                     </div>

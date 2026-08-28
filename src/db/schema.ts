@@ -16,6 +16,10 @@ export const equipments = sqliteTable('equipments', {
   lastUpdate: text('last_update').notNull(),
   observation: text('observation'),
   frequency: text('frequency').notNull().default('Monthly'),
+  vibrationFrequency: text('vibration_frequency').notNull().default('Monthly'),
+  lubeOilFrequency: text('lube_oil_frequency').notNull().default('Monthly'),
+  lastVibrationUpdate: text('last_vibration_update'),
+  lastLubeOilUpdate: text('last_lube_oil_update'),
   collectionMethod: text('collection_method').notNull().default('Online'),
 });
 
