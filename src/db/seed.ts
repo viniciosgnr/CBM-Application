@@ -3,23 +3,6 @@ import { equipments, equipmentHistory, analysisReports, workOrders } from './sch
 import { sql } from 'drizzle-orm';
 import { sbmEquipments } from './sbm-equipments';
 
-const mockHistory = [
-  { equipmentTag: 'COCE_TIME_NRS_01', vibrationStatus: 'Good - Tier 4', lubeOilStatus: 'Good - Tier 4', overallCondition: 'Good - Tier 4', changedAt: '2026-03-26T12:00:00Z' },
-  { equipmentTag: 'COCE_TIME_NRS_01', vibrationStatus: 'Good - Tier 3', lubeOilStatus: 'Good - Tier 4', overallCondition: 'Good - Tier 3', changedAt: '2026-04-26T12:00:00Z' },
-  { equipmentTag: 'COCE_TIME_NRS_01', vibrationStatus: 'Good - Tier 4', lubeOilStatus: 'Good - Tier 4', overallCondition: 'Good - Tier 4', changedAt: '2026-07-23T12:47:04Z' },
-  { equipmentTag: 'COCE_TIME_NRS_01', vibrationStatus: 'Good - Tier 4', lubeOilStatus: 'Good - Tier 4', overallCondition: 'Good - Tier 4', changedAt: '2026-07-27T12:47:04Z' },
-  { equipmentTag: 'COCE_TIME_NRS_01', vibrationStatus: 'Degraded - Tier 2', lubeOilStatus: 'Good - Tier 4', overallCondition: 'Degraded - Tier 2', changedAt: '2026-07-28T12:47:04Z' },
-  { equipmentTag: 'COCE_TIME_NRS_01', vibrationStatus: 'Good - Tier 4', lubeOilStatus: 'Good - Tier 4', overallCondition: 'Good - Tier 4', changedAt: '2026-07-30T12:47:04Z' },
-  { equipmentTag: 'COCE_TIME_NRS_01', vibrationStatus: 'Good - Tier 4', lubeOilStatus: 'Degraded - Tier 2', overallCondition: 'Degraded - Tier 2', changedAt: '2026-07-31T12:47:04Z' },
-  { equipmentTag: 'COCE_TIME_NRS_01', vibrationStatus: 'Good - Tier 4', lubeOilStatus: 'Good - Tier 4', overallCondition: 'Good - Tier 4', changedAt: '2026-08-03T12:47:04Z' },
-  { equipmentTag: 'COCE_TIME_NRS_01', vibrationStatus: 'Good - Tier 4', lubeOilStatus: 'Degraded - Tier 2', overallCondition: 'Degraded - Tier 2', changedAt: '2026-08-04T12:47:04Z' },
-  { equipmentTag: 'COCE_TIME_NRS_01', vibrationStatus: 'Good - Tier 4', lubeOilStatus: 'Good - Tier 4', overallCondition: 'Good - Tier 4', changedAt: '2026-08-06T12:47:04Z' },
-
-  { equipmentTag: 'COCE_TIME_NRS_02', vibrationStatus: 'Critical - Tier 1', lubeOilStatus: 'Good - Tier 4', overallCondition: 'Critical - Tier 1', changedAt: '2026-07-22T14:10:00Z' },
-  { equipmentTag: 'CDI_PUMP_OIL_02', vibrationStatus: 'Critical - Tier 1', lubeOilStatus: 'Critical - Tier 1', overallCondition: 'Critical - Tier 1', changedAt: '2026-07-24T13:20:00Z' },
-  { equipmentTag: 'SEP_SEP_HEATER_02', vibrationStatus: 'Critical - Tier 1', lubeOilStatus: 'Critical - Tier 1', overallCondition: 'Critical - Tier 1', changedAt: '2026-07-24T06:10:00Z' },
-];
-
 import { mockReports } from './mock-reports';
 
 const mockWorkOrders = [
@@ -594,6 +577,12 @@ export async function seed() {
     return `${day}/${month}/${year}, 10:30:00`;
   };
 
+  const getRelativeISO = (daysAgo: number, timeStr = '10:30:00Z') => {
+    const d = new Date(now);
+    d.setDate(d.getDate() - daysAgo);
+    return `${d.toISOString().split('T')[0]}T${timeStr}`;
+  };
+
   const sanitizedEquipments = sbmEquipments.map((eq: Record<string, string>, index: number) => {
     // Generate distinct relative dates & frequencies for Vibration and Lube Oil
     const vibDaysAgo = index % 5 === 0 ? 3 : index % 3 === 0 ? 12 : index % 2 === 0 ? 22 : 45;
@@ -661,16 +650,73 @@ export async function seed() {
     };
   });
 
-  const expandedHistory = sanitizedEquipments.flatMap((eq: Record<string, string>) => {
-    const existing = mockHistory.filter(h => h.equipmentTag === eq.tag);
-    if (existing.length > 0) return existing;
+  const expandedHistory = sanitizedEquipments.flatMap((eq: Record<string, string>, index: number) => {
+    const vibDaysAgo = index % 5 === 0 ? 3 : index % 3 === 0 ? 12 : index % 2 === 0 ? 22 : 45;
+    const oilDaysAgo = index % 4 === 0 ? 5 : index % 3 === 0 ? 18 : index % 2 === 0 ? 28 : 60;
 
-    return [
-      { equipmentTag: eq.tag, vibrationStatus: 'Good - Tier 4', lubeOilStatus: 'Good - Tier 4', overallCondition: 'Good - Tier 4', changedAt: '2026-03-15T10:00:00Z' },
-      { equipmentTag: eq.tag, vibrationStatus: 'Good - Tier 3', lubeOilStatus: 'Good - Tier 4', overallCondition: 'Good - Tier 3', changedAt: '2026-05-10T11:00:00Z' },
-      { equipmentTag: eq.tag, vibrationStatus: eq.vibrationStatus, lubeOilStatus: eq.lubeOilStatus, overallCondition: eq.condition, changedAt: '2026-07-20T14:30:00Z' },
-      { equipmentTag: eq.tag, vibrationStatus: eq.vibrationStatus, lubeOilStatus: eq.lubeOilStatus, overallCondition: eq.condition, changedAt: '2026-08-15T09:15:00Z' },
+    const p1Date = getRelativeISO(120, '09:00:00Z');
+    const p2Date = getRelativeISO(75, '11:15:00Z');
+
+    const historyRecords = [
+      {
+        equipmentTag: eq.tag,
+        vibrationStatus: 'Good - Tier 4',
+        lubeOilStatus: 'Good - Tier 4',
+        overallCondition: 'Good - Tier 4',
+        changedAt: p1Date,
+      },
+      {
+        equipmentTag: eq.tag,
+        vibrationStatus: 'Good - Tier 3',
+        lubeOilStatus: 'Good - Tier 4',
+        overallCondition: 'Good - Tier 3',
+        changedAt: p2Date,
+      },
     ];
+
+    if (vibDaysAgo < oilDaysAgo) {
+      // Lube oil analysis was completed first (oilDaysAgo), Vibration analysis completed later (vibDaysAgo)
+      historyRecords.push({
+        equipmentTag: eq.tag,
+        vibrationStatus: 'Good - Tier 3',
+        lubeOilStatus: eq.lubeOilStatus,
+        overallCondition: eq.lubeOilStatus.startsWith('Critical') ? eq.lubeOilStatus : 'Good - Tier 3',
+        changedAt: getRelativeISO(oilDaysAgo, '14:20:00Z'),
+      });
+      historyRecords.push({
+        equipmentTag: eq.tag,
+        vibrationStatus: eq.vibrationStatus,
+        lubeOilStatus: eq.lubeOilStatus,
+        overallCondition: eq.condition,
+        changedAt: getRelativeISO(vibDaysAgo, '10:30:00Z'),
+      });
+    } else if (oilDaysAgo < vibDaysAgo) {
+      // Vibration analysis was completed first (vibDaysAgo), Lube oil completed later (oilDaysAgo)
+      historyRecords.push({
+        equipmentTag: eq.tag,
+        vibrationStatus: eq.vibrationStatus,
+        lubeOilStatus: 'Good - Tier 4',
+        overallCondition: eq.vibrationStatus.startsWith('Critical') ? eq.vibrationStatus : eq.condition,
+        changedAt: getRelativeISO(vibDaysAgo, '09:45:00Z'),
+      });
+      historyRecords.push({
+        equipmentTag: eq.tag,
+        vibrationStatus: eq.vibrationStatus,
+        lubeOilStatus: eq.lubeOilStatus,
+        overallCondition: eq.condition,
+        changedAt: getRelativeISO(oilDaysAgo, '10:30:00Z'),
+      });
+    } else {
+      historyRecords.push({
+        equipmentTag: eq.tag,
+        vibrationStatus: eq.vibrationStatus,
+        lubeOilStatus: eq.lubeOilStatus,
+        overallCondition: eq.condition,
+        changedAt: getRelativeISO(vibDaysAgo, '10:30:00Z'),
+      });
+    }
+
+    return historyRecords;
   });
 
   await db.insert(equipments).values(sanitizedEquipments);
