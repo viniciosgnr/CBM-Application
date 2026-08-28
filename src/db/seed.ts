@@ -1,237 +1,7 @@
 import { db } from './index';
 import { equipments, equipmentHistory, analysisReports, workOrders } from './schema';
 import { sql } from 'drizzle-orm';
-
-const initialEquipments = [
-  {
-    tag: 'DNY_111-PKPD-0100',
-    fpso: 'DNY',
-    name: 'Emergency Diesel Generator',
-    class: 'Gas Turbine',
-    system: 'Power Generation',
-    criticality: 'High',
-    objectType: 'SECE',
-    condition: 'Good - Tier 4',
-    vibrationStatus: 'Good - Tier 4',
-    lubeOilStatus: 'Good - Tier 4',
-    lastUpdate: '23/07/2026, 12:47:04',
-    observation: 'Operating normally under scheduled CBM surveillance.',
-    frequency: 'Quarterly',
-    collectionMethod: 'Offline/Manual'
-  },
-  {
-    tag: 'CDI_PUMP_OIL_01',
-    fpso: 'CDI',
-    name: 'Crude Oil Transfer Pump A',
-    class: 'PUMP - Screw Pump',
-    system: 'Oil',
-    criticality: 'High',
-    objectType: 'SECE',
-    condition: 'Good - Tier 3',
-    vibrationStatus: 'Good',
-    lubeOilStatus: 'Good',
-    lastUpdate: '17/07/2026, 14:00:00',
-    observation: 'Flow output aligned with specification.',
-  },
-  {
-    tag: 'CDI_PUMP_OIL_02',
-    fpso: 'CDI',
-    name: 'Crude Oil Transfer Pump B',
-    class: 'PUMP - Screw Pump',
-    system: 'Oil',
-    criticality: 'Medium',
-    objectType: 'NCE',
-    condition: 'Critical - Tier 1',
-    vibrationStatus: 'Critical',
-    lubeOilStatus: 'Critical',
-    lastUpdate: '24/07/2026, 13:20:00',
-    observation: 'High bearing temperature & particle contamination.',
-  },
-  {
-    tag: 'CDI_GEN_TURB_01',
-    fpso: 'CDI',
-    name: 'Main Power Generator Turb-A',
-    class: 'TURB - Gas Turbine Generator',
-    system: 'Power',
-    criticality: 'High',
-    objectType: 'SECE',
-    condition: 'Good - Tier 4',
-    vibrationStatus: 'Good',
-    lubeOilStatus: 'Good',
-    lastUpdate: '21/07/2026, 09:00:00',
-    observation: 'Generator load 85% nominal, thermal imaging normal.',
-  },
-  {
-    tag: 'CDI_GEN_TURB_02',
-    fpso: 'CDI',
-    name: 'Main Power Generator Turb-B',
-    class: 'TURB - Gas Turbine Generator',
-    system: 'Power',
-    criticality: 'Medium',
-    objectType: 'NCE',
-    condition: 'Degraded - Tier 2',
-    vibrationStatus: 'Good',
-    lubeOilStatus: 'Degraded',
-    lastUpdate: '16/07/2026, 11:30:00',
-    observation: 'Water content in lube oil sample exceeds threshold.',
-  },
-  {
-    tag: 'CDI_WATER_INJ_01',
-    fpso: 'CDI',
-    name: 'Water Injection Pump 1',
-    class: 'PUMP - Multistage Centrifugal',
-    system: 'Water',
-    criticality: 'High',
-    objectType: 'SECE',
-    condition: 'Good - Tier 4',
-    vibrationStatus: 'Good',
-    lubeOilStatus: 'Good',
-    lastUpdate: '24/07/2026, 16:00:00',
-    observation: 'High pressure discharge stable.',
-  },
-  {
-    tag: 'CDI_WATER_INJ_02',
-    fpso: 'CDI',
-    name: 'Water Injection Pump 2',
-    class: 'PUMP - Multistage Centrifugal',
-    system: 'Water',
-    criticality: 'Low',
-    objectType: 'NCE',
-    condition: 'Machine Off',
-    vibrationStatus: 'Good',
-    lubeOilStatus: 'Good',
-    lastUpdate: '10/07/2026, 08:00:00',
-    observation: 'Standby unit, currently offline.',
-  },
-
-  // FPSO SEP (Separation, Gas & Power Systems)
-  {
-    tag: 'SEP_COMP_BOOST_01',
-    fpso: 'SEP',
-    name: 'Gas Booster Compressor',
-    class: 'COCE - Reciprocating Compressor',
-    system: 'Gas',
-    criticality: 'High',
-    objectType: 'SECE',
-    condition: 'Good - Tier 4',
-    vibrationStatus: 'Good',
-    lubeOilStatus: 'Good',
-    lastUpdate: '23/07/2026, 11:15:00',
-    observation: 'Suction pressure controlled.',
-  },
-  {
-    tag: 'SEP_COMP_BOOST_02',
-    fpso: 'SEP',
-    name: 'Gas Booster Compressor B',
-    class: 'COCE - Reciprocating Compressor',
-    system: 'Gas',
-    criticality: 'Medium',
-    objectType: 'NCE',
-    condition: 'Degraded - Tier 2',
-    vibrationStatus: 'Degraded',
-    lubeOilStatus: 'Good',
-    lastUpdate: '18/07/2026, 17:40:00',
-    observation: 'Piston rod packing seal temperature elevated.',
-  },
-  {
-    tag: 'SEP_SEP_HEATER_01',
-    fpso: 'SEP',
-    name: 'First Stage Separator Pump',
-    class: 'PUMP - Process Centrifugal',
-    system: 'Oil',
-    criticality: 'High',
-    objectType: 'SECE',
-    condition: 'Good - Tier 3',
-    vibrationStatus: 'Good',
-    lubeOilStatus: 'Good',
-    lastUpdate: '22/07/2026, 08:50:00',
-    observation: 'Flow velocity within operational limits.',
-  },
-  {
-    tag: 'SEP_SEP_HEATER_02',
-    fpso: 'SEP',
-    name: 'Second Stage Separator Pump',
-    class: 'PUMP - Process Centrifugal',
-    system: 'Oil',
-    criticality: 'Medium',
-    objectType: 'NCE',
-    condition: 'Critical - Tier 1',
-    vibrationStatus: 'Critical',
-    lubeOilStatus: 'Critical',
-    lastUpdate: '24/07/2026, 06:10:00',
-    observation: 'Severe mechanical seal leakage & vibration trip.',
-  },
-  {
-    tag: 'SEP_TURB_GEN_01',
-    fpso: 'SEP',
-    name: 'Emergency Diesel Generator',
-    class: 'GEN - Diesel Engine Generator',
-    system: 'Power',
-    criticality: 'High',
-    objectType: 'SECE',
-    condition: 'Good - Tier 4',
-    vibrationStatus: 'Good',
-    lubeOilStatus: 'Good',
-    lastUpdate: '21/07/2026, 12:00:00',
-    observation: 'Weekly auto-start test successful.',
-  },
-  {
-    tag: 'SEP_WATER_TREAT_01',
-    fpso: 'SEP',
-    name: 'Produced Water Pump A',
-    class: 'PUMP - Submersible',
-    system: 'Water',
-    criticality: 'Low',
-    objectType: 'NCE',
-    condition: 'Good - Tier 3',
-    vibrationStatus: 'Good',
-    lubeOilStatus: 'Good',
-    lastUpdate: '14/07/2026, 15:30:00',
-    observation: 'Oil-in-water monitor calibrated.',
-  },
-  {
-    tag: 'SEP_WATER_TREAT_02',
-    fpso: 'SEP',
-    name: 'Produced Water Pump B',
-    class: 'PUMP - Submersible',
-    system: 'Water',
-    criticality: 'Low',
-    objectType: 'NCE',
-    condition: 'Degraded - Tier 2',
-    vibrationStatus: 'Good',
-    lubeOilStatus: 'Degraded',
-    lastUpdate: '12/07/2026, 10:20:00',
-    observation: 'Filter clogged, differential pressure high.',
-  },
-  {
-    tag: 'SEP_FLARE_BLOWER_01',
-    fpso: 'SEP',
-    name: 'Flare Gas Blower A',
-    class: 'BLOW - Centrifugal Blower',
-    system: 'Gas',
-    criticality: 'Medium',
-    objectType: 'NCE',
-    condition: 'Good - Tier 4',
-    vibrationStatus: 'Good',
-    lubeOilStatus: 'Good',
-    lastUpdate: '23/07/2026, 09:10:00',
-    observation: 'VFD speed modulation smooth.',
-  },
-  {
-    tag: 'SEP_FLARE_BLOWER_02',
-    fpso: 'SEP',
-    name: 'Flare Gas Blower B',
-    class: 'BLOW - Centrifugal Blower',
-    system: 'Gas',
-    criticality: 'Low',
-    objectType: 'NCE',
-    condition: 'Machine Off',
-    vibrationStatus: 'Good',
-    lubeOilStatus: 'Good',
-    lastUpdate: '05/07/2026, 14:00:00',
-    observation: 'Offline for scheduled fan blade cleaning.',
-  }
-];
+import { sbmEquipments } from './sbm-equipments';
 
 const mockHistory = [
   { equipmentTag: 'COCE_TIME_NRS_01', vibrationStatus: 'Good - Tier 4', lubeOilStatus: 'Good - Tier 4', overallCondition: 'Good - Tier 4', changedAt: '2026-03-26T12:00:00Z' },
@@ -250,98 +20,7 @@ const mockHistory = [
   { equipmentTag: 'SEP_SEP_HEATER_02', vibrationStatus: 'Critical - Tier 1', lubeOilStatus: 'Critical - Tier 1', overallCondition: 'Critical - Tier 1', changedAt: '2026-07-24T06:10:00Z' },
 ];
 
-const mockReports = [
-  {
-    equipmentTag: 'COCE_TIME_NRS_02',
-    vibrationStatus: 'Critical - Tier 1',
-    lubeOilStatus: 'Good - Tier 4',
-    overallCondition: 'Critical - Tier 1',
-    facility: 'FPSO UNY',
-    system: 'Gas',
-    tagNumber: 'COCE_TIME_NRS_02',
-    cmmsNumber: 'CMMS-9082',
-    cof: 'Medium',
-    location: 'Module 3',
-    machineName: 'Compressor Performance',
-    mcProtection: 'Vibration Trip',
-    operatingContext: 'Continuous Gas Export',
-    technology: 'Vibration Analysis',
-    component: 'Compressor',
-    raisedBy: 'Gustavo Silva',
-    raisedDate: '2026-07-22',
-    targetDate: '2026-08-22',
-    shortDescription: 'High vibration alarm on Compressor axial sensors',
-    woNumber: '801021309',
-    conditionAssessment: 'Based on System 1 trends, abrupt jumps indicate instrumentation failure in axial sensors of Main Gas Compressor C.',
-    longDescription: 'Verify sensor fastening, check connection integrity, and perform channel cross-substitution.',
-    equipmentClass: 'Centrifugal Compressor',
-    subunit: 'Compressor',
-    maintainableItem: 'Radial Bearing',
-    failureModeDescription: 'AIR - Abnormal Instrument Reading',
-    failureMechanismSubdivision: 'Mechanical Failure - Vibration',
-    createdAt: '2026-07-22T14:10:00Z',
-  },
-  {
-    equipmentTag: 'CDI_PUMP_OIL_02',
-    vibrationStatus: 'Critical - Tier 1',
-    lubeOilStatus: 'Critical - Tier 1',
-    overallCondition: 'Critical - Tier 1',
-    facility: 'FPSO CDI',
-    system: 'Oil',
-    tagNumber: 'CDI_PUMP_OIL_02',
-    cmmsNumber: 'CMMS-9104',
-    cof: 'High',
-    location: 'Module 5',
-    machineName: 'Crude Oil Pump B',
-    mcProtection: 'Temp & Vib Trip',
-    operatingContext: 'Crude Offloading',
-    technology: 'Lube Oil Analysis',
-    component: 'Thrust Bearing',
-    raisedBy: 'Julia Mendes',
-    raisedDate: '2026-07-24',
-    targetDate: '2026-08-10',
-    shortDescription: 'Bearing overheating and particle contamination',
-    woNumber: '801021320',
-    conditionAssessment: 'Bearing temperature exceeded 95C under load with high metallic particle density.',
-    longDescription: 'Perform emergency bearing replacement and lube oil flush.',
-    equipmentClass: 'Centrifugal Pump',
-    subunit: 'Lubrication System',
-    maintainableItem: 'Lube Oil',
-    failureModeDescription: 'OHE - Overheating',
-    failureMechanismSubdivision: 'Material Failure - Wear',
-    createdAt: '2026-07-24T13:20:00Z',
-  },
-  {
-    equipmentTag: 'TURB_GEN_A_01',
-    vibrationStatus: 'Degraded - Tier 2',
-    lubeOilStatus: 'Good - Tier 4',
-    overallCondition: 'Degraded - Tier 2',
-    facility: 'FPSO UNY',
-    system: 'Power Generation',
-    tagNumber: 'TURB_GEN_A_01',
-    cmmsNumber: 'CMMS-9115',
-    cof: 'High',
-    location: 'Module 1',
-    machineName: 'Gas Turbine Generator A',
-    mcProtection: 'Overspeed & Vib Trip',
-    operatingContext: 'Power Generation',
-    technology: 'Vibration Analysis',
-    component: 'Power Turbine',
-    raisedBy: 'Roberto Santos',
-    raisedDate: '2026-08-05',
-    targetDate: '2026-08-25',
-    shortDescription: '1X harmonic peak increase on turbine drive shaft',
-    woNumber: '801021335',
-    conditionAssessment: 'Spectral analysis shows unbalance growth on power turbine rotor.',
-    longDescription: 'Schedule laser alignment check and dynamic balancing of power turbine rotor.',
-    equipmentClass: 'Gas Turbine',
-    subunit: 'Power Turbine HP Turbine',
-    maintainableItem: 'Rotor',
-    failureModeDescription: 'VIB - Vibration',
-    failureMechanismSubdivision: 'Mechanical Failure - Unbalance',
-    createdAt: '2026-08-05T10:15:00Z',
-  }
-];
+import { mockReports } from './mock-reports';
 
 const mockWorkOrders = [
   // UNY FPSO
@@ -915,34 +594,74 @@ export async function seed() {
     return `${day}/${month}/${year}, 10:30:00`;
   };
 
-  const sanitizedEquipments = initialEquipments.map((eq, index) => {
+  const sanitizedEquipments = sbmEquipments.map((eq: Record<string, string>, index: number) => {
     // Generate distinct relative dates & frequencies for Vibration and Lube Oil
-    const vibDaysAgo = index < 14 ? (index * 2) + 1 : 35 + (index * 3);
-    const oilDaysAgo = index < 14 ? (index * 2) + 5 : 40 + (index * 3);
+    const vibDaysAgo = index % 5 === 0 ? 3 : index % 3 === 0 ? 12 : index % 2 === 0 ? 22 : 45;
+    const oilDaysAgo = index % 4 === 0 ? 5 : index % 3 === 0 ? 18 : index % 2 === 0 ? 28 : 60;
 
     const vibDateStr = getRelativeDateStr(vibDaysAgo);
     const oilDateStr = getRelativeDateStr(oilDaysAgo);
 
-    const vibFreq = index % 2 === 0 ? 'Monthly' : 'Quarterly';
-    const oilFreq = index % 3 === 0 ? 'Quarterly' : 'Monthly';
+    // Assign realistic condition distribution across 339 real assets
+    let cond = 'Good - Tier 4';
+    let vibStat = 'Good - Tier 4';
+    let oilStat = 'Good - Tier 4';
+
+    if (index % 17 === 0) {
+      cond = 'Critical - Tier 1';
+      vibStat = 'Critical - Tier 1';
+      oilStat = 'Critical - Tier 1';
+    } else if (index % 11 === 0) {
+      cond = 'Degraded - Tier 2';
+      vibStat = 'Degraded - Tier 2';
+      oilStat = 'Good - Tier 4';
+    } else if (index % 7 === 0) {
+      cond = 'Good - Tier 3';
+      vibStat = 'Good - Tier 3';
+      oilStat = 'Good - Tier 4';
+    }
+
+    const nameLower = (eq.name || '').toLowerCase();
+    let crit = 'Medium';
+    if (eq.objectType === 'SECE') {
+      crit = 'High';
+    } else if (
+      nameLower.includes('utility') ||
+      nameLower.includes('drain') ||
+      nameLower.includes('fan') ||
+      nameLower.includes('blower') ||
+      nameLower.includes('hvac') ||
+      nameLower.includes('transfer') ||
+      nameLower.includes('sump') ||
+      nameLower.includes('package') ||
+      index % 5 === 0
+    ) {
+      crit = 'Low';
+    }
 
     return {
-      ...eq,
-      fpso: eq.tag.includes('_') ? eq.tag.split('_')[0] : eq.fpso,
-      frequency: (eq as { frequency?: string }).frequency || 'Monthly',
-      vibrationFrequency: (eq as { vibrationFrequency?: string }).vibrationFrequency || vibFreq,
-      lubeOilFrequency: (eq as { lubeOilFrequency?: string }).lubeOilFrequency || oilFreq,
+      tag: eq.tag,
+      fpso: eq.tag.includes('_') ? eq.tag.split('_')[0] : (eq.fpso || 'DNY'),
+      name: eq.name,
+      class: eq.class || 'Rotating Equipment',
+      system: eq.system || 'Process Utilities',
+      criticality: crit,
+      objectType: eq.objectType || 'SECE',
+      condition: cond,
+      vibrationStatus: vibStat,
+      lubeOilStatus: oilStat,
+      lastUpdate: vibDateStr,
+      observation: cond.startsWith('Critical') ? 'High vibration amplitude and particle contamination detected.' : cond.startsWith('Degraded') ? 'Slight bearing noise detected during operational run.' : 'Operating normally under scheduled CBM surveillance.',
+      frequency: eq.frequency || 'Monthly',
+      vibrationFrequency: eq.vibrationFrequency || eq.frequency || 'Monthly',
+      lubeOilFrequency: eq.lubeOilFrequency || eq.frequency || 'Monthly',
       lastVibrationUpdate: vibDateStr,
       lastLubeOilUpdate: oilDateStr,
-      lastUpdate: vibDateStr,
-      collectionMethod: (eq as { collectionMethod?: string }).collectionMethod || 'Online',
-      condition: eq.condition.includes(' - ') ? eq.condition : eq.condition === 'Critical' ? 'Critical - Tier 1' : eq.condition === 'Degraded' ? 'Degraded - Tier 2' : 'Good - Tier 4',
-      vibrationStatus: eq.vibrationStatus.includes(' - ') ? eq.vibrationStatus : eq.vibrationStatus === 'Critical' ? 'Critical - Tier 1' : eq.vibrationStatus === 'Degraded' ? 'Degraded - Tier 2' : 'Good - Tier 4',
-      lubeOilStatus: eq.lubeOilStatus.includes(' - ') ? eq.lubeOilStatus : eq.lubeOilStatus === 'Critical' ? 'Critical - Tier 1' : eq.lubeOilStatus === 'Degraded' ? 'Degraded - Tier 2' : 'Good - Tier 4',
+      collectionMethod: eq.collectionMethod || 'Online',
     };
   });
 
-  const expandedHistory = sanitizedEquipments.flatMap((eq) => {
+  const expandedHistory = sanitizedEquipments.flatMap((eq: Record<string, string>) => {
     const existing = mockHistory.filter(h => h.equipmentTag === eq.tag);
     if (existing.length > 0) return existing;
 

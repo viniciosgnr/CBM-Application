@@ -1082,7 +1082,7 @@ export default function MainPage() {
     if (!status) return null;
     const baseStatus = status.split(' - ')[0];
     
-    if (status.includes('Critical') || baseStatus === 'Rejected') {
+    if (status.includes('Critical') || baseStatus === 'Rejected' || status === 'Overdue') {
       return (
         <span className="inline-flex items-center gap-1.5 font-medium text-[11px]">
           <span className="w-1.5 h-1.5 rounded-full bg-status-error" />
@@ -1098,7 +1098,7 @@ export default function MainPage() {
         </span>
       );
     }
-    if (status.includes('Good') || baseStatus === 'Accepted') {
+    if (status.includes('Good') || baseStatus === 'Accepted' || status === 'On Time') {
       return (
         <span className="inline-flex items-center gap-1.5 font-medium text-[11px]">
           <span className="w-1.5 h-1.5 rounded-full bg-status-ok" />
@@ -1235,23 +1235,7 @@ export default function MainPage() {
     { key: 'system', header: 'System' },
     { key: 'criticality', header: 'Criticality' },
     { key: 'objectType', header: 'Object Type' },
-    {
-      key: 'collectionStatus',
-      header: 'Collection Status',
-      render: (val: string) => (
-        val === 'Overdue' ? (
-          <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-status-error/15 text-status-error border border-status-error/30">
-            <span className="w-1.5 h-1.5 rounded-full bg-status-error animate-pulse" />
-            Overdue
-          </span>
-        ) : (
-          <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-status-ok/15 text-status-ok border border-status-ok/30">
-            <span className="w-1.5 h-1.5 rounded-full bg-status-ok" />
-            On Time
-          </span>
-        )
-      )
-    },
+    { key: 'collectionStatus', header: 'Collection Status', render: (val: string) => getStatusDot(val) },
     { key: 'condition', header: 'Equip. CBM Condition', render: (val: string) => getStatusDot(val) },
     { key: 'lastUpdate', header: 'Last Update' },
     { key: 'observation', header: 'Observation' },
@@ -1273,15 +1257,7 @@ export default function MainPage() {
     { key: 'failureModeDescription', header: 'Failure Mode Description' },
     { key: 'raisedDate', header: 'Raised Date' },
     { key: 'raisedBy', header: 'Raised By' },
-    {
-      key: 'recommendation',
-      header: 'Recommendation',
-      render: (val: string) => (
-        <span className="text-[11px] text-text-muted font-medium max-w-[280px] line-clamp-2" title={val}>
-          {val}
-        </span>
-      )
-    },
+    { key: 'recommendation', header: 'Recommendation' },
   ];
 
   const formattedEquipments = equipments
