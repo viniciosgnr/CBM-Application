@@ -577,9 +577,11 @@ export function CbmCriticalityBar({
 export interface ReportChartItem {
   facility?: string | null;
   tagNumber?: string | null;
+  technology?: string | null;
   overallCondition?: string | null;
   vibrationStatus?: string | null;
   lubeOilStatus?: string | null;
+  thermographyStatus?: string | null;
   raisedDate?: string | null;
   createdAt?: string | null;
 }
@@ -587,10 +589,12 @@ export interface ReportChartItem {
 export function MonthlyConditionBarChart({
   reports = [],
   selectedFpsos = ['DNY', 'UNY', 'PTY', 'ONE'],
+  analysisType = 'All',
   timeRange = 'All Time'
 }: {
   reports?: ReportChartItem[];
   selectedFpsos?: string[] | string;
+  analysisType?: string;
   timeRange?: string;
 }) {
   const [mounted, setMounted] = useState(false);
@@ -603,7 +607,7 @@ export function MonthlyConditionBarChart({
     return <div className="h-[260px] w-full" />;
   }
 
-  // 1. Filter reports by FPSO and Time Range
+  // 1. Filter reports by FPSO, Analysis Type, and Time Range
   const filteredReports = reports.filter(r => {
     if (selectedFpsos) {
       const fpsosArray = Array.isArray(selectedFpsos)
@@ -621,6 +625,10 @@ export function MonthlyConditionBarChart({
         });
         if (!matches) return false;
       }
+    }
+    if (analysisType && analysisType !== 'All') {
+      const tech = r.technology || '';
+      if (tech && tech !== analysisType) return false;
     }
     const dateStr = r.raisedDate || r.createdAt;
     return isWithinTimeRange(dateStr, timeRange);
@@ -649,7 +657,15 @@ export function MonthlyConditionBarChart({
       };
     }
 
-    const cond = r.overallCondition || 'Good - Tier 4';
+    let cond = r.overallCondition || 'Good - Tier 4';
+    if (analysisType === 'Vibration Analysis' && r.vibrationStatus) {
+      cond = r.vibrationStatus;
+    } else if (analysisType === 'Lube Oil Analysis' && r.lubeOilStatus) {
+      cond = r.lubeOilStatus;
+    } else if (analysisType === 'Thermography Analysis' && r.thermographyStatus) {
+      cond = r.thermographyStatus;
+    }
+
     if (cond.includes('Tier 1') || cond.startsWith('Critical')) {
       monthMap[yyyyMm].tier1++;
     } else if (cond.includes('Tier 2') || cond.startsWith('Degraded')) {

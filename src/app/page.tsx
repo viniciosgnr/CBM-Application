@@ -688,6 +688,7 @@ export default function MainPage() {
   const [recomFpsoPopoverOpen, setRecomFpsoPopoverOpen] = useState(false);
   const [recomFpsoSearch, setRecomFpsoSearch] = useState('');
   const recomFpsoPopoverRef = useRef<HTMLDivElement>(null);
+  const [recomAnalysisType, setRecomAnalysisType] = useState<string>('All');
   const [recomTimeRange, setRecomTimeRange] = useState<string>('All Time');
 
   // Work Orders state
@@ -1325,6 +1326,7 @@ export default function MainPage() {
 
   const filteredReportsList = useMemo(() => {
     return reports.filter(r => {
+      // 1. FPSO Filter
       if (selectedRecomFpsos.size < ALL_RECOM_FPSOS.length) {
         const fac = (r.facility || '').toUpperCase();
         const tag = (r.tagNumber || '').toUpperCase();
@@ -1334,10 +1336,16 @@ export default function MainPage() {
         });
         if (!matches) return false;
       }
+      // 2. Analysis Type Filter
+      if (recomAnalysisType !== 'All') {
+        const tech = r.technology || '';
+        if (tech !== recomAnalysisType) return false;
+      }
+      // 3. Time Range Filter
       const dateStr = r.raisedDate || r.createdAt;
       return isWithinTimeRange(dateStr, recomTimeRange);
     });
-  }, [reports, selectedRecomFpsos, recomTimeRange]);
+  }, [reports, selectedRecomFpsos, recomAnalysisType, recomTimeRange]);
 
   const formattedReports = filteredReportsList.map(r => {
     const techniqueStatus = r.technology === 'Lube Oil Analysis'
@@ -1548,112 +1556,137 @@ export default function MainPage() {
 
         {activeTab === 'recommendations' && (
           <div className="flex flex-col gap-6 animate-fadeIn">
-            {/* Global Filter Bar (FPSO & Time Range) */}
-            <div className="bg-bg-card border border-border-panel rounded-card px-5 py-3.5 flex flex-wrap items-center justify-between gap-4">
-              <div className="flex flex-wrap items-center gap-6">
-                {/* FPSO Multi-Select Popover Filter */}
-                <div className="flex items-center gap-2 relative" ref={recomFpsoPopoverRef}>
-                  <span className="text-[11px] font-semibold text-text-muted uppercase tracking-wider">FPSO:</span>
-                  <div
-                    onClick={() => setRecomFpsoPopoverOpen(prev => !prev)}
-                    className="flex items-center gap-2 bg-[#111827] border border-border-panel/80 hover:border-accent-blue rounded-lg px-3 py-1.5 cursor-pointer transition-colors min-w-[120px] justify-between"
-                  >
-                    <span className="text-xs font-medium text-text-primary truncate">
-                      {selectedRecomFpsos.size === ALL_RECOM_FPSOS.length
-                        ? '(All)'
-                        : selectedRecomFpsos.size === 0
-                        ? '(None)'
-                        : Array.from(selectedRecomFpsos).join(', ')}
-                    </span>
-                    <ChevronDown size={13} className={`text-text-muted transition-transform ${recomFpsoPopoverOpen ? 'rotate-180 text-accent-blue' : ''}`} />
-                  </div>
-
-                  {/* Multi-Select Popover */}
-                  {recomFpsoPopoverOpen && (
-                    <div className="absolute top-full left-14 mt-1.5 w-56 bg-[#0d121f] border border-border-panel rounded-lg shadow-2xl p-3 z-50 animate-fadeIn text-left text-xs text-text-primary">
-                      {/* Search Input */}
-                      <div className="relative mb-2.5">
-                        <Search size={12} className="absolute left-2.5 top-2.5 text-text-muted" />
-                        <input
-                          type="text"
-                          value={recomFpsoSearch}
-                          onChange={e => setRecomFpsoSearch(e.target.value)}
-                          placeholder="Search..."
-                          className="w-full bg-[#111827] border border-border-panel/80 rounded pl-7 pr-2.5 py-1.5 text-xs text-text-primary focus:border-accent-blue focus:outline-none"
-                        />
-                      </div>
-
-                      {/* Options Checklist */}
-                      <div className="flex flex-col gap-1 max-h-48 overflow-y-auto pr-1">
-                        {/* (Select All) Checkbox */}
-                        <label className="flex items-center gap-2 px-2 py-1.5 rounded hover:bg-bg-panel/40 cursor-pointer font-semibold select-none text-text-primary">
-                          <input
-                            type="checkbox"
-                            checked={selectedRecomFpsos.size === ALL_RECOM_FPSOS.length}
-                            ref={el => {
-                              if (el) {
-                                el.indeterminate =
-                                  selectedRecomFpsos.size > 0 &&
-                                  selectedRecomFpsos.size < ALL_RECOM_FPSOS.length;
-                              }
-                            }}
-                            onChange={() => {
-                              if (selectedRecomFpsos.size === ALL_RECOM_FPSOS.length) {
-                                setSelectedRecomFpsos(new Set());
-                              } else {
-                                setSelectedRecomFpsos(new Set(ALL_RECOM_FPSOS));
-                              }
-                            }}
-                            className="accent-accent-blue cursor-pointer"
-                          />
-                          <span className="text-xs font-semibold">
-                            (Select All)
-                          </span>
-                        </label>
-
-                        <hr className="border-border-panel/40 my-1" />
-
-                        {/* FPSO Codes without 'FPSO ' prefix */}
-                        {ALL_RECOM_FPSOS.filter(f =>
-                          f.toLowerCase().includes(recomFpsoSearch.toLowerCase())
-                        ).map(fpso => {
-                          const isChecked = selectedRecomFpsos.has(fpso);
-                          return (
-                            <label
-                              key={fpso}
-                              className="flex items-center gap-2 px-2 py-1 rounded hover:bg-bg-panel/40 cursor-pointer text-text-primary select-none text-xs"
-                            >
-                              <input
-                                type="checkbox"
-                                checked={isChecked}
-                                onChange={() => {
-                                  const next = new Set(selectedRecomFpsos);
-                                  if (next.has(fpso)) {
-                                    next.delete(fpso);
-                                  } else {
-                                    next.add(fpso);
-                                  }
-                                  setSelectedRecomFpsos(next);
-                                }}
-                                className="accent-accent-blue cursor-pointer"
-                              />
-                              <span>{fpso}</span>
-                            </label>
-                          );
-                        })}
-                      </div>
-                    </div>
-                  )}
+            {/* Monthly CBM Surveillance Outcomes Stacked Bar Chart Card with Integrated Filters */}
+            <div className="bg-bg-card border border-border-panel rounded-card p-5 flex flex-col gap-3">
+              <div className="flex flex-wrap items-center justify-between gap-4 pb-3 border-b border-border-panel/50">
+                {/* Left: Title & Description */}
+                <div>
+                  <h3 className="text-sm font-bold text-text-primary">Monthly Surveillance Outcomes & CBM Condition</h3>
+                  <p className="text-[11px] text-text-muted mt-0.5">Distribution of monitored asset conditions across collection routines by month</p>
                 </div>
 
-                {/* Time Range Dropdown Filter */}
-                <div className="flex items-center gap-2">
-                  <span className="text-[11px] font-semibold text-text-muted uppercase tracking-wider">Time Range:</span>
+                {/* Right: Integrated Compact Filter Controls */}
+                <div className="flex flex-wrap items-center gap-2.5">
+                  {/* FPSO Multi-Select Popover Filter */}
+                  <div className="relative" ref={recomFpsoPopoverRef}>
+                    <div
+                      onClick={() => setRecomFpsoPopoverOpen(prev => !prev)}
+                      className="flex items-center gap-2 bg-[#111827] border border-border-panel/80 hover:border-accent-blue rounded-lg px-2.5 py-1.5 cursor-pointer transition-colors min-w-[100px] justify-between text-xs"
+                      title="Filter by FPSO"
+                    >
+                      <span className="text-xs font-medium text-text-primary truncate">
+                        {selectedRecomFpsos.size === ALL_RECOM_FPSOS.length
+                          ? 'All FPSOs'
+                          : selectedRecomFpsos.size === 0
+                          ? 'No FPSO'
+                          : Array.from(selectedRecomFpsos).join(', ')}
+                      </span>
+                      <ChevronDown size={13} className={`text-text-muted transition-transform shrink-0 ${recomFpsoPopoverOpen ? 'rotate-180 text-accent-blue' : ''}`} />
+                    </div>
+
+                    {/* Multi-Select Popover */}
+                    {recomFpsoPopoverOpen && (
+                      <div className="absolute top-full right-0 mt-1.5 w-56 bg-[#0d121f] border border-border-panel rounded-lg shadow-2xl p-3 z-50 animate-fadeIn text-left text-xs text-text-primary">
+                        {/* Search Input */}
+                        <div className="relative mb-2.5">
+                          <Search size={12} className="absolute left-2.5 top-2.5 text-text-muted" />
+                          <input
+                            type="text"
+                            value={recomFpsoSearch}
+                            onChange={e => setRecomFpsoSearch(e.target.value)}
+                            placeholder="Search FPSO..."
+                            className="w-full bg-[#111827] border border-border-panel/80 rounded pl-7 pr-2.5 py-1.5 text-xs text-text-primary focus:border-accent-blue focus:outline-none"
+                          />
+                        </div>
+
+                        {/* Options Checklist */}
+                        <div className="flex flex-col gap-1 max-h-48 overflow-y-auto pr-1">
+                          {/* (Select All) Checkbox */}
+                          <label className="flex items-center gap-2 px-2 py-1.5 rounded hover:bg-bg-panel/40 cursor-pointer font-semibold select-none text-text-primary">
+                            <input
+                              type="checkbox"
+                              checked={selectedRecomFpsos.size === ALL_RECOM_FPSOS.length}
+                              ref={el => {
+                                if (el) {
+                                  el.indeterminate =
+                                    selectedRecomFpsos.size > 0 &&
+                                    selectedRecomFpsos.size < ALL_RECOM_FPSOS.length;
+                                }
+                              }}
+                              onChange={() => {
+                                if (selectedRecomFpsos.size === ALL_RECOM_FPSOS.length) {
+                                  setSelectedRecomFpsos(new Set());
+                                } else {
+                                  setSelectedRecomFpsos(new Set(ALL_RECOM_FPSOS));
+                                }
+                              }}
+                              className="accent-accent-blue cursor-pointer"
+                            />
+                            <span className="text-xs font-semibold">
+                              (Select All)
+                            </span>
+                          </label>
+
+                          <hr className="border-border-panel/40 my-1" />
+
+                          {/* FPSO Codes without 'FPSO ' prefix */}
+                          {ALL_RECOM_FPSOS.filter(f =>
+                            f.toLowerCase().includes(recomFpsoSearch.toLowerCase())
+                          ).map(fpso => {
+                            const isChecked = selectedRecomFpsos.has(fpso);
+                            return (
+                              <label
+                                key={fpso}
+                                className="flex items-center gap-2 px-2 py-1 rounded hover:bg-bg-panel/40 cursor-pointer text-text-primary select-none text-xs"
+                              >
+                                <input
+                                  type="checkbox"
+                                  checked={isChecked}
+                                  onChange={() => {
+                                    const next = new Set(selectedRecomFpsos);
+                                    if (next.has(fpso)) {
+                                      next.delete(fpso);
+                                    } else {
+                                      next.add(fpso);
+                                    }
+                                    setSelectedRecomFpsos(next);
+                                  }}
+                                  className="accent-accent-blue cursor-pointer"
+                                />
+                                <span>{fpso}</span>
+                              </label>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Analysis Type Dropdown Filter */}
+                  <div className="relative inline-block">
+                    <select
+                      value={recomAnalysisType}
+                      onChange={e => setRecomAnalysisType(e.target.value)}
+                      className="bg-[#111827] border border-border-panel/80 text-text-primary text-xs font-medium rounded-lg px-2.5 py-1.5 pr-7 appearance-none cursor-pointer hover:border-accent-blue focus:outline-none focus:border-accent-blue transition-colors"
+                      title="Filter by Analysis Type"
+                    >
+                      <option value="All" className="bg-[#0b0f19] text-text-primary">All Analysis</option>
+                      <option value="Vibration Analysis" className="bg-[#0b0f19] text-text-primary">Vibration Analysis</option>
+                      <option value="Lube Oil Analysis" className="bg-[#0b0f19] text-text-primary">Lube Oil Analysis</option>
+                      <option value="Thermography Analysis" className="bg-[#0b0f19] text-text-primary">Thermography Analysis</option>
+                    </select>
+                    <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-text-muted">
+                      <ChevronDown size={13} />
+                    </div>
+                  </div>
+
+                  {/* Time Range Dropdown Filter */}
                   <div className="relative inline-block">
                     <select
                       value={recomTimeRange}
                       onChange={e => setRecomTimeRange(e.target.value)}
-                      className="bg-[#111827] border border-border-panel/80 text-text-primary text-xs font-medium rounded-lg px-3 py-1.5 pr-7 appearance-none cursor-pointer hover:border-accent-blue focus:outline-none focus:border-accent-blue transition-colors"
+                      className="bg-[#111827] border border-border-panel/80 text-text-primary text-xs font-medium rounded-lg px-2.5 py-1.5 pr-7 appearance-none cursor-pointer hover:border-accent-blue focus:outline-none focus:border-accent-blue transition-colors"
+                      title="Filter by Time Range"
                     >
                       <option value="All Time" className="bg-[#0b0f19] text-text-primary">All Time</option>
                       <option value="Last Month" className="bg-[#0b0f19] text-text-primary">Last Month</option>
@@ -1665,30 +1698,18 @@ export default function MainPage() {
                       <ChevronDown size={13} />
                     </div>
                   </div>
-                </div>
-              </div>
 
-              {/* Status / Records Counter */}
-              <div className="text-[11px] text-text-muted">
-                Showing <strong className="text-text-primary font-bold">{filteredReportsList.length}</strong> analysis records
-              </div>
-            </div>
-
-            {/* Monthly CBM Surveillance Outcomes Stacked Bar Chart Card */}
-            <div className="bg-bg-card border border-border-panel rounded-card p-5 flex flex-col gap-3">
-              <div className="flex items-center justify-between pb-2 border-b border-border-panel/50">
-                <div>
-                  <h3 className="text-sm font-bold text-text-primary">Monthly Surveillance Outcomes & CBM Condition</h3>
-                  <p className="text-[11px] text-text-muted mt-0.5">Distribution of monitored asset conditions across collection routines by month</p>
+                  {/* Total Outcomes Count Pill */}
+                  <span className="text-[10px] text-text-muted bg-[#111827] px-2.5 py-1 rounded-full border border-border-panel whitespace-nowrap shrink-0">
+                    {filteredReportsList.length} Outcomes
+                  </span>
                 </div>
-                <span className="text-[10px] text-text-muted bg-[#111827] px-2.5 py-1 rounded-full border border-border-panel">
-                  {filteredReportsList.length} Total Outcomes
-                </span>
               </div>
 
               <MonthlyConditionBarChart
                 reports={reports}
                 selectedFpsos={Array.from(selectedRecomFpsos)}
+                analysisType={recomAnalysisType}
                 timeRange={recomTimeRange}
               />
             </div>
