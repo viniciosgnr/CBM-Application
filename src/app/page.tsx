@@ -1,5 +1,5 @@
 'use client';
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useRef } from 'react';
 import Header from '@/components/Header';
 import Sidebar from '@/components/Sidebar';
 import DashboardCard from '@/components/DashboardCard';
@@ -15,13 +15,15 @@ import {
   Hash,
   Wrench,
   AlertCircle,
-  ChevronDown
+  ChevronDown,
+  Search
 } from 'lucide-react';
 import {
   WorkOrderStatusPie,
   DaysLeftBar,
   EquipmentConditionPie,
   CbmCriticalityBar,
+  MonthlyConditionBarChart,
   isWithinTimeRange
 } from '@/components/MetricCharts';
 import {
@@ -34,6 +36,7 @@ import {
   Tooltip as RechartsTooltip,
   Legend,
 } from 'recharts';
+import { calculateCombinedRisk } from '@/utils/riskMatrix';
 
 interface Equipment {
   id: number;
@@ -589,6 +592,7 @@ const TAXONOMY_DATA: Record<string, Record<string, string[]>> = {
   },
 };
 
+const ALL_RECOM_FPSOS = ['DNY', 'UNY', 'PTY', 'ONE'];
 
 export default function MainPage() {
   const [activeTab, setActiveTab] = useState<'equipment' | 'work-order' | 'recommendations'>('work-order');
@@ -680,6 +684,11 @@ export default function MainPage() {
   // Reports state
   const [reports, setReports] = useState<AnalysisReport[]>([]);
   const [loadingReports, setLoadingReports] = useState(true);
+  const [selectedRecomFpsos, setSelectedRecomFpsos] = useState<Set<string>>(new Set(ALL_RECOM_FPSOS));
+  const [recomFpsoPopoverOpen, setRecomFpsoPopoverOpen] = useState(false);
+  const [recomFpsoSearch, setRecomFpsoSearch] = useState('');
+  const recomFpsoPopoverRef = useRef<HTMLDivElement>(null);
+  const [recomTimeRange, setRecomTimeRange] = useState<string>('All Time');
 
   // Work Orders state
   const [workOrders, setWorkOrders] = useState<WorkOrder[]>([]);
@@ -883,6 +892,14 @@ export default function MainPage() {
     fetchEquipments();
     fetchReports();
     fetchWorkOrders();
+
+    function handleClickOutsideRecomFpso(event: MouseEvent) {
+      if (recomFpsoPopoverRef.current && !recomFpsoPopoverRef.current.contains(event.target as Node)) {
+        setRecomFpsoPopoverOpen(false);
+      }
+    }
+    document.addEventListener('mousedown', handleClickOutsideRecomFpso);
+    return () => document.removeEventListener('mousedown', handleClickOutsideRecomFpso);
   }, []);
 
   // Fetch single equipment history logs
@@ -1082,7 +1099,7 @@ export default function MainPage() {
     if (!status) return null;
     const baseStatus = status.split(' - ')[0];
     
-    if (status.includes('Critical') || baseStatus === 'Rejected' || status === 'Overdue') {
+    if (status === 'Very High' || status.includes('Critical') || baseStatus === 'Rejected' || status === 'Overdue') {
       return (
         <span className="inline-flex items-center gap-1.5 font-medium text-[11px]">
           <span className="w-1.5 h-1.5 rounded-full bg-status-error" />
@@ -1090,7 +1107,15 @@ export default function MainPage() {
         </span>
       );
     }
-    if (status.includes('Degraded')) {
+    if (status === 'High') {
+      return (
+        <span className="inline-flex items-center gap-1.5 font-medium text-[11px]">
+          <span className="w-1.5 h-1.5 rounded-full bg-orange-500" />
+          <span className="text-text-primary font-medium">{status}</span>
+        </span>
+      );
+    }
+    if (status === 'Moderate' || status.includes('Degraded')) {
       return (
         <span className="inline-flex items-center gap-1.5 font-medium text-[11px]">
           <span className="w-1.5 h-1.5 rounded-full bg-status-warn" />
@@ -1098,7 +1123,7 @@ export default function MainPage() {
         </span>
       );
     }
-    if (status.includes('Good') || baseStatus === 'Accepted' || status === 'On Time') {
+    if (status === 'Low' || status.includes('Good') || baseStatus === 'Accepted' || status === 'On Time') {
       return (
         <span className="inline-flex items-center gap-1.5 font-medium text-[11px]">
           <span className="w-1.5 h-1.5 rounded-full bg-status-ok" />
@@ -1271,6 +1296,8 @@ export default function MainPage() {
       const nextVib = calculateNextPlannedDate(vibDate, vibFreq);
       const nextOil = calculateNextPlannedDate(oilDate, oilFreq);
       const isOverdue = nextVib.isOverdue || nextOil.isOverdue;
+      const collectionStatus = isOverdue ? 'Overdue' : 'On Time';
+      const riskCalc = calculateCombinedRisk(e.criticality, e.condition, collectionStatus);
 
       return {
         id: String(e.id),
@@ -1282,19 +1309,37 @@ export default function MainPage() {
         criticality: e.criticality,
         objectType: e.objectType,
         condition: e.condition ? e.condition.split(' - ')[0] : e.condition,
+        combinedRiskPriority: riskCalc.finalCategory,
+        riskScore: String(riskCalc.baseScore),
         lastUpdate: e.lastUpdate,
         lastVibrationUpdate: vibDate,
         lastLubeOilUpdate: oilDate,
         vibrationFrequency: vibFreq,
         lubeOilFrequency: oilFreq,
-        collectionStatus: isOverdue ? 'Overdue' : 'On Time',
+        collectionStatus,
         plannedNextVibrationDate: nextVib.plannedDateStr,
         plannedNextOilDate: nextOil.plannedDateStr,
         observation: e.observation || '',
       };
     });
 
-  const formattedReports = reports.map(r => {
+  const filteredReportsList = useMemo(() => {
+    return reports.filter(r => {
+      if (selectedRecomFpsos.size < ALL_RECOM_FPSOS.length) {
+        const fac = (r.facility || '').toUpperCase();
+        const tag = (r.tagNumber || '').toUpperCase();
+        const matches = Array.from(selectedRecomFpsos).some(f => {
+          const target = f.trim().toUpperCase();
+          return fac.includes(target) || tag.startsWith(target);
+        });
+        if (!matches) return false;
+      }
+      const dateStr = r.raisedDate || r.createdAt;
+      return isWithinTimeRange(dateStr, recomTimeRange);
+    });
+  }, [reports, selectedRecomFpsos, recomTimeRange]);
+
+  const formattedReports = filteredReportsList.map(r => {
     const techniqueStatus = r.technology === 'Lube Oil Analysis'
       ? r.lubeOilStatus
       : r.technology === 'Thermography Analysis'
@@ -1503,26 +1548,149 @@ export default function MainPage() {
 
         {activeTab === 'recommendations' && (
           <div className="flex flex-col gap-6 animate-fadeIn">
-            {/* Cards Superiores Resumo */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div className="bg-bg-card border border-border-panel rounded-card p-5 flex flex-col gap-2 relative overflow-hidden">
-                <div className="absolute right-4 top-4 text-accent-blue/10">
-                  <FileText size={72} />
+            {/* Global Filter Bar (FPSO & Time Range) */}
+            <div className="bg-bg-card border border-border-panel rounded-card px-5 py-3.5 flex flex-wrap items-center justify-between gap-4">
+              <div className="flex flex-wrap items-center gap-6">
+                {/* FPSO Multi-Select Popover Filter */}
+                <div className="flex items-center gap-2 relative" ref={recomFpsoPopoverRef}>
+                  <span className="text-[11px] font-semibold text-text-muted uppercase tracking-wider">FPSO:</span>
+                  <div
+                    onClick={() => setRecomFpsoPopoverOpen(prev => !prev)}
+                    className="flex items-center gap-2 bg-[#111827] border border-border-panel/80 hover:border-accent-blue rounded-lg px-3 py-1.5 cursor-pointer transition-colors min-w-[120px] justify-between"
+                  >
+                    <span className="text-xs font-medium text-text-primary truncate">
+                      {selectedRecomFpsos.size === ALL_RECOM_FPSOS.length
+                        ? '(All)'
+                        : selectedRecomFpsos.size === 0
+                        ? '(None)'
+                        : Array.from(selectedRecomFpsos).join(', ')}
+                    </span>
+                    <ChevronDown size={13} className={`text-text-muted transition-transform ${recomFpsoPopoverOpen ? 'rotate-180 text-accent-blue' : ''}`} />
+                  </div>
+
+                  {/* Multi-Select Popover */}
+                  {recomFpsoPopoverOpen && (
+                    <div className="absolute top-full left-14 mt-1.5 w-56 bg-[#0d121f] border border-border-panel rounded-lg shadow-2xl p-3 z-50 animate-fadeIn text-left text-xs text-text-primary">
+                      {/* Search Input */}
+                      <div className="relative mb-2.5">
+                        <Search size={12} className="absolute left-2.5 top-2.5 text-text-muted" />
+                        <input
+                          type="text"
+                          value={recomFpsoSearch}
+                          onChange={e => setRecomFpsoSearch(e.target.value)}
+                          placeholder="Search..."
+                          className="w-full bg-[#111827] border border-border-panel/80 rounded pl-7 pr-2.5 py-1.5 text-xs text-text-primary focus:border-accent-blue focus:outline-none"
+                        />
+                      </div>
+
+                      {/* Options Checklist */}
+                      <div className="flex flex-col gap-1 max-h-48 overflow-y-auto pr-1">
+                        {/* (Select All) Checkbox */}
+                        <label className="flex items-center gap-2 px-2 py-1.5 rounded hover:bg-bg-panel/40 cursor-pointer font-semibold select-none text-text-primary">
+                          <input
+                            type="checkbox"
+                            checked={selectedRecomFpsos.size === ALL_RECOM_FPSOS.length}
+                            ref={el => {
+                              if (el) {
+                                el.indeterminate =
+                                  selectedRecomFpsos.size > 0 &&
+                                  selectedRecomFpsos.size < ALL_RECOM_FPSOS.length;
+                              }
+                            }}
+                            onChange={() => {
+                              if (selectedRecomFpsos.size === ALL_RECOM_FPSOS.length) {
+                                setSelectedRecomFpsos(new Set());
+                              } else {
+                                setSelectedRecomFpsos(new Set(ALL_RECOM_FPSOS));
+                              }
+                            }}
+                            className="accent-accent-blue cursor-pointer"
+                          />
+                          <span className="text-xs font-semibold">
+                            (Select All)
+                          </span>
+                        </label>
+
+                        <hr className="border-border-panel/40 my-1" />
+
+                        {/* FPSO Codes without 'FPSO ' prefix */}
+                        {ALL_RECOM_FPSOS.filter(f =>
+                          f.toLowerCase().includes(recomFpsoSearch.toLowerCase())
+                        ).map(fpso => {
+                          const isChecked = selectedRecomFpsos.has(fpso);
+                          return (
+                            <label
+                              key={fpso}
+                              className="flex items-center gap-2 px-2 py-1 rounded hover:bg-bg-panel/40 cursor-pointer text-text-primary select-none text-xs"
+                            >
+                              <input
+                                type="checkbox"
+                                checked={isChecked}
+                                onChange={() => {
+                                  const next = new Set(selectedRecomFpsos);
+                                  if (next.has(fpso)) {
+                                    next.delete(fpso);
+                                  } else {
+                                    next.add(fpso);
+                                  }
+                                  setSelectedRecomFpsos(next);
+                                }}
+                                className="accent-accent-blue cursor-pointer"
+                              />
+                              <span>{fpso}</span>
+                            </label>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  )}
                 </div>
-                <span className="text-[10px] text-text-muted uppercase tracking-wider font-semibold">Reports Register</span>
-                <span className="text-2xl font-bold text-text-primary">{reports.length}</span>
-                <span className="text-[9px] text-[#a2b4cd] mt-2">Total analysis outcomes stored from Excel workflows</span>
+
+                {/* Time Range Dropdown Filter */}
+                <div className="flex items-center gap-2">
+                  <span className="text-[11px] font-semibold text-text-muted uppercase tracking-wider">Time Range:</span>
+                  <div className="relative inline-block">
+                    <select
+                      value={recomTimeRange}
+                      onChange={e => setRecomTimeRange(e.target.value)}
+                      className="bg-[#111827] border border-border-panel/80 text-text-primary text-xs font-medium rounded-lg px-3 py-1.5 pr-7 appearance-none cursor-pointer hover:border-accent-blue focus:outline-none focus:border-accent-blue transition-colors"
+                    >
+                      <option value="All Time" className="bg-[#0b0f19] text-text-primary">All Time</option>
+                      <option value="Last Month" className="bg-[#0b0f19] text-text-primary">Last Month</option>
+                      <option value="Last 3 Months" className="bg-[#0b0f19] text-text-primary">Last 3 Months</option>
+                      <option value="Last 6 Months" className="bg-[#0b0f19] text-text-primary">Last 6 Months</option>
+                      <option value="Last Year" className="bg-[#0b0f19] text-text-primary">Last Year</option>
+                    </select>
+                    <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-text-muted">
+                      <ChevronDown size={13} />
+                    </div>
+                  </div>
+                </div>
               </div>
-              <div className="bg-bg-card border border-border-panel rounded-card p-5 flex flex-col gap-2 relative overflow-hidden">
-                <div className="absolute right-4 top-4 text-status-error/10">
-                  <AlertCircle size={72} />
+
+              {/* Status / Records Counter */}
+              <div className="text-[11px] text-text-muted">
+                Showing <strong className="text-text-primary font-bold">{filteredReportsList.length}</strong> analysis records
+              </div>
+            </div>
+
+            {/* Monthly CBM Surveillance Outcomes Stacked Bar Chart Card */}
+            <div className="bg-bg-card border border-border-panel rounded-card p-5 flex flex-col gap-3">
+              <div className="flex items-center justify-between pb-2 border-b border-border-panel/50">
+                <div>
+                  <h3 className="text-sm font-bold text-text-primary">Monthly Surveillance Outcomes & CBM Condition</h3>
+                  <p className="text-[11px] text-text-muted mt-0.5">Distribution of monitored asset conditions across collection routines by month</p>
                 </div>
-                <span className="text-[10px] text-text-muted uppercase tracking-wider font-semibold">Active Warnings</span>
-                <span className="text-2xl font-bold text-status-error">
-                  {reports.filter(r => r.overallCondition?.includes('Critical') || r.overallCondition?.includes('Degraded')).length}
+                <span className="text-[10px] text-text-muted bg-[#111827] px-2.5 py-1 rounded-full border border-border-panel">
+                  {filteredReportsList.length} Total Outcomes
                 </span>
-                <span className="text-[9px] text-[#a2b4cd] mt-2">Critical and Degraded conditions requiring attention</span>
               </div>
+
+              <MonthlyConditionBarChart
+                reports={reports}
+                selectedFpsos={Array.from(selectedRecomFpsos)}
+                timeRange={recomTimeRange}
+              />
             </div>
 
             {/* Tabela do Registro de Recomendações */}
@@ -1560,31 +1728,66 @@ export default function MainPage() {
             </button>
 
             {/* Header da Modal SLB OptiSite Style */}
-            <div className="mb-2">
-              {/* Linha 1: Título + Badge + Botão Fechar */}
-              <div className="flex items-center gap-2 pr-8">
-                <h2 className="text-base font-bold text-text-primary">
-                  {selectedEquipment.tag} - {selectedEquipment.name.charAt(0).toUpperCase() + selectedEquipment.name.slice(1).toLowerCase()}
-                </h2>
-                <span className="text-[10px] bg-[#222944] text-[#94a3b8] px-2 py-0.5 rounded border border-[#333e68] font-semibold uppercase tracking-wider flex-shrink-0">
-                  {selectedEquipment.system}
-                </span>
-              </div>
+            {(() => {
+              const vibDate = selectedEquipment.lastVibrationUpdate || selectedEquipment.lastUpdate;
+              const oilDate = selectedEquipment.lastLubeOilUpdate || selectedEquipment.lastUpdate;
+              const vibFreq = selectedEquipment.vibrationFrequency || selectedEquipment.frequency || 'Monthly';
+              const oilFreq = selectedEquipment.lubeOilFrequency || selectedEquipment.frequency || 'Monthly';
+              const nextVib = calculateNextPlannedDate(vibDate, vibFreq);
+              const nextOil = calculateNextPlannedDate(oilDate, oilFreq);
+              const isOverdue = nextVib.isOverdue || nextOil.isOverdue;
+              const risk = calculateCombinedRisk(
+                selectedEquipment.criticality,
+                selectedEquipment.condition,
+                isOverdue ? 'Overdue' : 'On Time'
+              );
 
-              {/* Linha 2: Overall CBM status */}
-              <div className="flex items-center text-xs text-text-muted mt-2.5 font-medium">
-                <div className="flex items-center gap-2">
-                  <span>Overall CBM status:</span>
-                  <span className={`font-bold ${
-                    selectedEquipment.condition?.startsWith('Good') ? 'text-status-ok' :
-                    selectedEquipment.condition?.startsWith('Degraded') ? 'text-status-warn' :
-                    selectedEquipment.condition?.startsWith('Critical') ? 'text-status-error' : 'text-text-muted'
-                  }`}>
-                    {selectedEquipment.condition}
-                  </span>
+              return (
+                <div className="mb-3">
+                  {/* Linha 1: Título + Badge + Botão Fechar */}
+                  <div className="flex items-center gap-2 pr-8">
+                    <h2 className="text-base font-bold text-text-primary">
+                      {selectedEquipment.tag} - {selectedEquipment.name.charAt(0).toUpperCase() + selectedEquipment.name.slice(1).toLowerCase()}
+                    </h2>
+                    <span className="text-[10px] bg-[#222944] text-[#94a3b8] px-2 py-0.5 rounded border border-[#333e68] font-semibold uppercase tracking-wider flex-shrink-0">
+                      {selectedEquipment.system}
+                    </span>
+                  </div>
+
+                  {/* Linha 2: Overall CBM status + Combined Risk Priority & Score Numérico */}
+                  <div className="flex flex-wrap items-center justify-between gap-2 text-xs text-text-muted mt-3 font-medium bg-[#101422]/70 border border-[#202742] p-2.5 rounded-xl">
+                    <div className="flex items-center gap-2">
+                      <span>Overall CBM status:</span>
+                      <span className={`font-bold ${
+                        selectedEquipment.condition?.startsWith('Good') ? 'text-status-ok' :
+                        selectedEquipment.condition?.startsWith('Degraded') ? 'text-status-warn' :
+                        selectedEquipment.condition?.startsWith('Critical') ? 'text-status-error' : 'text-text-muted'
+                      }`}>
+                        {selectedEquipment.condition}
+                      </span>
+                    </div>
+
+                    {/* Combined Risk Priority com Score Numérico */}
+                    <div className="flex items-center gap-2 text-[11px]">
+                      <span>Combined Risk Priority:</span>
+                      <span className="inline-flex items-center gap-1.5 font-bold">
+                        <span className={`w-2 h-2 rounded-full ${risk.dotColor}`} />
+                        <span className={risk.badgeText}>{risk.finalCategory}</span>
+                      </span>
+                      <span className="text-[#333e68]">•</span>
+                      <span className="text-text-muted">
+                        Score: <strong className="text-text-primary font-bold">{risk.baseScore}</strong><span className="text-text-muted text-[10px]">/12</span>
+                      </span>
+                      {risk.isEscalated && (
+                        <span className="text-[9px] text-status-error font-semibold bg-status-error/15 px-1.5 py-0.5 rounded border border-status-error/30" title="Overdue collection escalated risk category by 1 level">
+                          +1 Overdue
+                        </span>
+                      )}
+                    </div>
+                  </div>
                 </div>
-              </div>
-            </div>
+              );
+            })()}
 
             {/* Illustrative Read-Only Status & Observation Overview */}
             <div className="flex flex-col gap-4 mt-4">
@@ -1604,24 +1807,22 @@ export default function MainPage() {
                 return (
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-xs">
                     {/* Vibration Status Card */}
-                    <div className="bg-[#101422]/60 p-3.5 border border-[#202742] rounded-xl flex flex-col gap-2.5">
+                    <div className="bg-[#101422]/60 p-3.5 border border-[#202742] rounded-xl flex flex-col justify-between gap-3 h-full">
+                      {/* Linha 1: Topo (Ícone + Título + Frequency Selector) */}
                       <div className="flex items-center justify-between gap-2">
-                        <div className="flex items-center gap-2.5">
-                          <div className="w-8 h-8 rounded-lg bg-[#161c30] border border-[#263152] flex items-center justify-center text-[#3b82f6] shrink-0">
-                            <svg className="w-4 h-4 stroke-current" fill="none" viewBox="0 0 24 24" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <div className="flex items-center gap-2 min-w-0">
+                          <div className="w-7 h-7 rounded-lg bg-[#161c30] border border-[#263152] flex items-center justify-center text-[#3b82f6] shrink-0">
+                            <svg className="w-3.5 h-3.5 stroke-current" fill="none" viewBox="0 0 24 24" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                               <path d="M2 12h3l3-8 4 16 3-10 2 4h3" />
                             </svg>
                           </div>
-                          <div className="flex flex-col gap-0.5">
-                            <span className="text-text-muted font-semibold uppercase text-[9px] tracking-wider">Vibration Analysis</span>
-                            <div className="flex items-center gap-1.5 font-bold text-xs">
-                              {getStatusDot(formatSurveillanceTier(selectedEquipment.vibrationStatus))}
-                            </div>
-                          </div>
+                          <span className="text-text-muted font-bold uppercase text-[10px] tracking-wider whitespace-nowrap truncate">
+                            Vibration Analysis
+                          </span>
                         </div>
 
                         {/* Vibration Frequency Selector */}
-                        <div className="relative inline-block">
+                        <div className="relative inline-block shrink-0">
                           <select
                             value={selectedEquipment.vibrationFrequency || 'Monthly'}
                             onChange={async (e) => {
@@ -1651,7 +1852,13 @@ export default function MainPage() {
                         </div>
                       </div>
 
-                      <div className="flex items-center justify-between text-[10px] text-text-muted font-medium pt-1.5 border-t border-[#1a2035]">
+                      {/* Linha 2: Centro (Status CBM) */}
+                      <div className="flex items-center gap-2 pl-0.5">
+                        {getStatusDot(formatSurveillanceTier(selectedEquipment.vibrationStatus))}
+                      </div>
+
+                      {/* Linha 3: Rodapé (Last & Next) */}
+                      <div className="flex items-center justify-between text-[10px] text-text-muted font-medium pt-2 border-t border-[#1a2035]">
                         <span>Last: <strong className="text-text-primary">{vibLastDateStr}</strong></span>
                         <span className={vibNext.isOverdue ? "text-status-error font-bold" : "text-status-ok font-semibold"}>
                           Next: {vibNext.plannedDateStr}
@@ -1660,24 +1867,22 @@ export default function MainPage() {
                     </div>
 
                     {/* Lube Oil Status Card */}
-                    <div className="bg-[#101422]/60 p-3.5 border border-[#202742] rounded-xl flex flex-col gap-2.5">
+                    <div className="bg-[#101422]/60 p-3.5 border border-[#202742] rounded-xl flex flex-col justify-between gap-3 h-full">
+                      {/* Linha 1: Topo (Ícone + Título + Frequency Selector) */}
                       <div className="flex items-center justify-between gap-2">
-                        <div className="flex items-center gap-2.5">
-                          <div className="w-8 h-8 rounded-lg bg-[#161c30] border border-[#263152] flex items-center justify-center text-[#3b82f6] shrink-0">
-                            <svg className="w-4 h-4 stroke-current" fill="none" viewBox="0 0 24 24" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <div className="flex items-center gap-2 min-w-0">
+                          <div className="w-7 h-7 rounded-lg bg-[#161c30] border border-[#263152] flex items-center justify-center text-[#3b82f6] shrink-0">
+                            <svg className="w-3.5 h-3.5 stroke-current" fill="none" viewBox="0 0 24 24" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                               <path d="M12 2.69l5.66 5.66a8 8 0 1 1-11.31 0z" />
                             </svg>
                           </div>
-                          <div className="flex flex-col gap-0.5">
-                            <span className="text-text-muted font-semibold uppercase text-[9px] tracking-wider">Lube Oil Analysis</span>
-                            <div className="flex items-center gap-1.5 font-bold text-xs">
-                              {getStatusDot(formatSurveillanceTier(selectedEquipment.lubeOilStatus))}
-                            </div>
-                          </div>
+                          <span className="text-text-muted font-bold uppercase text-[10px] tracking-wider whitespace-nowrap truncate">
+                            Lube Oil Analysis
+                          </span>
                         </div>
 
                         {/* Lube Oil Frequency Selector */}
-                        <div className="relative inline-block">
+                        <div className="relative inline-block shrink-0">
                           <select
                             value={selectedEquipment.lubeOilFrequency || 'Monthly'}
                             onChange={async (e) => {
@@ -1707,7 +1912,13 @@ export default function MainPage() {
                         </div>
                       </div>
 
-                      <div className="flex items-center justify-between text-[10px] text-text-muted font-medium pt-1.5 border-t border-[#1a2035]">
+                      {/* Linha 2: Centro (Status CBM) */}
+                      <div className="flex items-center gap-2 pl-0.5">
+                        {getStatusDot(formatSurveillanceTier(selectedEquipment.lubeOilStatus))}
+                      </div>
+
+                      {/* Linha 3: Rodapé (Last & Next) */}
+                      <div className="flex items-center justify-between text-[10px] text-text-muted font-medium pt-2 border-t border-[#1a2035]">
                         <span>Last: <strong className="text-text-primary">{oilLastDateStr}</strong></span>
                         <span className={oilNext.isOverdue ? "text-status-error font-bold" : "text-status-ok font-semibold"}>
                           Next: {oilNext.plannedDateStr}
