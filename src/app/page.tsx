@@ -1061,14 +1061,19 @@ export default function MainPage() {
     return isNaN(d.getTime()) ? null : d;
   }
 
+  function formatFrequencyBadge(freq?: string | null, defaultDays = 24): string {
+    if (!freq) return `${defaultDays} Days`;
+    if (/\d+/.test(freq)) {
+      const num = freq.match(/\d+/)?.[0];
+      return `${num} Days`;
+    }
+    return `${defaultDays} Days`;
+  }
+
   function getFrequencyDays(frequency?: string | null, defaultDays = 30): number {
     if (!frequency) return defaultDays;
     const numMatch = frequency.match(/\d+/);
     if (numMatch) return parseInt(numMatch[0], 10);
-    const freq = frequency.toLowerCase();
-    if (freq.includes('quart')) return 90;
-    if (freq.includes('semi')) return 180;
-    if (freq.includes('ann')) return 365;
     return defaultDays;
   }
 
@@ -1295,8 +1300,8 @@ export default function MainPage() {
     .map(e => {
       const vibDate = e.lastVibrationUpdate || e.lastUpdate;
       const oilDate = e.lastLubeOilUpdate || e.lastUpdate;
-      const vibFreq = e.vibrationFrequency || '24 Days';
-      const oilFreq = e.lubeOilFrequency || '84 Days';
+      const vibFreq = formatFrequencyBadge(e.vibrationFrequency, 24);
+      const oilFreq = formatFrequencyBadge(e.lubeOilFrequency, 84);
 
       const nextVib = calculateNextPlannedDate(vibDate, vibFreq, 24);
       const nextOil = calculateNextPlannedDate(oilDate, oilFreq, 84);
@@ -1783,8 +1788,8 @@ export default function MainPage() {
               {(() => {
                 const vibDate = selectedEquipment.lastVibrationUpdate || selectedEquipment.lastUpdate;
                 const oilDate = selectedEquipment.lastLubeOilUpdate || selectedEquipment.lastUpdate;
-                const vibFreq = selectedEquipment.vibrationFrequency || '24 Days';
-                const oilFreq = selectedEquipment.lubeOilFrequency || '84 Days';
+                const vibFreq = formatFrequencyBadge(selectedEquipment.vibrationFrequency, 24);
+                const oilFreq = formatFrequencyBadge(selectedEquipment.lubeOilFrequency, 84);
 
                 const vibNext = calculateNextPlannedDate(vibDate, vibFreq, 24);
                 const oilNext = calculateNextPlannedDate(oilDate, oilFreq, 84);
