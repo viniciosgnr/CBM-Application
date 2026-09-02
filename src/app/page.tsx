@@ -1061,17 +1061,20 @@ export default function MainPage() {
     return isNaN(d.getTime()) ? null : d;
   }
 
-  function getFrequencyDays(frequency?: string | null): number {
-    const freq = (frequency || '').toLowerCase();
+  function getFrequencyDays(frequency?: string | null, defaultDays = 30): number {
+    if (!frequency) return defaultDays;
+    const numMatch = frequency.match(/\d+/);
+    if (numMatch) return parseInt(numMatch[0], 10);
+    const freq = frequency.toLowerCase();
     if (freq.includes('quart')) return 90;
     if (freq.includes('semi')) return 180;
     if (freq.includes('ann')) return 365;
-    return 30; // Monthly default
+    return defaultDays;
   }
 
-  function calculateNextPlannedDate(lastUpdateStr?: string | null, frequency?: string | null): { plannedDateStr: string; isOverdue: boolean } {
+  function calculateNextPlannedDate(lastUpdateStr?: string | null, frequency?: string | null, defaultDays = 30): { plannedDateStr: string; isOverdue: boolean } {
     const lastDate = parseDate(lastUpdateStr) || new Date(2026, 6, 23);
-    const freqDays = getFrequencyDays(frequency);
+    const freqDays = getFrequencyDays(frequency, defaultDays);
     const plannedDate = new Date(lastDate);
     plannedDate.setDate(plannedDate.getDate() + freqDays);
 
@@ -1080,7 +1083,8 @@ export default function MainPage() {
     const year = plannedDate.getFullYear();
     const plannedDateStr = `${day}/${month}/${year}`;
 
-    const today = new Date();
+    // Anchor to operational timeline date (2026-08-31)
+    const today = new Date('2026-08-31T23:59:59Z');
     const isOverdue = today > plannedDate;
 
     return { plannedDateStr, isOverdue };
@@ -1291,11 +1295,11 @@ export default function MainPage() {
     .map(e => {
       const vibDate = e.lastVibrationUpdate || e.lastUpdate;
       const oilDate = e.lastLubeOilUpdate || e.lastUpdate;
-      const vibFreq = e.vibrationFrequency || e.frequency || 'Monthly';
-      const oilFreq = e.lubeOilFrequency || e.frequency || 'Monthly';
+      const vibFreq = e.vibrationFrequency || '24 Days';
+      const oilFreq = e.lubeOilFrequency || '84 Days';
 
-      const nextVib = calculateNextPlannedDate(vibDate, vibFreq);
-      const nextOil = calculateNextPlannedDate(oilDate, oilFreq);
+      const nextVib = calculateNextPlannedDate(vibDate, vibFreq, 24);
+      const nextOil = calculateNextPlannedDate(oilDate, oilFreq, 84);
       const isOverdue = nextVib.isOverdue || nextOil.isOverdue;
       const collectionStatus = isOverdue ? 'Overdue' : 'On Time';
       const riskCalc = calculateCombinedRisk(e.criticality, e.condition, collectionStatus);
@@ -1749,66 +1753,29 @@ export default function MainPage() {
             </button>
 
             {/* Header da Modal SLB OptiSite Style */}
-            {(() => {
-              const vibDate = selectedEquipment.lastVibrationUpdate || selectedEquipment.lastUpdate;
-              const oilDate = selectedEquipment.lastLubeOilUpdate || selectedEquipment.lastUpdate;
-              const vibFreq = selectedEquipment.vibrationFrequency || selectedEquipment.frequency || 'Monthly';
-              const oilFreq = selectedEquipment.lubeOilFrequency || selectedEquipment.frequency || 'Monthly';
-              const nextVib = calculateNextPlannedDate(vibDate, vibFreq);
-              const nextOil = calculateNextPlannedDate(oilDate, oilFreq);
-              const isOverdue = nextVib.isOverdue || nextOil.isOverdue;
-              const risk = calculateCombinedRisk(
-                selectedEquipment.criticality,
-                selectedEquipment.condition,
-                isOverdue ? 'Overdue' : 'On Time'
-              );
+            <div className="mb-3">
+              {/* Linha 1: Título + Badge + Botão Fechar */}
+              <div className="flex items-center gap-2 pr-8">
+                <h2 className="text-base font-bold text-text-primary">
+                  {selectedEquipment.tag} - {selectedEquipment.name.charAt(0).toUpperCase() + selectedEquipment.name.slice(1).toLowerCase()}
+                </h2>
+                <span className="text-[10px] bg-[#222944] text-[#94a3b8] px-2 py-0.5 rounded border border-[#333e68] font-semibold uppercase tracking-wider flex-shrink-0">
+                  {selectedEquipment.system}
+                </span>
+              </div>
 
-              return (
-                <div className="mb-3">
-                  {/* Linha 1: Título + Badge + Botão Fechar */}
-                  <div className="flex items-center gap-2 pr-8">
-                    <h2 className="text-base font-bold text-text-primary">
-                      {selectedEquipment.tag} - {selectedEquipment.name.charAt(0).toUpperCase() + selectedEquipment.name.slice(1).toLowerCase()}
-                    </h2>
-                    <span className="text-[10px] bg-[#222944] text-[#94a3b8] px-2 py-0.5 rounded border border-[#333e68] font-semibold uppercase tracking-wider flex-shrink-0">
-                      {selectedEquipment.system}
-                    </span>
-                  </div>
-
-                  {/* Linha 2: Overall CBM status + Combined Risk Priority & Score Numérico */}
-                  <div className="flex flex-wrap items-center justify-between gap-2 text-xs text-text-muted mt-3 font-medium bg-[#101422]/70 border border-[#202742] p-2.5 rounded-xl">
-                    <div className="flex items-center gap-2">
-                      <span>Overall CBM status:</span>
-                      <span className={`font-bold ${
-                        selectedEquipment.condition?.startsWith('Good') ? 'text-status-ok' :
-                        selectedEquipment.condition?.startsWith('Degraded') ? 'text-status-warn' :
-                        selectedEquipment.condition?.startsWith('Critical') ? 'text-status-error' : 'text-text-muted'
-                      }`}>
-                        {selectedEquipment.condition}
-                      </span>
-                    </div>
-
-                    {/* Combined Risk Priority com Score Numérico */}
-                    <div className="flex items-center gap-2 text-[11px]">
-                      <span>Combined Risk Priority:</span>
-                      <span className="inline-flex items-center gap-1.5 font-bold">
-                        <span className={`w-2 h-2 rounded-full ${risk.dotColor}`} />
-                        <span className={risk.badgeText}>{risk.finalCategory}</span>
-                      </span>
-                      <span className="text-[#333e68]">•</span>
-                      <span className="text-text-muted">
-                        Score: <strong className="text-text-primary font-bold">{risk.baseScore}</strong><span className="text-text-muted text-[10px]">/12</span>
-                      </span>
-                      {risk.isEscalated && (
-                        <span className="text-[9px] text-status-error font-semibold bg-status-error/15 px-1.5 py-0.5 rounded border border-status-error/30" title="Overdue collection escalated risk category by 1 level">
-                          +1 Overdue
-                        </span>
-                      )}
-                    </div>
-                  </div>
-                </div>
-              );
-            })()}
+              {/* Linha 2: Overall CBM status */}
+              <div className="flex items-center gap-2 text-xs text-text-muted mt-3 font-medium bg-[#101422]/70 border border-[#202742] p-2.5 rounded-xl">
+                <span>Overall CBM status:</span>
+                <span className={`font-bold ${
+                  selectedEquipment.condition?.startsWith('Good') ? 'text-status-ok' :
+                  selectedEquipment.condition?.startsWith('Degraded') ? 'text-status-warn' :
+                  selectedEquipment.condition?.startsWith('Critical') ? 'text-status-error' : 'text-text-muted'
+                }`}>
+                  {selectedEquipment.condition}
+                </span>
+              </div>
+            </div>
 
             {/* Illustrative Read-Only Status & Observation Overview */}
             <div className="flex flex-col gap-4 mt-4">
@@ -1816,11 +1783,11 @@ export default function MainPage() {
               {(() => {
                 const vibDate = selectedEquipment.lastVibrationUpdate || selectedEquipment.lastUpdate;
                 const oilDate = selectedEquipment.lastLubeOilUpdate || selectedEquipment.lastUpdate;
-                const vibFreq = selectedEquipment.vibrationFrequency || selectedEquipment.frequency || 'Monthly';
-                const oilFreq = selectedEquipment.lubeOilFrequency || selectedEquipment.frequency || 'Monthly';
+                const vibFreq = selectedEquipment.vibrationFrequency || '24 Days';
+                const oilFreq = selectedEquipment.lubeOilFrequency || '84 Days';
 
-                const vibNext = calculateNextPlannedDate(vibDate, vibFreq);
-                const oilNext = calculateNextPlannedDate(oilDate, oilFreq);
+                const vibNext = calculateNextPlannedDate(vibDate, vibFreq, 24);
+                const oilNext = calculateNextPlannedDate(oilDate, oilFreq, 84);
 
                 const vibLastDateStr = vibDate ? vibDate.split(',')[0] : '26/08/2026';
                 const oilLastDateStr = oilDate ? oilDate.split(',')[0] : '26/08/2026';
@@ -1829,7 +1796,7 @@ export default function MainPage() {
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-xs">
                     {/* Vibration Status Card */}
                     <div className="bg-[#101422]/60 p-3.5 border border-[#202742] rounded-xl flex flex-col justify-between gap-3 h-full">
-                      {/* Linha 1: Topo (Ícone + Título + Frequency Selector) */}
+                      {/* Linha 1: Topo (Ícone + Título + Read-only Frequency Badge from DB) */}
                       <div className="flex items-center justify-between gap-2">
                         <div className="flex items-center gap-2 min-w-0">
                           <div className="w-7 h-7 rounded-lg bg-[#161c30] border border-[#263152] flex items-center justify-center text-[#3b82f6] shrink-0">
@@ -1842,35 +1809,10 @@ export default function MainPage() {
                           </span>
                         </div>
 
-                        {/* Vibration Frequency Selector */}
-                        <div className="relative inline-block shrink-0">
-                          <select
-                            value={selectedEquipment.vibrationFrequency || 'Monthly'}
-                            onChange={async (e) => {
-                              const newFreq = e.target.value;
-                              setSelectedEquipment((prev: Equipment | null) => prev ? { ...prev, vibrationFrequency: newFreq } : prev);
-                              try {
-                                await fetch(`/api/equipments/${selectedEquipment.tag}`, {
-                                  method: 'PUT',
-                                  headers: { 'Content-Type': 'application/json' },
-                                  body: JSON.stringify({ vibrationFrequency: newFreq }),
-                                });
-                                fetchEquipments();
-                              } catch (err) {
-                                console.error('Failed to update vibration frequency:', err);
-                              }
-                            }}
-                            className="bg-[#121626] border border-[#2a3556] text-text-primary text-[10px] font-semibold rounded-full px-2.5 py-0.5 pr-5 appearance-none cursor-pointer focus:outline-none focus:border-accent-blue"
-                          >
-                            <option value="Monthly" className="bg-[#121626]">Monthly</option>
-                            <option value="Quarterly" className="bg-[#121626]">Quarterly</option>
-                            <option value="Semi-Annual" className="bg-[#121626]">Semi-Annual</option>
-                            <option value="Annual" className="bg-[#121626]">Annual</option>
-                          </select>
-                          <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-1.5 text-text-muted">
-                            <ChevronDown size={11} />
-                          </div>
-                        </div>
+                        {/* Read-only Frequency Badge */}
+                        <span className="bg-[#121626] border border-[#2a3556] text-text-muted text-[10px] font-semibold rounded-full px-2.5 py-0.5 shrink-0" title="Routine collection frequency ingested from database">
+                          {vibFreq}
+                        </span>
                       </div>
 
                       {/* Linha 2: Centro (Status CBM) */}
@@ -1889,7 +1831,7 @@ export default function MainPage() {
 
                     {/* Lube Oil Status Card */}
                     <div className="bg-[#101422]/60 p-3.5 border border-[#202742] rounded-xl flex flex-col justify-between gap-3 h-full">
-                      {/* Linha 1: Topo (Ícone + Título + Frequency Selector) */}
+                      {/* Linha 1: Topo (Ícone + Título + Read-only Frequency Badge from DB) */}
                       <div className="flex items-center justify-between gap-2">
                         <div className="flex items-center gap-2 min-w-0">
                           <div className="w-7 h-7 rounded-lg bg-[#161c30] border border-[#263152] flex items-center justify-center text-[#3b82f6] shrink-0">
@@ -1902,35 +1844,10 @@ export default function MainPage() {
                           </span>
                         </div>
 
-                        {/* Lube Oil Frequency Selector */}
-                        <div className="relative inline-block shrink-0">
-                          <select
-                            value={selectedEquipment.lubeOilFrequency || 'Monthly'}
-                            onChange={async (e) => {
-                              const newFreq = e.target.value;
-                              setSelectedEquipment((prev: Equipment | null) => prev ? { ...prev, lubeOilFrequency: newFreq } : prev);
-                              try {
-                                await fetch(`/api/equipments/${selectedEquipment.tag}`, {
-                                  method: 'PUT',
-                                  headers: { 'Content-Type': 'application/json' },
-                                  body: JSON.stringify({ lubeOilFrequency: newFreq }),
-                                });
-                                fetchEquipments();
-                              } catch (err) {
-                                console.error('Failed to update lube oil frequency:', err);
-                              }
-                            }}
-                            className="bg-[#121626] border border-[#2a3556] text-text-primary text-[10px] font-semibold rounded-full px-2.5 py-0.5 pr-5 appearance-none cursor-pointer focus:outline-none focus:border-accent-blue"
-                          >
-                            <option value="Monthly" className="bg-[#121626]">Monthly</option>
-                            <option value="Quarterly" className="bg-[#121626]">Quarterly</option>
-                            <option value="Semi-Annual" className="bg-[#121626]">Semi-Annual</option>
-                            <option value="Annual" className="bg-[#121626]">Annual</option>
-                          </select>
-                          <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-1.5 text-text-muted">
-                            <ChevronDown size={11} />
-                          </div>
-                        </div>
+                        {/* Read-only Frequency Badge */}
+                        <span className="bg-[#121626] border border-[#2a3556] text-text-muted text-[10px] font-semibold rounded-full px-2.5 py-0.5 shrink-0" title="Routine collection frequency ingested from database">
+                          {oilFreq}
+                        </span>
                       </div>
 
                       {/* Linha 2: Centro (Status CBM) */}
