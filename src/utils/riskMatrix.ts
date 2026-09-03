@@ -18,9 +18,101 @@ export interface RiskCalculationResult {
 export function parseCriticalityScore(criticality?: string): number {
   if (!criticality) return 2; // default Medium
   const clean = criticality.trim().toLowerCase();
-  if (clean === 'high' || clean === 'sece') return 3;
-  if (clean === 'low') return 1;
-  return 2; // Medium
+  if (clean === 'high' || clean === 'critical' || clean === 'sece') return 3;
+  if (clean === 'medium') return 2;
+  return 1; // Low
+}
+
+export function calculateRiskScore(condition?: string, criticality?: string): number {
+  const critScore = parseCriticalityScore(criticality);
+  const { tierScore } = parseSurveillanceTier(condition);
+  return critScore * tierScore;
+}
+
+export type RiskMatrixCategory = 'Critical' | 'High' | 'Medium' | 'Low';
+
+export function getRiskCategory(score: number): {
+  category: RiskMatrixCategory;
+  colorClass: string;
+  badgeBg: string;
+  badgeText: string;
+  hex: string;
+} {
+  if (score >= 12) {
+    return {
+      category: 'Critical',
+      colorClass: 'text-status-error',
+      badgeBg: 'bg-status-error/15',
+      badgeText: 'text-status-error',
+      hex: '#ef4444',
+    };
+  }
+  if (score >= 8) {
+    return {
+      category: 'High',
+      colorClass: 'text-orange-400',
+      badgeBg: 'bg-orange-500/15',
+      badgeText: 'text-orange-400',
+      hex: '#f97316',
+    };
+  }
+  if (score >= 4) {
+    return {
+      category: 'Medium',
+      colorClass: 'text-status-warn',
+      badgeBg: 'bg-status-warn/15',
+      badgeText: 'text-status-warn',
+      hex: '#eab308',
+    };
+  }
+  return {
+    category: 'Low',
+    colorClass: 'text-status-ok',
+    badgeBg: 'bg-status-ok/15',
+    badgeText: 'text-status-ok',
+    hex: '#22c55e',
+  };
+}
+
+export function formatSurveillanceTier(status?: string | null): string {
+  if (!status) return 'Good - Tier 4';
+  if (status.includes(' - Tier ')) return status;
+  if (status.includes('Tier 1') || status.startsWith('Critical')) return 'Critical - Tier 1';
+  if (status.includes('Tier 2') || status.startsWith('Degraded')) return 'Degraded - Tier 2';
+  if (status.includes('Tier 3')) return 'Good - Tier 3';
+  if (status.includes('Tier 4') || status.startsWith('Good')) return 'Good - Tier 4';
+  return status;
+}
+
+export function getTierSeverity(status?: string | null): number {
+  if (!status) return 1;
+  const s = status.toLowerCase();
+  if (s.includes('tier 1') || s.includes('critical')) return 4;
+  if (s.includes('tier 2') || s.includes('degraded')) return 3;
+  if (s.includes('tier 3')) return 2;
+  if (s.includes('tier 4') || s.includes('good')) return 1;
+  return 1;
+}
+
+export function getWorstTechniqueStatus(
+  vibStatus?: string | null,
+  oilStatus?: string | null,
+  fallbackCondition?: string | null
+): string {
+  const formattedVib = vibStatus ? formatSurveillanceTier(vibStatus) : null;
+  const formattedOil = oilStatus ? formatSurveillanceTier(oilStatus) : null;
+
+  if (!formattedVib && !formattedOil) {
+    return formatSurveillanceTier(fallbackCondition);
+  }
+  if (formattedVib && !formattedOil) return formattedVib;
+  if (!formattedVib && formattedOil) return formattedOil;
+
+  const rankVib = getTierSeverity(formattedVib);
+  const rankOil = getTierSeverity(formattedOil);
+
+  // Worst condition has higher severity: Tier 1 (4) > Tier 2 (3) > Tier 3 (2) > Tier 4 (1)
+  return rankVib >= rankOil ? formattedVib! : formattedOil!;
 }
 
 export function parseSurveillanceTier(condition?: string): { tierName: SurveillanceTier; tierScore: number } {

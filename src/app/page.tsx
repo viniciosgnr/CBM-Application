@@ -36,7 +36,7 @@ import {
   Tooltip as RechartsTooltip,
   Legend,
 } from 'recharts';
-import { calculateCombinedRisk } from '@/utils/riskMatrix';
+import { calculateCombinedRisk, calculateRiskScore, getWorstTechniqueStatus, getRiskCategory } from '@/utils/riskMatrix';
 
 interface Equipment {
   id: number;
@@ -1272,6 +1272,14 @@ export default function MainPage() {
     { key: 'objectType', header: 'Object Type' },
     { key: 'collectionStatus', header: 'Collection Status', render: (val: string) => getStatusDot(val) },
     { key: 'condition', header: 'Equip. CBM Condition', render: (val: string) => getStatusDot(val) },
+    {
+      key: 'riskScore',
+      header: 'Risk Score',
+      sortable: true,
+      render: (val: string) => (
+        <span className="font-bold text-text-primary text-center block text-xs">{val}</span>
+      )
+    },
     { key: 'lastUpdate', header: 'Last Update' },
     { key: 'observation', header: 'Observation' },
   ];
@@ -1307,7 +1315,11 @@ export default function MainPage() {
       const nextOil = calculateNextPlannedDate(oilDate, oilFreq, 84);
       const isOverdue = nextVib.isOverdue || nextOil.isOverdue;
       const collectionStatus = isOverdue ? 'Overdue' : 'On Time';
-      const riskCalc = calculateCombinedRisk(e.criticality, e.condition, collectionStatus);
+
+      // Overall condition is the worst outcome between individual surveillance techniques (Vibration and Lube Oil)
+      const overallCondition = getWorstTechniqueStatus(e.vibrationStatus, e.lubeOilStatus, e.condition);
+      const riskCalc = calculateCombinedRisk(e.criticality, overallCondition, collectionStatus);
+      const rawScore = calculateRiskScore(overallCondition, e.criticality);
 
       return {
         id: String(e.id),
@@ -1318,9 +1330,9 @@ export default function MainPage() {
         system: e.system,
         criticality: e.criticality,
         objectType: e.objectType,
-        condition: e.condition ? e.condition.split(' - ')[0] : e.condition,
+        condition: overallCondition,
         combinedRiskPriority: riskCalc.finalCategory,
-        riskScore: String(riskCalc.baseScore),
+        riskScore: String(rawScore),
         lastUpdate: e.lastUpdate,
         lastVibrationUpdate: vibDate,
         lastLubeOilUpdate: oilDate,
@@ -1758,29 +1770,53 @@ export default function MainPage() {
             </button>
 
             {/* Header da Modal SLB OptiSite Style */}
-            <div className="mb-3">
-              {/* Linha 1: Título + Badge + Botão Fechar */}
-              <div className="flex items-center gap-2 pr-8">
-                <h2 className="text-base font-bold text-text-primary">
-                  {selectedEquipment.tag} - {selectedEquipment.name.charAt(0).toUpperCase() + selectedEquipment.name.slice(1).toLowerCase()}
-                </h2>
-                <span className="text-[10px] bg-[#222944] text-[#94a3b8] px-2 py-0.5 rounded border border-[#333e68] font-semibold uppercase tracking-wider flex-shrink-0">
-                  {selectedEquipment.system}
-                </span>
-              </div>
+            {(() => {
+              const modalOverallCondition = getWorstTechniqueStatus(
+                selectedEquipment.vibrationStatus,
+                selectedEquipment.lubeOilStatus,
+                selectedEquipment.condition
+              );
+              const modalScore = calculateRiskScore(modalOverallCondition, selectedEquipment.criticality);
 
-              {/* Linha 2: Overall CBM status */}
-              <div className="flex items-center gap-2 text-xs text-text-muted mt-3 font-medium bg-[#101422]/70 border border-[#202742] p-2.5 rounded-xl">
-                <span>Overall CBM status:</span>
-                <span className={`font-bold ${
-                  selectedEquipment.condition?.startsWith('Good') ? 'text-status-ok' :
-                  selectedEquipment.condition?.startsWith('Degraded') ? 'text-status-warn' :
-                  selectedEquipment.condition?.startsWith('Critical') ? 'text-status-error' : 'text-text-muted'
-                }`}>
-                  {selectedEquipment.condition}
-                </span>
-              </div>
-            </div>
+              return (
+                <div className="mb-3">
+                  {/* Linha 1: Título + Badge + Botão Fechar */}
+                  <div className="flex items-center gap-2 pr-8">
+                    <h2 className="text-base font-bold text-text-primary">
+                      {selectedEquipment.tag} - {selectedEquipment.name.charAt(0).toUpperCase() + selectedEquipment.name.slice(1).toLowerCase()}
+                    </h2>
+                    <span className="text-[10px] bg-[#222944] text-[#94a3b8] px-2 py-0.5 rounded border border-[#333e68] font-semibold uppercase tracking-wider flex-shrink-0">
+                      {selectedEquipment.system}
+                    </span>
+                  </div>
+
+                  {/* Linha 2: Overall CBM status • Risk Score */}
+                  <div className="flex flex-wrap items-center justify-between gap-2 text-xs text-text-muted mt-3 font-medium bg-[#101422]/70 border border-[#202742] p-2.5 rounded-xl">
+                    <div className="flex items-center gap-2">
+                      <span>Overall CBM status:</span>
+                      <span className={`font-bold ${
+                        modalOverallCondition?.includes('Good') ? 'text-status-ok' :
+                        modalOverallCondition?.includes('Degraded') ? 'text-status-warn' :
+                        modalOverallCondition?.includes('Critical') ? 'text-status-error' : 'text-text-muted'
+                      }`}>
+                        {modalOverallCondition}
+                      </span>
+                    </div>
+                    {(() => {
+                      const riskCat = getRiskCategory(modalScore);
+                      return (
+                        <div className="flex items-center gap-1.5">
+                          <span>Risk:</span>
+                          <strong className={`font-bold text-xs ${riskCat.colorClass}`} title={`Risk Score: ${modalScore} (Matrix 3×4)`}>
+                            {riskCat.category} ({modalScore})
+                          </strong>
+                        </div>
+                      );
+                    })()}
+                  </div>
+                </div>
+              );
+            })()}
 
             {/* Illustrative Read-Only Status & Observation Overview */}
             <div className="flex flex-col gap-4 mt-4">

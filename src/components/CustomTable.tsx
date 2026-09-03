@@ -1,5 +1,5 @@
 'use client';
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, useMemo } from 'react';
 import {
   ChevronLeft,
   ChevronRight,
@@ -12,6 +12,7 @@ import {
 interface Column {
   key: string;
   header: string;
+  sortable?: boolean;
   render?: (val: string, row: Record<string, string>) => React.ReactNode;
 }
 
@@ -67,6 +68,8 @@ export default function CustomTable({
 
   const [currentPage, setCurrentPage] = useState(1);
   const [rowsPerPage, setRowsPerPage] = useState(10);
+  const [sortColumn, setSortColumn] = useState<string | null>(null);
+  const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc');
   
   const popoverRef = useRef<HTMLDivElement>(null);
 
@@ -162,13 +165,29 @@ export default function CustomTable({
       // If no filter state is set or all items are selected, show row
       if (!selectedSet || selectedSet.size === allValues.length) return true;
       
-      let cellVal = String(row[col.key] || '');
-      if (cellVal.includes(' - Tier ')) {
-        cellVal = cellVal.split(' - Tier ')[0];
-      }
+      const cellVal = String(row[col.key] || '');
       return selectedSet.has(cellVal);
     });
   });
+
+  // Sorting logic (numeric-aware)
+  const sortedData = useMemo(() => {
+    if (!sortColumn) return filteredData;
+    return [...filteredData].sort((a, b) => {
+      const valA = a[sortColumn];
+      const valB = b[sortColumn];
+
+      const numA = Number(valA);
+      const numB = Number(valB);
+      if (!isNaN(numA) && !isNaN(numB) && valA !== '' && valB !== '' && valA !== null && valB !== null) {
+        return sortDirection === 'asc' ? numA - numB : numB - numA;
+      }
+
+      const strA = String(valA ?? '').toLowerCase();
+      const strB = String(valB ?? '').toLowerCase();
+      return sortDirection === 'asc' ? strA.localeCompare(strB) : strB.localeCompare(strA);
+    });
+  }, [filteredData, sortColumn, sortDirection]);
 
   // Check if any column filter is active (subset of values selected)
   const isAnyFilterActive = columns.some(col => {
@@ -178,9 +197,9 @@ export default function CustomTable({
   });
 
   // Pagination logic
-  const totalRows = filteredData.length;
+  const totalRows = sortedData.length;
   const startIndex = (currentPage - 1) * rowsPerPage;
-  const paginatedData = filteredData.slice(startIndex, startIndex + rowsPerPage);
+  const paginatedData = sortedData.slice(startIndex, startIndex + rowsPerPage);
   const totalPages = Math.ceil(totalRows / rowsPerPage) || 1;
 
   return (
@@ -243,14 +262,41 @@ export default function CustomTable({
                 // Align rightmost column popovers to the right edge to avoid horizontal clipping
                 const isRightColumn = colIdx >= columns.length - 3;
 
+                const isSortable = col.sortable ?? (col.key === 'riskScore');
+
                 return (
                   <th
                     key={col.key}
                     className="px-4 py-3 text-[10px] font-bold uppercase tracking-wider text-text-primary whitespace-nowrap relative"
                   >
-                    <div className="flex items-center justify-between gap-1">
-                      <span>{col.header}</span>
-                    </div>
+                    {isSortable ? (
+                      <div 
+                        onClick={() => {
+                          if (sortColumn === col.key) {
+                            setSortDirection(prev => prev === 'asc' ? 'desc' : 'asc');
+                          } else {
+                            setSortColumn(col.key);
+                            setSortDirection('desc');
+                          }
+                          setCurrentPage(1);
+                        }}
+                        className="flex items-center justify-between gap-1.5 cursor-pointer hover:text-accent-blue transition-colors select-none group"
+                        title={`Sort by ${col.header}`}
+                      >
+                        <span className="truncate">{col.header}</span>
+                        <span className="text-[11px] font-bold">
+                          {sortColumn === col.key ? (
+                            <span className="text-accent-blue">{sortDirection === 'asc' ? '▲' : '▼'}</span>
+                          ) : (
+                            <span className="text-text-muted/40 group-hover:text-accent-blue/70 transition-opacity">⇅</span>
+                          )}
+                        </span>
+                      </div>
+                    ) : (
+                      <div className="flex items-center justify-between gap-1 select-none">
+                        <span className="truncate">{col.header}</span>
+                      </div>
+                    )}
 
                     {/* Filter Input & Icon Line (Underline style without box borders, icon on the right) */}
                     <div className="flex items-center gap-1.5 mt-1.5 w-full relative">
