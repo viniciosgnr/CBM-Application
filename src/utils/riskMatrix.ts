@@ -74,6 +74,67 @@ export function getRiskCategory(score: number): {
   };
 }
 
+export interface OverallHealthResult {
+  totalMachines: number;
+  maxPoints: number;
+  deductedPoints: number;
+  healthPoints: number;
+  healthPercentage: number;
+  tier1Count: number;
+  tier2Count: number;
+  goodCount: number;
+}
+
+export function calculateOverallHealth(
+  equipments: Array<{
+    condition?: string | null;
+    vibrationStatus?: string | null;
+    lubeOilStatus?: string | null;
+    criticality?: string | null;
+  }>
+): OverallHealthResult {
+  const totalMachines = equipments.length;
+  const maxPoints = totalMachines * 12;
+  let deductedPoints = 0;
+  let tier1Count = 0;
+  let tier2Count = 0;
+  let goodCount = 0;
+
+  for (const eq of equipments) {
+    const resolvedCondition = getWorstTechniqueStatus(
+      eq.vibrationStatus,
+      eq.lubeOilStatus,
+      eq.condition || 'Good - Tier 4'
+    );
+
+    if (resolvedCondition.includes('Tier 1') || resolvedCondition.includes('Critical')) {
+      const riskScore = calculateRiskScore(resolvedCondition, eq.criticality || 'Medium');
+      deductedPoints += riskScore;
+      tier1Count++;
+    } else if (resolvedCondition.includes('Tier 2') || resolvedCondition.includes('Degraded')) {
+      const riskScore = calculateRiskScore(resolvedCondition, eq.criticality || 'Medium');
+      deductedPoints += riskScore;
+      tier2Count++;
+    } else {
+      goodCount++;
+    }
+  }
+
+  const healthPoints = Math.max(0, maxPoints - deductedPoints);
+  const healthPercentage = totalMachines > 0 ? (healthPoints / maxPoints) * 100 : 100;
+
+  return {
+    totalMachines,
+    maxPoints,
+    deductedPoints,
+    healthPoints,
+    healthPercentage: Number(healthPercentage.toFixed(1)),
+    tier1Count,
+    tier2Count,
+    goodCount,
+  };
+}
+
 export function formatSurveillanceTier(status?: string | null): string {
   if (!status) return 'Good - Tier 4';
   if (status.includes(' - Tier ')) return status;

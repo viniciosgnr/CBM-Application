@@ -727,11 +727,16 @@ export async function seed() {
   
   // Update reportId references in mockWorkOrders
   const updatedWorkOrders = mockWorkOrders.map((wo) => {
-    if (wo.reference === '801021309' && insertedReports[0]) {
-      return { ...wo, reportId: insertedReports[0].id };
-    }
-    if (wo.reference === '801021320' && insertedReports[1]) {
-      return { ...wo, reportId: insertedReports[1].id };
+    const matchingReport = insertedReports.find((r) => r.woNumber === wo.reference);
+    if (matchingReport) {
+      return {
+        ...wo,
+        reportId: matchingReport.id,
+        tagNumber: matchingReport.equipmentTag,
+        fpso: matchingReport.facility ? matchingReport.facility.replace(/^FPSO\s+/i, '') : wo.fpso,
+        tagDescription: matchingReport.machineName || wo.tagDescription,
+        description: matchingReport.shortDescription || wo.description,
+      };
     }
     return { ...wo, reportId: null };
   });

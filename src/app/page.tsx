@@ -16,7 +16,9 @@ import {
   Wrench,
   AlertCircle,
   ChevronDown,
-  Search
+  Search,
+  Activity,
+  Filter,
 } from 'lucide-react';
 import {
   WorkOrderStatusPie,
@@ -30,13 +32,22 @@ import {
   ResponsiveContainer,
   LineChart,
   Line,
+  PieChart,
+  Pie,
+  Cell,
   XAxis,
   YAxis,
   CartesianGrid,
   Tooltip as RechartsTooltip,
   Legend,
 } from 'recharts';
-import { calculateCombinedRisk, calculateRiskScore, getWorstTechniqueStatus, getRiskCategory } from '@/utils/riskMatrix';
+import {
+  calculateCombinedRisk,
+  calculateRiskScore,
+  getWorstTechniqueStatus,
+  getRiskCategory,
+  calculateOverallHealth,
+} from '@/utils/riskMatrix';
 
 interface Equipment {
   id: number;
@@ -595,9 +606,16 @@ const TAXONOMY_DATA: Record<string, Record<string, string[]>> = {
 const ALL_RECOM_FPSOS = ['DNY', 'UNY', 'PTY', 'ONE'];
 
 export default function MainPage() {
-  const [activeTab, setActiveTab] = useState<'equipment' | 'work-order' | 'recommendations'>('work-order');
+  const [activeTab, setActiveTab] = useState<'equipment' | 'work-order' | 'recommendations' | 'kpis'>('work-order');
   const [maximizedChart, setMaximizedChart] = useState<string | null>(null);
   const [mounted, setMounted] = useState(false);
+
+  // KPIs tab states (SLB Optisite standard)
+  const [selectedKpiFpsos, setSelectedKpiFpsos] = useState<Set<string>>(new Set());
+  const [kpiFpsoPopoverOpen, setKpiFpsoPopoverOpen] = useState(false);
+  const [kpiFpsoSearch, setKpiFpsoSearch] = useState('');
+  const kpiFpsoPopoverRef = useRef<HTMLDivElement>(null);
+  const [kpiTrendTimeRange, setKpiTrendTimeRange] = useState<string>('Last 6 Months');
 
   // Per-chart time range states
   const [woStatusTimeRange, setWoStatusTimeRange] = useState('Last Month');
@@ -681,9 +699,197 @@ export default function MainPage() {
     });
   }, [equipments, selectedEquipmentFilters, selectedConditionChart, selectedCriticalityChart]);
 
+  // Unique FPSO Trigrams available in Equipment List (e.g. SEP, CDI, UNY, DNY, ONE, PTY)
+  const availableKpiFpsos = useMemo(() => {
+    const set = new Set<string>();
+    equipments.forEach(e => {
+      if (e.fpso) {
+        const trigram = e.fpso.replace(/^FPSO\s+/i, '').trim();
+        if (trigram) set.add(trigram.toUpperCase());
+      }
+    });
+    return Array.from(set).sort();
+  }, [equipments]);
+
+  // Target equipments for KPI calculation based on selected vessel trigrams (or all if none/all selected)
+  const currentKpiEquipments = useMemo(() => {
+    if (selectedKpiFpsos.size === 0 || selectedKpiFpsos.size === availableKpiFpsos.length) {
+      return equipments;
+    }
+    return equipments.filter(e => {
+      const trigram = e.fpso ? e.fpso.replace(/^FPSO\s+/i, '').trim().toUpperCase() : '';
+      return selectedKpiFpsos.has(trigram);
+    });
+  }, [equipments, selectedKpiFpsos, availableKpiFpsos]);
+
+  // Display label for the FPSO capsule button
+  const kpiFpsoLabel = useMemo(() => {
+    if (availableKpiFpsos.length === 0) return 'All FPSOs';
+    if (selectedKpiFpsos.size === 0 || selectedKpiFpsos.size === availableKpiFpsos.length) {
+      return 'All FPSOs';
+    }
+    if (selectedKpiFpsos.size === 1) {
+      return Array.from(selectedKpiFpsos)[0];
+    }
+    if (selectedKpiFpsos.size === 2) {
+      return Array.from(selectedKpiFpsos).join(', ');
+    }
+    return `${selectedKpiFpsos.size} FPSOs`;
+  }, [selectedKpiFpsos, availableKpiFpsos]);
+
+  // Overall Health calculation (Strictly from Equipment List table)
+  const overallHealthData = useMemo(() => {
+    return calculateOverallHealth(currentKpiEquipments);
+  }, [currentKpiEquipments]);
+
+  // Compliance Calculation based on routine frequency (24 DAY)
+  const complianceData = useMemo(() => {
+    const total = currentKpiEquipments.length;
+    if (total === 0) {
+      return { total: 0, collected: 0, overdue: 0, percentage: 100 };
+    }
+
+    const now = new Date('2026-09-04T00:00:00Z').getTime();
+    let collected = 0;
+    let overdue = 0;
+
+    currentKpiEquipments.forEach(eq => {
+      const parts = (eq.lastUpdate || '').split(',')[0].trim().split('/');
+      if (parts.length === 3) {
+        const d = new Date(parseInt(parts[2], 10), parseInt(parts[1], 10) - 1, parseInt(parts[0], 10));
+        const diffDays = (now - d.getTime()) / (1000 * 60 * 60 * 24);
+        if (diffDays <= 24) {
+          collected++;
+        } else {
+          overdue++;
+        }
+      } else {
+        overdue++;
+      }
+    });
+
+    const percentage = Number(((collected / total) * 100).toFixed(1));
+    return { total, collected, overdue, percentage };
+  }, [currentKpiEquipments]);
+
   // Reports state
   const [reports, setReports] = useState<AnalysisReport[]>([]);
   const [loadingReports, setLoadingReports] = useState(true);
+
+  // Overall Health Trend Data aggregated monthly based on Report Date and vessel scope
+  const overallHealthTrendData = useMemo(() => {
+    const currentScore = overallHealthData.healthPercentage;
+    const currentPts = overallHealthData.healthPoints;
+    const maxPts = overallHealthData.maxPoints;
+    const currentAtRisk = overallHealthData.tier1Count + overallHealthData.tier2Count;
+
+    // Pure monthly aggregation configs matching selected time range (no weekly subdivisions)
+    const monthConfigs = kpiTrendTimeRange === 'Last Month'
+      ? [
+          { key: '2026-08', label: 'Aug 26' },
+          { key: '2026-09', label: 'Sep 26' },
+        ]
+      : kpiTrendTimeRange === 'Last 3 Months'
+      ? [
+          { key: '2026-07', label: 'Jul 26' },
+          { key: '2026-08', label: 'Aug 26' },
+          { key: '2026-09', label: 'Sep 26' },
+        ]
+      : kpiTrendTimeRange === 'Last 6 Months'
+      ? [
+          { key: '2026-04', label: 'Apr 26' },
+          { key: '2026-05', label: 'May 26' },
+          { key: '2026-06', label: 'Jun 26' },
+          { key: '2026-07', label: 'Jul 26' },
+          { key: '2026-08', label: 'Aug 26' },
+          { key: '2026-09', label: 'Sep 26' },
+        ]
+      : [
+          { key: '2026-03', label: 'Mar 26' },
+          { key: '2026-04', label: 'Apr 26' },
+          { key: '2026-05', label: 'May 26' },
+          { key: '2026-06', label: 'Jun 26' },
+          { key: '2026-07', label: 'Jul 26' },
+          { key: '2026-08', label: 'Aug 26' },
+          { key: '2026-09', label: 'Sep 26' },
+        ];
+
+    // Filter reports in vessel scope
+    const scopeReports = reports.filter(r => {
+      if (selectedKpiFpsos.size === 0 || selectedKpiFpsos.size === availableKpiFpsos.length) return true;
+      const fac = (r.facility || '').toUpperCase();
+      const trigram = fac.replace(/^FPSO\s+/i, '').trim();
+      return selectedKpiFpsos.has(trigram);
+    });
+
+    const totalMachines = currentKpiEquipments.length;
+    const vesselMaxPts = totalMachines * 12;
+
+    if (totalMachines === 0) {
+      return monthConfigs.map(m => ({ label: m.label, healthPercentage: 100, points: 0, maxPoints: 0, atRisk: 0 }));
+    }
+
+    return monthConfigs.map(cfg => {
+      if (cfg.key === '2026-09') {
+        return {
+          label: cfg.label,
+          healthPercentage: currentScore,
+          points: currentPts,
+          maxPoints: maxPts,
+          atRisk: currentAtRisk,
+        };
+      }
+
+      // Reports up to this month
+      const relevantReports = scopeReports.filter(r => {
+        const dt = r.raisedDate || r.createdAt;
+        return dt && dt.substring(0, 7) <= cfg.key;
+      });
+
+      // Sort ascending to find latest condition
+      const sorted = [...relevantReports].sort((a, b) => {
+        const da = a.raisedDate || a.createdAt || '';
+        const db = b.raisedDate || b.createdAt || '';
+        return da.localeCompare(db);
+      });
+
+      const latestCondition = new Map<string, string>();
+      sorted.forEach(r => {
+        if (r.equipmentTag && r.overallCondition) {
+          latestCondition.set(r.equipmentTag, r.overallCondition);
+        }
+      });
+
+      let deducted = 0;
+      let atRisk = 0;
+
+      currentKpiEquipments.forEach(eq => {
+        const cond = latestCondition.get(eq.tag) || 'Good - Tier 4';
+        const crit = eq.criticality || 'Medium';
+
+        if (cond.includes('Tier 1') || cond.includes('Critical')) {
+          const score = crit === 'High' ? 12 : crit === 'Medium' ? 8 : 4;
+          deducted += score;
+          atRisk++;
+        } else if (cond.includes('Tier 2') || cond.includes('Degraded')) {
+          const score = crit === 'High' ? 8 : crit === 'Medium' ? 6 : 2;
+          deducted += score;
+          atRisk++;
+        }
+      });
+
+      const healthPts = Math.max(0, vesselMaxPts - deducted);
+      const healthPct = Number(((healthPts / vesselMaxPts) * 100).toFixed(1));
+
+      return {
+        label: cfg.label,
+        healthPercentage: healthPct,
+        points: healthPts,
+        maxPoints: vesselMaxPts,
+        atRisk,
+      };
+    });
+  }, [overallHealthData, kpiTrendTimeRange, reports, selectedKpiFpsos, availableKpiFpsos, currentKpiEquipments]);
   const [selectedRecomFpsos, setSelectedRecomFpsos] = useState<Set<string>>(new Set(ALL_RECOM_FPSOS));
   const [recomFpsoPopoverOpen, setRecomFpsoPopoverOpen] = useState(false);
   const [recomFpsoSearch, setRecomFpsoSearch] = useState('');
@@ -695,6 +901,67 @@ export default function MainPage() {
   const [workOrders, setWorkOrders] = useState<WorkOrder[]>([]);
   const [loadingWorkOrders, setLoadingWorkOrders] = useState(true);
   const [woSearchQuery, setWoSearchQuery] = useState('');
+
+  // Target Work Orders for KPI calculation based on selected vessel trigrams
+  const currentKpiWorkOrders = useMemo(() => {
+    if (selectedKpiFpsos.size === 0 || selectedKpiFpsos.size === availableKpiFpsos.length) {
+      return workOrders;
+    }
+    return workOrders.filter(w => {
+      const trigram = (w.fpso || '').replace(/^FPSO\s+/i, '').trim().toUpperCase();
+      return selectedKpiFpsos.has(trigram);
+    });
+  }, [workOrders, selectedKpiFpsos, availableKpiFpsos]);
+
+  // Open Action Items calculation (Backlog snapshot)
+  const openActionsData = useMemo(() => {
+    const total = currentKpiWorkOrders.length;
+    const now = new Date('2026-09-04T00:00:00Z').getTime();
+    let openCount = 0;
+    let closedCount = 0;
+    let inProgress = 0;
+    let pending = 0;
+    let accepted = 0;
+    let overdueDue = 0;
+
+    currentKpiWorkOrders.forEach(w => {
+      const s = w.status;
+      if (s === 'Finished' || s === 'Completed' || s === 'Cancelled' || s === 'Rejected') {
+        closedCount++;
+        return;
+      }
+      openCount++;
+      if (s === 'In Progress') inProgress++;
+      else if (s === 'Pending' || s === 'Observed') pending++;
+      else if (s === 'Accepted') accepted++;
+      else inProgress++;
+
+      const parts = (w.dueDate || '').split(',')[0].trim().split('/');
+      if (parts.length === 3) {
+        const d = new Date(parseInt(parts[2], 10), parseInt(parts[1], 10) - 1, parseInt(parts[0], 10));
+        if (d.getTime() < now) {
+          overdueDue++;
+        }
+      }
+    });
+
+    return {
+      total,
+      openCount,
+      closedCount,
+      inProgress,
+      pending,
+      accepted,
+      overdueDue,
+      donutData: openCount === 0 
+        ? [{ name: 'All Completed', value: 1, color: '#84cc16' }]
+        : [
+            { name: 'In Progress', value: inProgress, color: '#3b82f6' },
+            { name: 'Pending', value: pending, color: '#64748b' },
+            { name: 'Accepted', value: accepted, color: '#93c5fd' },
+          ].filter(item => item.value > 0)
+    };
+  }, [currentKpiWorkOrders]);
 
   // Modal states (Equipment Detail View)
   const [selectedEquipment, setSelectedEquipment] = useState<Equipment | null>(null);
@@ -899,8 +1166,17 @@ export default function MainPage() {
         setRecomFpsoPopoverOpen(false);
       }
     }
+    function handleClickOutsideKpiFpso(event: MouseEvent) {
+      if (kpiFpsoPopoverRef.current && !kpiFpsoPopoverRef.current.contains(event.target as Node)) {
+        setKpiFpsoPopoverOpen(false);
+      }
+    }
     document.addEventListener('mousedown', handleClickOutsideRecomFpso);
-    return () => document.removeEventListener('mousedown', handleClickOutsideRecomFpso);
+    document.addEventListener('mousedown', handleClickOutsideKpiFpso);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutsideRecomFpso);
+      document.removeEventListener('mousedown', handleClickOutsideKpiFpso);
+    };
   }, []);
 
   // Fetch single equipment history logs
@@ -1272,14 +1548,6 @@ export default function MainPage() {
     { key: 'objectType', header: 'Object Type' },
     { key: 'collectionStatus', header: 'Collection Status', render: (val: string) => getStatusDot(val) },
     { key: 'condition', header: 'Equip. CBM Condition', render: (val: string) => getStatusDot(val) },
-    {
-      key: 'riskScore',
-      header: 'Risk Score',
-      sortable: true,
-      render: (val: string) => (
-        <span className="font-bold text-text-primary text-center block text-xs">{val}</span>
-      )
-    },
     { key: 'lastUpdate', header: 'Last Update' },
     { key: 'observation', header: 'Observation' },
   ];
@@ -1462,6 +1730,18 @@ export default function MainPage() {
               Recommendations
               {activeTab === 'recommendations' && (
                 <span className="absolute bottom-[-13px] left-0 right-0 h-[2px] bg-accent-blue" />
+              )}
+            </button>
+            <button
+              onClick={() => setActiveTab('kpis')}
+              className={`pb-2 text-xs font-semibold uppercase tracking-wider relative transition-colors cursor-pointer flex items-center gap-1.5 ${
+                activeTab === 'kpis' ? 'text-accent-blue font-bold' : 'text-text-muted hover:text-text-primary'
+              }`}
+            >
+              <Activity size={13} className={activeTab === 'kpis' ? 'text-accent-blue' : 'text-text-muted'} />
+              KPIs
+              {activeTab === 'kpis' && (
+                <span className="absolute bottom-[-13px] left-0 right-0 h-[2px] bg-accent-blue shadow-[0_0_8px_rgba(56,189,248,0.6)]" />
               )}
             </button>
           </div>
@@ -1750,6 +2030,380 @@ export default function MainPage() {
                   onRowClick={handleReportRowClick}
                 />
               )}
+            </div>
+          </div>
+        )}
+
+        {/* Lógica SPA: Tela de KPIs & Overall Health (Strictly SLB Optisite DashboardCards) */}
+        {activeTab === 'kpis' && (
+          <div className="flex flex-col gap-6 animate-fadeIn">
+            {/* Top Vessel Scope Capsule Filter Bar (SLB Optisite Pill) */}
+            <div className="flex items-center justify-between gap-4 bg-bg-card border border-border-panel rounded-card px-4 py-2.5 shadow-sm select-none">
+              <div className="flex items-center gap-3">
+                <span className="text-xs text-text-muted font-medium">Vessel Scope:</span>
+                {/* SLB Capsule Popover Filter */}
+                <div className="relative" ref={kpiFpsoPopoverRef}>
+                  <button
+                    type="button"
+                    onClick={() => setKpiFpsoPopoverOpen(prev => !prev)}
+                    className="flex items-center gap-2 bg-[#0c101d] hover:bg-[#121829] border border-[#202742] hover:border-accent-blue/80 rounded-full px-3.5 py-1.5 cursor-pointer transition-all shadow-sm text-xs"
+                    title="Filter by FPSO"
+                  >
+                    <Filter size={12} className="text-accent-blue shrink-0" />
+                    <span className="font-semibold text-text-primary tracking-wide">{kpiFpsoLabel}</span>
+                    <ChevronDown size={12} className={`text-text-muted transition-transform shrink-0 ${kpiFpsoPopoverOpen ? 'rotate-180 text-accent-blue' : ''}`} />
+                  </button>
+
+                  {/* Multi-Select Capsule Popover */}
+                  {kpiFpsoPopoverOpen && (
+                    <div className="absolute top-full left-0 mt-2 w-64 bg-[#0c101d] border border-[#202742] rounded-2xl shadow-2xl p-3 z-50 animate-fadeIn text-left text-xs text-text-primary">
+                      {/* Search Input */}
+                      <div className="relative mb-2.5">
+                        <Search size={13} className="absolute left-2.5 top-2.5 text-text-muted" />
+                        <input
+                          type="text"
+                          value={kpiFpsoSearch}
+                          onChange={e => setKpiFpsoSearch(e.target.value)}
+                          placeholder="Search FPSO..."
+                          className="w-full bg-[#111728] border border-[#202742] rounded-xl pl-8 pr-2.5 py-1.5 text-xs text-text-primary focus:border-accent-blue focus:outline-none placeholder:text-text-muted/60"
+                        />
+                      </div>
+
+                      {/* Options Checklist */}
+                      <div className="flex flex-col gap-0.5 max-h-52 overflow-y-auto pr-1">
+                        {/* (Select All) Checkbox */}
+                        <label className="flex items-center gap-2.5 px-2.5 py-1.5 rounded-lg hover:bg-[#172033] cursor-pointer font-semibold select-none text-text-primary transition-colors">
+                          <input
+                            type="checkbox"
+                            checked={selectedKpiFpsos.size === availableKpiFpsos.length || selectedKpiFpsos.size === 0}
+                            ref={el => {
+                              if (el) {
+                                el.indeterminate =
+                                  selectedKpiFpsos.size > 0 &&
+                                  selectedKpiFpsos.size < availableKpiFpsos.length;
+                              }
+                            }}
+                            onChange={() => {
+                              if (selectedKpiFpsos.size === availableKpiFpsos.length || selectedKpiFpsos.size === 0) {
+                                setSelectedKpiFpsos(new Set());
+                              } else {
+                                setSelectedKpiFpsos(new Set(availableKpiFpsos));
+                              }
+                            }}
+                            className="accent-accent-blue cursor-pointer rounded"
+                          />
+                          <span className="text-xs font-semibold">(Select All)</span>
+                        </label>
+
+                        <hr className="border-[#202742] my-1" />
+
+                        {availableKpiFpsos
+                          .filter(f => f.toLowerCase().includes(kpiFpsoSearch.toLowerCase()))
+                          .map(trigram => {
+                            const isChecked = selectedKpiFpsos.has(trigram) || selectedKpiFpsos.size === 0;
+                            return (
+                              <label
+                                key={trigram}
+                                className="flex items-center justify-between px-2.5 py-1.5 rounded-lg hover:bg-[#172033] cursor-pointer select-none text-text-primary transition-colors"
+                              >
+                                <div className="flex items-center gap-2.5">
+                                  <input
+                                    type="checkbox"
+                                    checked={isChecked}
+                                    onChange={() => {
+                                      const next = new Set(selectedKpiFpsos.size === 0 ? availableKpiFpsos : selectedKpiFpsos);
+                                      if (next.has(trigram)) {
+                                        next.delete(trigram);
+                                      } else {
+                                        next.add(trigram);
+                                      }
+                                      setSelectedKpiFpsos(next);
+                                    }}
+                                    className="accent-accent-blue cursor-pointer rounded"
+                                  />
+                                  <span className="text-xs font-medium">{trigram}</span>
+                                </div>
+                              </label>
+                            );
+                          })}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              <div className="text-xs text-text-muted font-medium hidden sm:flex items-center gap-1.5">
+                <span>Total Evaluated Machines:</span>
+                <strong className="text-text-primary font-bold">{overallHealthData.totalMachines}</strong>
+              </div>
+            </div>
+
+            {/* Row 1: 3 KPI Snapshot Cards Side-by-Side */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              {/* Card 1: Overall Health Indicator */}
+              <DashboardCard
+                title={kpiFpsoLabel === 'All FPSOs' ? 'Overall Fleet Health' : `${kpiFpsoLabel} Health`}
+                timeRange="Current Snapshot"
+                onMaximize={() => setMaximizedChart('kpi-health')}
+              >
+                <div className="w-full flex flex-col xl:flex-row items-center justify-around gap-4 p-1">
+                  {/* Circular Donut with percentage in center */}
+                  <div className="relative flex items-center justify-center shrink-0">
+                    <ResponsiveContainer width={145} height={145}>
+                      <PieChart>
+                        <Pie
+                          data={[
+                            { name: 'Health Points', value: overallHealthData.healthPoints },
+                            { name: 'Deducted Points', value: overallHealthData.deductedPoints },
+                          ]}
+                          cx="50%"
+                          cy="50%"
+                          innerRadius={46}
+                          outerRadius={64}
+                          startAngle={90}
+                          endAngle={-270}
+                          dataKey="value"
+                          stroke="none"
+                        >
+                          <Cell 
+                            fill={
+                              overallHealthData.healthPercentage >= 95 ? '#84cc16' : 
+                              overallHealthData.healthPercentage >= 90 ? '#3b82f6' : 
+                              overallHealthData.healthPercentage >= 80 ? '#f97316' : '#f87171'
+                            } 
+                          />
+                          <Cell fill="#1e293b" />
+                        </Pie>
+                      </PieChart>
+                    </ResponsiveContainer>
+                    <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none select-none">
+                      <span className="text-xl font-extrabold text-text-primary tracking-tight">
+                        {overallHealthData.healthPercentage}%
+                      </span>
+                      <span className="text-[8px] uppercase tracking-wider font-semibold text-text-muted">
+                        Health
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* Breakdown list */}
+                  <div className="flex flex-col gap-2 text-[11px] flex-1 w-full max-w-[210px]">
+                    <div className="flex items-center justify-between">
+                      <span className="text-text-muted font-medium">Evaluated:</span>
+                      <strong className="text-text-primary font-bold">{overallHealthData.totalMachines} machines</strong>
+                    </div>
+
+                    <div className="flex items-center justify-between border-t border-border-panel/40 pt-1.5">
+                      <span className="text-text-muted font-medium">Health Points:</span>
+                      <span className="font-semibold text-text-primary">{overallHealthData.healthPoints.toLocaleString()} / {overallHealthData.maxPoints.toLocaleString()}</span>
+                    </div>
+
+                    <div className="flex items-center justify-between border-t border-border-panel/40 pt-1.5">
+                      <span className="text-text-muted font-medium">At Risk:</span>
+                      <span className={overallHealthData.tier1Count + overallHealthData.tier2Count > 0 ? 'font-bold text-orange-400' : 'font-semibold text-status-ok'}>
+                        {overallHealthData.tier1Count + overallHealthData.tier2Count} ({overallHealthData.tier1Count} Crit, {overallHealthData.tier2Count} Deg)
+                      </span>
+                    </div>
+
+                    <div className="flex items-center justify-between border-t border-border-panel/40 pt-1.5">
+                      <span className="text-text-muted font-medium">Deduction:</span>
+                      <span className={overallHealthData.deductedPoints > 0 ? 'font-bold text-status-warn' : 'font-semibold text-status-ok'}>
+                        {overallHealthData.deductedPoints > 0 ? `-${overallHealthData.deductedPoints} pts` : '0 pts'}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              </DashboardCard>
+
+              {/* Card 2: CBM Surveillance Compliance */}
+              <DashboardCard
+                title="Surveillance Compliance"
+                timeRange="Current Snapshot"
+                onMaximize={() => setMaximizedChart('kpi-compliance')}
+              >
+                <div className="w-full flex flex-col xl:flex-row items-center justify-around gap-4 p-1">
+                  {/* Circular Donut with compliance percentage in center */}
+                  <div className="relative flex items-center justify-center shrink-0">
+                    <ResponsiveContainer width={145} height={145}>
+                      <PieChart>
+                        <Pie
+                          data={[
+                            { name: 'Collected', value: complianceData.collected },
+                            { name: 'Overdue', value: complianceData.overdue },
+                          ]}
+                          cx="50%"
+                          cy="50%"
+                          innerRadius={46}
+                          outerRadius={64}
+                          startAngle={90}
+                          endAngle={-270}
+                          dataKey="value"
+                          stroke="none"
+                        >
+                          <Cell 
+                            fill={
+                              complianceData.percentage >= 95 ? '#84cc16' : 
+                              complianceData.percentage >= 85 ? '#3b82f6' : 
+                              complianceData.percentage >= 75 ? '#f97316' : '#f87171'
+                            } 
+                          />
+                          <Cell fill="#1e293b" />
+                        </Pie>
+                      </PieChart>
+                    </ResponsiveContainer>
+                    <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none select-none">
+                      <span className="text-xl font-extrabold text-text-primary tracking-tight">
+                        {complianceData.percentage}%
+                      </span>
+                      <span className="text-[8px] uppercase tracking-wider font-semibold text-text-muted">
+                        Compliance
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* Breakdown list */}
+                  <div className="flex flex-col gap-2 text-[11px] flex-1 w-full max-w-[210px]">
+                    <div className="flex items-center justify-between">
+                      <span className="text-text-muted font-medium">Total Scope:</span>
+                      <strong className="text-text-primary font-bold">{complianceData.total} machines</strong>
+                    </div>
+
+                    <div className="flex items-center justify-between border-t border-border-panel/40 pt-1.5">
+                      <span className="text-text-muted font-medium">Collected:</span>
+                      <span className="font-semibold text-status-ok">{complianceData.collected} machines</span>
+                    </div>
+
+                    <div className="flex items-center justify-between border-t border-border-panel/40 pt-1.5">
+                      <span className="text-text-muted font-medium">Overdue:</span>
+                      <span className={complianceData.overdue > 0 ? 'font-bold text-status-warn' : 'font-semibold text-status-ok'}>
+                        {complianceData.overdue} machines
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              </DashboardCard>
+
+              {/* Card 3: Open Action Items */}
+              <DashboardCard
+                title="Open Action Items"
+                timeRange="Current Snapshot"
+                onMaximize={() => setMaximizedChart('kpi-actions')}
+              >
+                <div className="w-full flex flex-col xl:flex-row items-center justify-around gap-4 p-1">
+                  {/* Circular Donut with open count in center */}
+                  <div className="relative flex items-center justify-center shrink-0">
+                    <ResponsiveContainer width={145} height={145}>
+                      <PieChart>
+                        <Pie
+                          data={openActionsData.donutData}
+                          cx="50%"
+                          cy="50%"
+                          innerRadius={46}
+                          outerRadius={64}
+                          startAngle={90}
+                          endAngle={-270}
+                          dataKey="value"
+                          stroke="none"
+                        >
+                          {openActionsData.donutData.map((entry, index) => (
+                            <Cell key={`cell-${index}`} fill={entry.color} />
+                          ))}
+                        </Pie>
+                      </PieChart>
+                    </ResponsiveContainer>
+                    <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none select-none">
+                      <span className="text-xl font-extrabold text-text-primary tracking-tight">
+                        {openActionsData.openCount}
+                      </span>
+                      <span className="text-[8px] uppercase tracking-wider font-semibold text-text-muted">
+                        Open Actions
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* Breakdown list */}
+                  <div className="flex flex-col gap-2 text-[11px] flex-1 w-full max-w-[210px]">
+                    <div className="flex items-center justify-between">
+                      <span className="text-text-muted font-medium">In Progress:</span>
+                      <span className="font-semibold text-[#3b82f6]">{openActionsData.inProgress} orders</span>
+                    </div>
+
+                    <div className="flex items-center justify-between border-t border-border-panel/40 pt-1.5">
+                      <span className="text-text-muted font-medium">Pending:</span>
+                      <span className="font-semibold text-[#64748b]">{openActionsData.pending} orders</span>
+                    </div>
+
+                    <div className="flex items-center justify-between border-t border-border-panel/40 pt-1.5">
+                      <span className="text-text-muted font-medium">Accepted:</span>
+                      <span className="font-semibold text-[#93c5fd]">{openActionsData.accepted} orders</span>
+                    </div>
+
+                    <div className="flex items-center justify-between border-t border-border-panel/40 pt-1.5">
+                      <span className="text-text-muted font-medium">Past Due Date:</span>
+                      <span className={openActionsData.overdueDue > 0 ? 'font-bold text-status-warn' : 'font-semibold text-status-ok'}>
+                        {openActionsData.overdueDue} overdue
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              </DashboardCard>
+            </div>
+
+            {/* Row 2: Full-Width Overall Health Trend */}
+            <div className="w-full">
+              <DashboardCard
+                title="Overall Health Trend"
+                timeRange={kpiTrendTimeRange}
+                onTimeRangeChange={setKpiTrendTimeRange}
+                onMaximize={() => setMaximizedChart('kpi-trend')}
+              >
+                <div className="w-full h-[250px]">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <LineChart data={overallHealthTrendData} margin={{ top: 15, right: 25, left: -20, bottom: 5 }}>
+                      <CartesianGrid strokeDasharray="3 3" stroke="#1e293b" vertical={false} />
+                      <XAxis 
+                        dataKey="label" 
+                        stroke="#64748b" 
+                        fontSize={10} 
+                        tickLine={false} 
+                        axisLine={{ stroke: '#334155' }} 
+                      />
+                      <YAxis 
+                        domain={[0, 100]} 
+                        stroke="#64748b" 
+                        fontSize={10} 
+                        tickLine={false} 
+                        axisLine={{ stroke: '#334155' }}
+                        tickFormatter={(val) => `${val}%`}
+                      />
+                      <RechartsTooltip 
+                        content={({ active, payload, label }) => {
+                          if (active && payload && payload.length) {
+                            const item = payload[0].payload;
+                            return (
+                              <div className="bg-[#0b0f19] border border-[#1e2a3a] px-2.5 py-1.5 rounded shadow-xl text-[10px]">
+                                <p className="font-semibold text-text-primary border-b border-border-panel/40 pb-0.5">{label}</p>
+                                <p className="text-[#38bdf8] font-bold mt-1">Overall Health: {item.healthPercentage}%</p>
+                                <p className="text-text-muted mt-0.5">Points: {item.points.toLocaleString()} / {item.maxPoints.toLocaleString()}</p>
+                                <p className={item.atRisk > 0 ? 'text-orange-400 mt-0.5' : 'text-status-ok mt-0.5'}>At Risk: {item.atRisk} machines</p>
+                              </div>
+                            );
+                          }
+                          return null;
+                        }}
+                      />
+                      <Line 
+                        type="linear" 
+                        dataKey="healthPercentage" 
+                        stroke="#5b9bf3" 
+                        strokeWidth={2}
+                        dot={{ r: 4.5, fill: '#60a5fa', stroke: '#0e1726', strokeWidth: 2 }}
+                        activeDot={{ r: 6.5, fill: '#93c5fd', stroke: '#ffffff', strokeWidth: 2 }}
+                      />
+                    </LineChart>
+                  </ResponsiveContainer>
+                </div>
+              </DashboardCard>
             </div>
           </div>
         )}
@@ -2935,12 +3589,224 @@ export default function MainPage() {
               {maximizedChart === 'days-due' && 'Days Left to Due (Maximized View)'}
               {maximizedChart === 'equip-condition' && 'Equipment by CBM Condition (Maximized View)'}
               {maximizedChart === 'cbm-criticality' && 'CBM Condition by Equipment Criticality (Maximized View)'}
+              {maximizedChart === 'kpi-health' && (kpiFpsoLabel === 'All FPSOs' ? 'Overall Fleet Health (Maximized View)' : `${kpiFpsoLabel} Health (Maximized View)`)}
+              {maximizedChart === 'kpi-compliance' && 'Surveillance Compliance (Maximized View)'}
+              {maximizedChart === 'kpi-actions' && 'Open Action Items & Maintenance Backlog (Maximized View)'}
+              {maximizedChart === 'kpi-trend' && 'Overall Health Trend (Maximized View)'}
             </h2>
             <div className="h-[360px] flex items-center justify-center">
               {maximizedChart === 'wo-status' && <WorkOrderStatusPie workOrders={workOrders} />}
               {maximizedChart === 'days-due' && <DaysLeftBar workOrders={workOrders} />}
               {maximizedChart === 'equip-condition' && <EquipmentConditionPie equipments={equipments} />}
               {maximizedChart === 'cbm-criticality' && <CbmCriticalityBar equipments={equipments} />}
+              {maximizedChart === 'kpi-health' && (
+                <div className="w-full flex flex-col sm:flex-row items-center justify-around gap-8 p-4">
+                  <div className="relative flex items-center justify-center shrink-0">
+                    <ResponsiveContainer width={240} height={240}>
+                      <PieChart>
+                        <Pie
+                          data={[
+                            { name: 'Health Points', value: overallHealthData.healthPoints },
+                            { name: 'Deducted Points', value: overallHealthData.deductedPoints },
+                          ]}
+                          cx="50%"
+                          cy="50%"
+                          innerRadius={75}
+                          outerRadius={105}
+                          startAngle={90}
+                          endAngle={-270}
+                          dataKey="value"
+                          stroke="none"
+                        >
+                          <Cell 
+                            fill={
+                              overallHealthData.healthPercentage >= 95 ? '#84cc16' : 
+                              overallHealthData.healthPercentage >= 90 ? '#3b82f6' : 
+                              overallHealthData.healthPercentage >= 80 ? '#f97316' : '#f87171'
+                            } 
+                          />
+                          <Cell fill="#1e293b" />
+                        </Pie>
+                      </PieChart>
+                    </ResponsiveContainer>
+                    <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none select-none">
+                      <span className="text-3xl font-extrabold text-text-primary tracking-tight">
+                        {overallHealthData.healthPercentage}%
+                      </span>
+                      <span className="text-xs uppercase tracking-wider font-semibold text-text-muted">
+                        Health
+                      </span>
+                    </div>
+                  </div>
+                  <div className="flex flex-col gap-3 text-sm flex-1 max-w-sm w-full">
+                    <div className="flex items-center justify-between">
+                      <span className="text-text-muted font-medium">Evaluated Machines:</span>
+                      <strong className="text-text-primary font-bold">{overallHealthData.totalMachines} machines</strong>
+                    </div>
+                    <div className="flex items-center justify-between border-t border-border-panel/40 pt-2">
+                      <span className="text-text-muted font-medium">Health Points:</span>
+                      <span className="font-semibold text-text-primary">{overallHealthData.healthPoints.toLocaleString()} / {overallHealthData.maxPoints.toLocaleString()} pts</span>
+                    </div>
+                    <div className="flex items-center justify-between border-t border-border-panel/40 pt-2">
+                      <span className="text-text-muted font-medium">Machines at Risk:</span>
+                      <span className={overallHealthData.tier1Count + overallHealthData.tier2Count > 0 ? 'font-bold text-orange-400' : 'font-semibold text-status-ok'}>
+                        {overallHealthData.tier1Count + overallHealthData.tier2Count} ({overallHealthData.tier1Count} Critical, {overallHealthData.tier2Count} Degraded)
+                      </span>
+                    </div>
+                    <div className="flex items-center justify-between border-t border-border-panel/40 pt-2">
+                      <span className="text-text-muted font-medium">Deducted Risk Points:</span>
+                      <span className={overallHealthData.deductedPoints > 0 ? 'font-bold text-status-warn' : 'font-semibold text-status-ok'}>
+                        {overallHealthData.deductedPoints > 0 ? `-${overallHealthData.deductedPoints} pts` : '0 pts'}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              )}
+              {maximizedChart === 'kpi-compliance' && (
+                <div className="w-full flex flex-col sm:flex-row items-center justify-around gap-8 p-4">
+                  <div className="relative flex items-center justify-center shrink-0">
+                    <ResponsiveContainer width={240} height={240}>
+                      <PieChart>
+                        <Pie
+                          data={[
+                            { name: 'Collected', value: complianceData.collected },
+                            { name: 'Overdue', value: complianceData.overdue },
+                          ]}
+                          cx="50%"
+                          cy="50%"
+                          innerRadius={75}
+                          outerRadius={105}
+                          startAngle={90}
+                          endAngle={-270}
+                          dataKey="value"
+                          stroke="none"
+                        >
+                          <Cell 
+                            fill={
+                              complianceData.percentage >= 95 ? '#84cc16' : 
+                              complianceData.percentage >= 85 ? '#3b82f6' : 
+                              complianceData.percentage >= 75 ? '#f97316' : '#f87171'
+                            } 
+                          />
+                          <Cell fill="#1e293b" />
+                        </Pie>
+                      </PieChart>
+                    </ResponsiveContainer>
+                    <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none select-none">
+                      <span className="text-3xl font-extrabold text-text-primary tracking-tight">
+                        {complianceData.percentage}%
+                      </span>
+                      <span className="text-xs uppercase tracking-wider font-semibold text-text-muted">
+                        Compliance
+                      </span>
+                    </div>
+                  </div>
+                  <div className="flex flex-col gap-3 text-sm flex-1 max-w-sm w-full">
+                    <div className="flex items-center justify-between">
+                      <span className="text-text-muted font-medium">Total Scope Machines:</span>
+                      <strong className="text-text-primary font-bold">{complianceData.total} machines</strong>
+                    </div>
+                    <div className="flex items-center justify-between border-t border-border-panel/40 pt-2">
+                      <span className="text-text-muted font-medium">Collected (On-Time):</span>
+                      <span className="font-semibold text-status-ok">{complianceData.collected} machines</span>
+                    </div>
+                    <div className="flex items-center justify-between border-t border-border-panel/40 pt-2">
+                      <span className="text-text-muted font-medium">Overdue (Pending):</span>
+                      <span className={complianceData.overdue > 0 ? 'font-bold text-status-warn' : 'font-semibold text-status-ok'}>
+                        {complianceData.overdue} machines
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              )}
+              {maximizedChart === 'kpi-actions' && (
+                <div className="w-full flex flex-col sm:flex-row items-center justify-around gap-8 p-4">
+                  <div className="relative flex items-center justify-center shrink-0">
+                    <ResponsiveContainer width={240} height={240}>
+                      <PieChart>
+                        <Pie
+                          data={openActionsData.donutData}
+                          cx="50%"
+                          cy="50%"
+                          innerRadius={75}
+                          outerRadius={105}
+                          startAngle={90}
+                          endAngle={-270}
+                          dataKey="value"
+                          stroke="none"
+                        >
+                          {openActionsData.donutData.map((entry, index) => (
+                            <Cell key={`cell-modal-${index}`} fill={entry.color} />
+                          ))}
+                        </Pie>
+                      </PieChart>
+                    </ResponsiveContainer>
+                    <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none select-none">
+                      <span className="text-3xl font-extrabold text-text-primary tracking-tight">
+                        {openActionsData.openCount}
+                      </span>
+                      <span className="text-xs uppercase tracking-wider font-semibold text-text-muted">
+                        Open Actions
+                      </span>
+                    </div>
+                  </div>
+                  <div className="flex flex-col gap-3 text-sm flex-1 max-w-sm w-full">
+                    <div className="flex items-center justify-between">
+                      <span className="text-text-muted font-medium">In Progress:</span>
+                      <span className="font-semibold text-[#3b82f6]">{openActionsData.inProgress} orders</span>
+                    </div>
+                    <div className="flex items-center justify-between border-t border-border-panel/40 pt-2">
+                      <span className="text-text-muted font-medium">Pending Review:</span>
+                      <span className="font-semibold text-[#64748b]">{openActionsData.pending} orders</span>
+                    </div>
+                    <div className="flex items-center justify-between border-t border-border-panel/40 pt-2">
+                      <span className="text-text-muted font-medium">Accepted:</span>
+                      <span className="font-semibold text-[#93c5fd]">{openActionsData.accepted} orders</span>
+                    </div>
+                    <div className="flex items-center justify-between border-t border-border-panel/40 pt-2">
+                      <span className="text-text-muted font-medium">Overdue Target Date:</span>
+                      <span className={openActionsData.overdueDue > 0 ? 'font-bold text-status-warn' : 'font-semibold text-status-ok'}>
+                        {openActionsData.overdueDue} overdue
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              )}
+              {maximizedChart === 'kpi-trend' && (
+                <div className="w-full h-full p-2">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <LineChart data={overallHealthTrendData} margin={{ top: 15, right: 25, left: -10, bottom: 5 }}>
+                      <CartesianGrid strokeDasharray="3 3" stroke="#1e293b" vertical={false} />
+                      <XAxis dataKey="label" stroke="#64748b" fontSize={11} tickLine={false} axisLine={{ stroke: '#334155' }} />
+                      <YAxis domain={[0, 100]} stroke="#64748b" fontSize={11} tickLine={false} axisLine={{ stroke: '#334155' }} tickFormatter={(val) => `${val}%`} />
+                      <RechartsTooltip 
+                        content={({ active, payload, label }) => {
+                          if (active && payload && payload.length) {
+                            const item = payload[0].payload;
+                            return (
+                              <div className="bg-[#0b0f19] border border-[#1e2a3a] px-3 py-2 rounded shadow-xl text-xs">
+                                <p className="font-semibold text-text-primary border-b border-border-panel/40 pb-1">{label}</p>
+                                <p className="text-[#38bdf8] font-bold mt-1">Overall Health: {item.healthPercentage}%</p>
+                                <p className="text-text-muted mt-0.5">Points: {item.points.toLocaleString()} / {item.maxPoints.toLocaleString()}</p>
+                                <p className={item.atRisk > 0 ? 'text-orange-400 mt-0.5' : 'text-status-ok mt-0.5'}>At Risk: {item.atRisk} machines</p>
+                              </div>
+                            );
+                          }
+                          return null;
+                        }}
+                      />
+                      <Line 
+                        type="linear" 
+                        dataKey="healthPercentage" 
+                        stroke="#5b9bf3" 
+                        strokeWidth={2.5} 
+                        dot={{ r: 6, fill: '#60a5fa', stroke: '#0e1726', strokeWidth: 2 }} 
+                        activeDot={{ r: 8, fill: '#93c5fd', stroke: '#ffffff', strokeWidth: 2 }} 
+                      />
+                    </LineChart>
+                  </ResponsiveContainer>
+                </div>
+              )}
             </div>
           </div>
         </div>

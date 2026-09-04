@@ -3,8 +3,8 @@ import { ReactNode } from 'react';
 import { Maximize2 } from 'lucide-react';
 
 export const TIME_RANGE_OPTIONS = [
-  'Last Week',
   'Last Month',
+  'Last 3 Months',
   'Last 6 Months',
   'Last Year',
   'All Time'
@@ -15,6 +15,7 @@ interface DashboardCardProps {
   timeRange?: string;
   onTimeRangeChange?: (range: string) => void;
   onMaximize: () => void;
+  timeRangeOptions?: string[];
   children: ReactNode;
 }
 
@@ -23,8 +24,10 @@ export default function DashboardCard({
   timeRange = 'Last Month',
   onTimeRangeChange,
   onMaximize,
+  timeRangeOptions,
   children
 }: DashboardCardProps) {
+  const options = timeRangeOptions || TIME_RANGE_OPTIONS;
   return (
     <div className="bg-bg-card border border-border-panel rounded-card p-4 flex flex-col relative h-full">
       <div className="flex items-center justify-between mb-4">
@@ -37,7 +40,7 @@ export default function DashboardCard({
               onChange={(e) => onTimeRangeChange(e.target.value)}
               className="text-[10px] text-text-primary bg-[#111827] border border-border-panel/80 px-2 py-1 rounded cursor-pointer hover:border-accent-blue focus:border-accent-blue transition-colors font-medium outline-none"
             >
-              {TIME_RANGE_OPTIONS.map((option) => (
+              {options.map((option) => (
                 <option key={option} value={option} className="bg-[#0b0f19] text-text-primary">
                   {option}
                 </option>
