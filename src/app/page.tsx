@@ -154,454 +154,35 @@ const CHART_VALUE_MAP: Record<string, number> = {
   'Machine Off': 0,
 };
 
-const FAILURE_MODE_OPTIONS = [
-  'AIR - Abnormal Instrument Reading',
-  'BRD - Breakdown',
-  'ELP - External Leakage - process medium',
-  'ELU - External Leakage - Utility Medium',
-  'ERO - Erratic Output',
-  'FTS - Failure To Start On Demand',
-  'HIO - High Output',
-  'INL - Internal Leakage',
-  'LOO - Low Output',
-  'NOI - Noise',
-  'OHE - Overheating',
-  'PDE - Parameter Deviation',
-  'PLU - Plugged / Choked',
-  'STD - Structural Deficiency',
-  'STP - Failure To Stop On Demand',
-  'UST - Spurious Stop',
-  'VIB - Vibration',
-  'ELF - External Leakage - Fuel',
+const VIBRATION_FAILURE_MODES = [
+  'LUBRICATION DEFICIENCY',
+  'STRUCTURAL CLEARANCE',
+  'CAVITATION',
+  'BEARING INNER RACE',
+  'BEARING OUTER RACE',
+  'BEARING CAGE',
+  'BEARING ROLLING ELEMENTS',
+  'EXCESSIVE CLEARANCE (SHAFT, BEARINGS, BEARING HOUSING, GEAR)',
+  'GEAR EFFORT',
+  'ROTOR BAR PASS - ELECTRICAL',
+  'UNBALANCE',
+  'MISALIGNMENT',
+  'PUMP ROTOR BLADES WEAR',
+  'RESONANCE',
+  'TEMPERATURE OVER THE LIMITS',
+  'AXIAL DISPLACEMENT',
 ];
 
-const FAILURE_MECHANISM_SUBDIVISION_OPTIONS = [
-  'Mechanical Failure - Leakage',
-  'Mechanical Failure - Vibration',
-  'Mechanical Failure - Clearance',
-  'Mechanical Failure - Unbalance',
-  'Mechanical Failure - Misalignment',
-  'Mechanical Failure - Deformation',
-  'Mechanical Failure - Looseness',
-  'Mechanical Failure - Sticking',
-  'Material Failure - Cavitation',
-  'Material Failure - Corrosion',
-  'Material Failure - Erosion',
-  'Material Failure - Wear',
-  'Material Failure - Breakage',
-  'Material Failure - Fatigue',
-  'Material Failure - Overheating',
-  'Material Failure - Burst',
-  'Instrument Failure - Control Failure',
-  'Instrument Failure - No Signal/Indication/Alarm',
-  'Instrument Failure - Faulty Signal/Indication/Alarm',
-  'Instrument Failure - Out of Adjustment',
-  'Instrument Failure - Software Error',
-  'Instrument Failure - Common Cause/Common Mode Failure',
-  'Electrical Failure - Short Circuiting',
-  'Electrical Failure - Open Circuit',
-  'Electrical Failure - No Power/Voltage',
-  'Electrical Failure - Faulty Power/Voltage',
-  'Electrical Failure - Earth/Isolation Fault',
-  'External Influence - Blockage/Plugged',
-  'External Influence - Contamination',
-  'External Influence - Miscellaneous External Influences',
-  'Miscellaneous - No Cause Found',
-  'Miscellaneous - Combined Causes',
-  'Miscellaneous - Other',
-  'Miscellaneous - Unknown',
+const OIL_FAILURE_MODES = [
+  { value: 'WATER > 1%', label: 'WATER > 1% (WATER ABOVE 10,000 PPM)', directive: 'WATER ABOVE 10,000 PPM' },
+  { value: 'WATER < 1%', label: 'WATER < 1% (WATER BELLOW 10,000 PPM)', directive: 'WATER BELLOW 10,000 PPM' },
+  { value: 'EXTERNAL CONTAMINATION', label: 'EXTERNAL CONTAMINATION (PRESENCE OF EXTERNAL MATERIALS (Si, Na, B))', directive: 'PRESENCE OF EXTERNAL MATERIALS (Si, Na, B)' },
+  { value: 'WEAR', label: 'WEAR (PRESENCE OF WEAR METALS (Fe, Cu, Al, Cr, etc))', directive: 'PRESENCE OF WEAR METALS (Fe, Cu, Al, Cr, etc)' },
+  { value: 'VISCOSITY ABOVE NORMAL', label: 'VISCOSITY ABOVE NORMAL (COMERCIAL VISCOSITY +10%)', directive: 'COMERCIAL VISCOSITY +10%' },
+  { value: 'VISCOSITY BELOW NORMAL', label: 'VISCOSITY BELOW NORMAL (COMERCIAL VISCOSITY -10%)', directive: 'COMERCIAL VISCOSITY -10%' },
+  { value: 'ADDITIVE DEPLETION', label: 'ADDITIVE DEPLETION (TAN > 1,5 OR TBN < 4)', directive: 'TAN > 1,5 OR TBN < 4' },
+  { value: 'HIGH PARTICLE COUNT', label: 'HIGH PARTICLE COUNT (NAS OVER THE LIMITS)', directive: 'NAS OVER THE LIMITS' },
 ];
-
-const EQUIPMENT_CLASS_OPTIONS = [
-  'Centrifugal Compressor',
-  'Centrifugal Pump',
-  'Gas Turbine',
-  'Reciprocating Compressor',
-  'Screw Compressor',
-];
-
-const TAXONOMY_DATA: Record<string, Record<string, string[]>> = {
-  'Centrifugal Compressor': {
-    'Power Transmission': [
-      'Coupling to the Driver',
-      'Coupling to the Driven Unit',
-      'Lubrication',
-      'Seals',
-      'Bearings',
-      'Gearbox / Variable Drive',
-      'Belt / Sheave',
-    ],
-    'Compressor': [
-      'Casing',
-      'Rotor with Impellers',
-      'Balance Piston',
-      'Interstage Seals',
-      'Thrust Bearing',
-      'Radial Bearing',
-      'Shaft Seals',
-      'Internal Piping',
-      'Valves',
-      'Antysurge System',
-    ],
-    'Control and Monitoring': [
-      'Actuating Device',
-      'Control Unit',
-      'Cables and Junction Boxes',
-      'Internal Power Supply',
-      'Monitoring',
-      'Sensors',
-      'Valves',
-      'Wiring',
-      'Piping',
-      'Seals',
-    ],
-    'Lubrication System': [
-      'Oil Tank with Heating System',
-      'Pump',
-      'Motor',
-      'Check Valves',
-      'Coolers',
-      'Filters',
-      'Piping',
-      'Valves',
-      'Lube Oil',
-    ],
-    'Shaft Seal System': [
-      'Oil Tank with Heating',
-      'Reservoir',
-      'Pump',
-      'Motor',
-      'Gear',
-      'Filters',
-      'Valves',
-      'Seal Oil',
-      'Dry Gas Seal',
-      'Mechanical Seal',
-      'Scrubber',
-    ],
-    'Miscellaneous': [
-      'Base Frame',
-      'Piping, Pipe Support and Bellows',
-      'Control Valves',
-      'Isolation Valves',
-      'Check Valves',
-      'Coolers',
-      'Silencers',
-      'Purge Air',
-      'Flange Joints',
-    ],
-  },
-  'Screw Compressor': {
-    'Power Transmission': [
-      'Coupling to the Driver',
-      'Coupling to the Driven Unit',
-      'Lubrication',
-      'Seals',
-      'Bearings',
-      'Gearbox / Variable Drive',
-      'Belt / Sheave',
-    ],
-    'Compressor': [
-      'Casing',
-      'Female Rotor',
-      'Male Rotor',
-      'Thrust Bearing',
-      'Radial Bearing',
-      'Shaft Seals',
-      'Internal Piping',
-      'Valves',
-      'Spillback System',
-    ],
-    'Control and Monitoring': [
-      'Actuating Device',
-      'Control Unit',
-      'Cables and Junction Boxes',
-      'Internal Power Supply',
-      'Monitoring',
-      'Sensors',
-      'Valves',
-      'Wiring',
-      'Piping',
-      'Seals',
-    ],
-    'Lubrication System': [
-      'Oil Tank with Heating System',
-      'Pump',
-      'Motor',
-      'Check Valves',
-      'Coolers',
-      'Filters',
-      'Piping',
-      'Valves',
-      'Lube Oil',
-    ],
-    'Shaft Seal System': [
-      'Oil Tank with Heating',
-      'Reservoir',
-      'Pump',
-      'Motor',
-      'Gear',
-      'Filters',
-      'Valves',
-      'Seal Oil',
-      'Dry Gas Seal',
-      'Mechanical Seal',
-      'Scrubber',
-    ],
-    'Miscellaneous': [
-      'Base Frame',
-      'Piping, Pipe Support and Bellows',
-      'Control Valves',
-      'Isolation Valves',
-      'Check Valves',
-      'Coolers',
-      'Silencers',
-      'Purge Air',
-      'Flange Joints',
-    ],
-  },
-  'Reciprocating Compressor': {
-    'Power Transmission': [
-      'Coupling to the Driver',
-      'Coupling to the Driven Unit',
-      'Lubrication',
-      'Seals',
-      'Bearings',
-      'Gearbox / Variable Drive',
-      'Belt / Sheave',
-    ],
-    'Compressor': [
-      'Casing',
-      'Piston',
-      'Cylinder Line',
-      'Packing',
-      'Bearing',
-      'Shaft Seals',
-      'Internal Piping',
-      'Valves',
-      'Spillback System',
-    ],
-    'Control and Monitoring': [
-      'Actuating Device',
-      'Control Unit',
-      'Cables and Junction Boxes',
-      'Internal Power Supply',
-      'Monitoring',
-      'Sensors',
-      'Valves',
-      'Wiring',
-      'Piping',
-      'Seals',
-    ],
-    'Lubrication System': [
-      'Oil Tank with Heating System',
-      'Pump',
-      'Motor',
-      'Check Valves',
-      'Coolers',
-      'Filters',
-      'Piping',
-      'Valves',
-      'Lube Oil',
-    ],
-    'Shaft Seal System': [
-      'Oil Tank with Heating',
-      'Reservoir',
-      'Pump',
-      'Motor',
-      'Gear',
-      'Filters',
-      'Valves',
-      'Seal Oil',
-      'Dry Gas Seal',
-      'Mechanical Seal',
-      'Scrubber',
-    ],
-    'Miscellaneous': [
-      'Base Frame',
-      'Piping, Pipe Support and Bellows',
-      'Control Valves',
-      'Isolation Valves',
-      'Check Valves',
-      'Coolers',
-      'Silencers',
-      'Purge Air',
-      'Flange Joints',
-    ],
-  },
-  'Centrifugal Pump': {
-    'Power Transmission': [
-      'Coupling to the Driver',
-      'Coupling to the Driven Unit',
-      'Lubrication',
-      'Seals',
-      'Bearings',
-      'Gearbox / Variable Drive',
-      'Belt / Sheave',
-    ],
-    'Pump Unit': [
-      'Support',
-      'Casing',
-      'Impeller',
-      'Shaft',
-      'Thrust Bearing',
-      'Radial Bearing',
-      'Seals',
-      'Piping',
-      'Valves',
-    ],
-    'Control and Monitoring': [
-      'Actuating Device',
-      'Control Unit',
-      'Cables and Junction Boxes',
-      'Internal Power Supply',
-      'Monitoring',
-      'Sensors',
-      'Valves',
-      'Wiring',
-      'Piping',
-      'Seals',
-    ],
-    'Lubrication System': [
-      'Reservoir',
-      'Pump',
-      'Motor',
-      'Cooler',
-      'Filter',
-      'Piping',
-      'Valves',
-      'Lube Oil',
-      'Seals',
-    ],
-    'Miscellaneous': [
-      'Cyclone Separator',
-      'Cooling/Heating System',
-      'Purge Air',
-      'Flange Joints',
-    ],
-  },
-  'Gas Turbine': {
-    'Starting System': [
-      'Starting Motor',
-      'Start Control',
-      'Piping',
-      'Filter',
-      'Valve',
-      'Pump',
-      'Start Energy - Battery, Air',
-    ],
-    'Air Intake': [
-      'Air Cooling',
-      'Anti-icing',
-      'Filters',
-      'Intake Duct',
-      'Inlet Vanes',
-    ],
-    'Combustion System': [
-      'Combustor',
-      'Fuel Nozzles',
-      'Seals',
-    ],
-    'Compressor': [
-      'Rotor',
-      'Stator',
-      'Cooling System',
-      'VGV System',
-      'Anti-surge Valve',
-      'Aux. Bleeding System',
-      'Anti-icing Valve',
-      'Casing',
-      'Radial Bearing',
-      'Thrust Bearing',
-      'Seals',
-      'Piping',
-    ],
-    'Power Turbine HP Turbine': [
-      'Rotor',
-      'Stator',
-      'Casing',
-      'Radial Bearing',
-      'Thrust Bearing',
-      'Seals',
-      'Valves',
-      'Piping',
-    ],
-    'Control and Monitoring': [
-      'Control Unit',
-      'Sensors',
-      'Wires',
-      'Actuating Device',
-      'Monitoring',
-      'Valves',
-      'Internal Power Supply',
-      'Seals',
-    ],
-    'Lubrication System': [
-      'Heater',
-      'Reservoir',
-      'Pump',
-      'Motor',
-      'Filter',
-      'Temperature Control',
-      'Valves',
-      'Piping',
-      'Oil Cooler',
-      'Oil',
-      'Sensors',
-      'Wires',
-    ],
-    'Fuel System': [
-      'Fuel Control',
-      'Piping',
-      'Valves',
-      'Pump/Gas Compressor',
-      'Filters/Separators',
-      'Wires',
-      'Fuel Properties Measurement',
-    ],
-    'Water/Steam Injection': [
-      'Pump',
-      'Piping',
-      'Valves',
-      'Filters',
-      'Seals',
-      'Wires',
-    ],
-    'Fire and Gas Protection': [
-      'Control Unit',
-      'Pipes',
-      'Valves',
-      'Sensors',
-      'Wires',
-      'Tanks/Storage',
-    ],
-    'Acessory Drive': [
-      'Gearbox',
-      'Bearing',
-      'Seals',
-      'Casing',
-    ],
-    'Exhaust': [
-      'Diffuser',
-      'Exhaust collector',
-      'Compensator/bellows',
-      'Ducting',
-      'Emission monitoring',
-      'Silencer',
-      'Thrust Bearing',
-      'Valves',
-      'Waste Heat Recovery Unit',
-    ],
-    'Miscellaneous': [
-      'Enclosure',
-      'Hood',
-      'Purge air',
-      'Flange Joints',
-      'Ventilation Fan',
-      'Water-wash System',
-    ],
-  },
-};
 
 const ALL_RECOM_FPSOS = ['DNY', 'UNY', 'PTY', 'ONE'];
 
@@ -971,7 +552,7 @@ export default function MainPage() {
 
   // Report Creation Form state
   const [reportFormOpen, setReportFormOpen] = useState(false);
-  const [analysisType, setAnalysisType] = useState<'Vibration' | 'Lube Oil' | 'Thermography'>('Vibration');
+  const [analysisType, setAnalysisType] = useState<'Vibration' | 'Lube Oil'>('Vibration');
   const [formFields, setFormFields] = useState({
     facility: '',
     system: '',
@@ -1246,11 +827,11 @@ export default function MainPage() {
       lubeOilStatus: selectedEquipment.lubeOilStatus,
       cbmStatus: selectedEquipment.condition || 'Good - Tier 4',
       imageUrl: '',
-      equipmentClass: 'Centrifugal Compressor',
-      subunit: 'Power Transmission',
-      maintainableItem: 'Coupling to the Driver',
-      failureModeDescription: 'VIB - Vibration',
-      failureMechanismSubdivision: 'Mechanical Failure - Vibration',
+      equipmentClass: selectedEquipment.class || 'equipmentClass_PUCE',
+      subunit: '',
+      maintainableItem: '',
+      failureModeDescription: VIBRATION_FAILURE_MODES[0],
+      failureMechanismSubdivision: '',
     });
 
     setReportFormOpen(true);
@@ -2704,18 +2285,18 @@ export default function MainPage() {
                     <select
                       value={analysisType}
                       onChange={(e) => {
-                        const val = e.target.value as 'Vibration' | 'Lube Oil' | 'Thermography';
+                        const val = e.target.value as 'Vibration' | 'Lube Oil';
                         setAnalysisType(val);
                         setFormFields(prev => ({
                           ...prev,
-                          technology: val === 'Thermography' ? 'Thermography Analysis' : val === 'Vibration' ? 'Vibration Analysis' : 'Lube Oil Analysis',
+                          technology: val === 'Vibration' ? 'Vibration Analysis' : 'Lube Oil Analysis',
+                          failureModeDescription: val === 'Vibration' ? VIBRATION_FAILURE_MODES[0] : OIL_FAILURE_MODES[0].value,
                         }));
                       }}
                       className="bg-[#121626] border border-[#2a3254] rounded-lg p-2.5 text-text-primary focus:border-accent-blue outline-none cursor-pointer text-xs w-full"
                     >
                       <option value="Vibration">Vibration Analysis</option>
                       <option value="Lube Oil">Lube Oil Analysis</option>
-                      <option value="Thermography">Thermography Analysis</option>
                     </select>
                   </div>
 
@@ -2810,123 +2391,48 @@ export default function MainPage() {
               </div>
 
               {/* Bloco Failure Mode Details */}
-              {(() => {
-                const currentClass = formFields.equipmentClass || 'Centrifugal Compressor';
-                const availableSubunits = Object.keys(TAXONOMY_DATA[currentClass] || {});
-                const currentSubunit = formFields.subunit && availableSubunits.includes(formFields.subunit)
-                  ? formFields.subunit
-                  : availableSubunits[0] || '';
-                const availableMaintainableItems = TAXONOMY_DATA[currentClass]?.[currentSubunit] || [];
-                const currentMaintainableItem = formFields.maintainableItem && availableMaintainableItems.includes(formFields.maintainableItem)
-                  ? formFields.maintainableItem
-                  : availableMaintainableItems[0] || '';
-
-                return (
-                  <div className="bg-[#101422]/60 p-4 border border-[#202742] rounded-xl flex flex-col gap-4">
-                    <h4 className="text-[10px] font-bold text-text-muted uppercase tracking-wider">Failure Mode Details</h4>
-                    
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-                      <div className="flex flex-col gap-1.5">
-                        <label className="text-text-muted font-semibold uppercase text-[9px] tracking-wider">Equipment Class</label>
-                        <select
-                          value={currentClass}
-                          onChange={e => {
-                            const newClass = e.target.value;
-                            const newSubunits = Object.keys(TAXONOMY_DATA[newClass] || {});
-                            const firstSubunit = newSubunits[0] || '';
-                            const newItems = TAXONOMY_DATA[newClass]?.[firstSubunit] || [];
-                            const firstItem = newItems[0] || '';
-                            setFormFields({
-                              ...formFields,
-                              equipmentClass: newClass,
-                              subunit: firstSubunit,
-                              maintainableItem: firstItem,
-                            });
-                          }}
-                          className="bg-[#121626] border border-[#2a3254] rounded-lg p-2.5 text-text-primary focus:border-accent-blue outline-none cursor-pointer text-xs w-full"
-                        >
-                          {EQUIPMENT_CLASS_OPTIONS.map((opt) => (
-                            <option key={opt} value={opt} className="bg-[#121626]">
-                              {opt}
-                            </option>
-                          ))}
-                        </select>
-                      </div>
-
-                      <div className="flex flex-col gap-1.5">
-                        <label className="text-text-muted font-semibold uppercase text-[9px] tracking-wider">Subunit</label>
-                        <select
-                          value={currentSubunit}
-                          onChange={e => {
-                            const newSubunit = e.target.value;
-                            const newItems = TAXONOMY_DATA[currentClass]?.[newSubunit] || [];
-                            const firstItem = newItems[0] || '';
-                            setFormFields({
-                              ...formFields,
-                              subunit: newSubunit,
-                              maintainableItem: firstItem,
-                            });
-                          }}
-                          className="bg-[#121626] border border-[#2a3254] rounded-lg p-2.5 text-text-primary focus:border-accent-blue outline-none cursor-pointer text-xs w-full"
-                        >
-                          {availableSubunits.map((sub) => (
-                            <option key={sub} value={sub} className="bg-[#121626]">
-                              {sub}
-                            </option>
-                          ))}
-                        </select>
-                      </div>
-
-                      <div className="flex flex-col gap-1.5">
-                        <label className="text-text-muted font-semibold uppercase text-[9px] tracking-wider">Maintainable Item</label>
-                        <select
-                          value={currentMaintainableItem}
-                          onChange={e => setFormFields({ ...formFields, maintainableItem: e.target.value })}
-                          className="bg-[#121626] border border-[#2a3254] rounded-lg p-2.5 text-text-primary focus:border-accent-blue outline-none cursor-pointer text-xs w-full"
-                        >
-                          {availableMaintainableItems.map((item) => (
-                            <option key={item} value={item} className="bg-[#121626]">
-                              {item}
-                            </option>
-                          ))}
-                        </select>
-                      </div>
+              <div className="bg-[#101422]/60 p-4 border border-[#202742] rounded-xl flex flex-col gap-4">
+                <h4 className="text-[10px] font-bold text-text-muted uppercase tracking-wider">Failure Mode Details</h4>
+                
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                  {/* Equipment Class (Read-only, loaded from selected equipment) */}
+                  <div className="flex flex-col gap-1.5">
+                    <div className="flex items-center justify-between">
+                      <label className="text-text-muted font-semibold uppercase text-[9px] tracking-wider">Equipment Class</label>
+                      <span className="text-[9px] text-text-muted/70 italic">Read-only from asset</span>
                     </div>
-
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                      <div className="flex flex-col gap-1.5">
-                        <label className="text-text-muted font-semibold uppercase text-[9px] tracking-wider">Failure Mode Description</label>
-                        <select
-                          value={formFields.failureModeDescription || 'VIB - Vibration'}
-                          onChange={e => setFormFields({ ...formFields, failureModeDescription: e.target.value })}
-                          className="bg-[#121626] border border-[#2a3254] rounded-lg p-2.5 text-text-primary focus:border-accent-blue outline-none cursor-pointer text-xs w-full"
-                        >
-                          {FAILURE_MODE_OPTIONS.map((opt) => (
-                            <option key={opt} value={opt} className="bg-[#121626]">
-                              {opt}
-                            </option>
-                          ))}
-                        </select>
-                      </div>
-
-                      <div className="flex flex-col gap-1.5">
-                        <label className="text-text-muted font-semibold uppercase text-[9px] tracking-wider">Failure Mechanism Subdivision</label>
-                        <select
-                          value={formFields.failureMechanismSubdivision || 'Mechanical Failure - Vibration'}
-                          onChange={e => setFormFields({ ...formFields, failureMechanismSubdivision: e.target.value })}
-                          className="bg-[#121626] border border-[#2a3254] rounded-lg p-2.5 text-text-primary focus:border-accent-blue outline-none cursor-pointer text-xs w-full"
-                        >
-                          {FAILURE_MECHANISM_SUBDIVISION_OPTIONS.map((opt) => (
-                            <option key={opt} value={opt} className="bg-[#121626]">
-                              {opt}
-                            </option>
-                          ))}
-                        </select>
-                      </div>
-                    </div>
+                    <input
+                      type="text"
+                      readOnly
+                      value={selectedEquipment?.class || formFields.equipmentClass || 'equipmentClass_PUCE'}
+                      className="bg-[#121626]/70 border border-[#2a3254]/60 rounded-lg p-2.5 text-text-primary/90 text-xs font-mono cursor-not-allowed select-all"
+                    />
                   </div>
-                );
-              })()}
+
+                  {/* Failure Mode Dropdown (Vibration or Oil depending on analysisType) */}
+                  <div className="flex flex-col gap-1.5">
+                    <label className="text-text-muted font-semibold uppercase text-[9px] tracking-wider">Failure Mode</label>
+                    <select
+                      value={formFields.failureModeDescription || (analysisType === 'Vibration' ? VIBRATION_FAILURE_MODES[0] : OIL_FAILURE_MODES[0].value)}
+                      onChange={e => setFormFields({ ...formFields, failureModeDescription: e.target.value })}
+                      className="bg-[#121626] border border-[#2a3254] rounded-lg p-2.5 text-text-primary focus:border-accent-blue outline-none cursor-pointer text-xs w-full"
+                    >
+                      {analysisType === 'Vibration'
+                        ? VIBRATION_FAILURE_MODES.map((mode) => (
+                            <option key={mode} value={mode} className="bg-[#121626]">
+                              {mode}
+                            </option>
+                          ))
+                        : OIL_FAILURE_MODES.map((oilMode) => (
+                            <option key={oilMode.value} value={oilMode.value} className="bg-[#121626]">
+                              {oilMode.label}
+                            </option>
+                          ))
+                      }
+                    </select>
+                  </div>
+                </div>
+              </div>
 
               {/* Bloco 2: Avaliação da Condição & Recomendações */}
               <div className="bg-[#101422]/60 p-4 border border-[#202742] rounded-xl flex flex-col gap-4">

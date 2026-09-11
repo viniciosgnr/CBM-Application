@@ -628,11 +628,36 @@ export async function seed() {
       crit = 'Low';
     }
 
+    const tagUpper = (eq.tag || '').toUpperCase();
+    const nameUpper = (eq.name || '').toUpperCase();
+    let eqClass = 'equipmentClass_PUCE';
+    if (tagUpper.includes('PURE') || nameUpper.includes('RECIPROCATING')) {
+      eqClass = 'equipmentClass_PURE';
+    } else if (tagUpper.includes('PUCE') || nameUpper.includes('PUMP')) {
+      eqClass = 'equipmentClass_PUCE';
+    } else if (tagUpper.includes('COSC') || nameUpper.includes('SCREW')) {
+      eqClass = 'equipmentClass_COSC';
+    } else if (tagUpper.includes('COCE') || nameUpper.includes('COMPRESSOR')) {
+      eqClass = 'equipmentClass_COCE';
+    } else if (tagUpper.includes('COBL') || nameUpper.includes('FAN') || nameUpper.includes('BLOWER')) {
+      eqClass = 'equipmentClass_COBL';
+    } else if (tagUpper.includes('PKAC') || tagUpper.includes('PKPD') || nameUpper.includes('PACKAGE') || nameUpper.includes('AIR')) {
+      eqClass = 'equipmentClass_PKAC';
+    } else if (tagUpper.includes('DRDE') || nameUpper.includes('DIESEL') || nameUpper.includes('GENERATOR') || nameUpper.includes('TURBINE') || eq.class === 'Power Generator') {
+      eqClass = 'equipmentClass_DRDE';
+    } else if (eq.class === 'Centrifugal Pump') {
+      eqClass = 'equipmentClass_PUCE';
+    } else if (eq.class === 'Gas Compressor') {
+      eqClass = 'equipmentClass_COCE';
+    } else if (eq.class === 'Fan/Blower') {
+      eqClass = 'equipmentClass_COBL';
+    }
+
     return {
       tag: eq.tag,
       fpso: eq.tag.includes('_') ? eq.tag.split('_')[0] : (eq.fpso || 'DNY'),
       name: eq.name,
-      class: eq.class || 'Rotating Equipment',
+      class: eqClass,
       system: eq.system || 'Process Utilities',
       criticality: crit,
       objectType: eq.objectType || 'SECE',
@@ -722,8 +747,18 @@ export async function seed() {
   await db.insert(equipments).values(sanitizedEquipments);
   await db.insert(equipmentHistory).values(expandedHistory);
   
+  const eqClassMap = new Map<string, string>();
+  sanitizedEquipments.forEach((e) => {
+    eqClassMap.set(e.tag, e.class);
+  });
+
+  const enrichedReports = mockReports.map((r) => ({
+    ...r,
+    equipmentClass: eqClassMap.get(r.equipmentTag) || 'equipmentClass_PUCE',
+  }));
+
   // Insert reports first and get their inserted IDs
-  const insertedReports = await db.insert(analysisReports).values(mockReports).returning();
+  const insertedReports = await db.insert(analysisReports).values(enrichedReports).returning();
   
   // Update reportId references in mockWorkOrders
   const updatedWorkOrders = mockWorkOrders.map((wo) => {
