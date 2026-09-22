@@ -1063,28 +1063,28 @@ export default function MainPage() {
     if (active && payload && payload.length) {
       const data = payload[0].payload;
       return (
-        <div className="bg-[#111827] border border-[#1e2a3a] p-3 rounded-lg shadow-xl text-[11px] text-[#a2b4cd] flex flex-col gap-1.5 select-none z-50">
-          <p className="font-bold text-[#e2e8f0] pb-1 border-b border-[#1e2a3a]">{data.name}</p>
-          <p className="flex items-center justify-between gap-3 text-[#60a5fa]">
-            <span className="flex items-center gap-1.5">
-              <span className="w-2 h-2 rounded-full bg-[#60a5fa]" />
+        <div className="bg-[#1a2136] border border-[#2b3655] p-3 rounded-lg shadow-2xl text-[11px] text-[#c5d0e6] flex flex-col gap-1.5 select-none z-50 min-w-[200px]">
+          <p className="font-bold text-[#f8fafc] pb-1 border-b border-[#2b3655]/60 text-xs">{data.name}</p>
+          <p className="flex items-center justify-between gap-3 text-xs">
+            <span className="flex items-center gap-1.5 text-[#94a3b8]">
+              <span className="w-2 h-2 rounded-full bg-[#10b981]" />
               Overall Status:
             </span>
-            <span className="font-semibold">{data.overallLabel}</span>
+            <span className="font-semibold text-[#10b981]">{data.overallLabel}</span>
           </p>
-          <p className="flex items-center justify-between gap-3 text-[#a855f7]">
-            <span className="flex items-center gap-1.5">
+          <p className="flex items-center justify-between gap-3 text-xs">
+            <span className="flex items-center gap-1.5 text-[#94a3b8]">
               <span className="w-2 h-2 rounded-full bg-[#a855f7]" />
               Vibration Status:
             </span>
-            <span className="font-semibold">{data.vibrationLabel}</span>
+            <span className="font-semibold text-[#c084fc]">{data.vibrationLabel}</span>
           </p>
-          <p className="flex items-center justify-between gap-3 text-[#f59e0b]">
-            <span className="flex items-center gap-1.5">
+          <p className="flex items-center justify-between gap-3 text-xs">
+            <span className="flex items-center gap-1.5 text-[#94a3b8]">
               <span className="w-2 h-2 rounded-full bg-[#f59e0b]" />
               Lube Oil Status:
             </span>
-            <span className="font-semibold">{data.lubeOilLabel}</span>
+            <span className="font-semibold text-[#fbbf24]">{data.lubeOilLabel}</span>
           </p>
         </div>
       );
@@ -2015,39 +2015,37 @@ export default function MainPage() {
 
               return (
                 <div className="mb-3">
-                  {/* Linha 1: Título + Badge + Botão Fechar */}
-                  <div className="flex items-center gap-2 pr-8">
-                    <h2 className="text-base font-bold text-text-primary">
-                      {selectedEquipment.tag} - {selectedEquipment.name.charAt(0).toUpperCase() + selectedEquipment.name.slice(1).toLowerCase()}
-                    </h2>
-                    <span className="text-[10px] bg-[#222944] text-[#94a3b8] px-2 py-0.5 rounded border border-[#333e68] font-semibold uppercase tracking-wider flex-shrink-0">
-                      {selectedEquipment.system}
-                    </span>
+                  {/* Breadcrumb SLB Figma */}
+                  <div className="text-[11px] text-[#8a94a6] font-medium tracking-wide mb-1">
+                    Equipment Detail
                   </div>
 
-                  {/* Linha 2: Overall CBM status • Risk Score */}
-                  <div className="flex flex-wrap items-center justify-between gap-2 text-xs text-text-muted mt-3 font-medium bg-[#101422]/70 border border-[#202742] p-2.5 rounded-xl">
-                    <div className="flex items-center gap-2">
-                      <span>Overall CBM status:</span>
-                      <span className={`font-bold ${
-                        modalOverallCondition?.includes('Good') ? 'text-status-ok' :
-                        modalOverallCondition?.includes('Degraded') ? 'text-status-warn' :
-                        modalOverallCondition?.includes('Critical') ? 'text-status-error' : 'text-text-muted'
-                      }`}>
-                        {modalOverallCondition}
-                      </span>
+                  {/* Header: Tag + Name + Classification + Criticality Badge */}
+                  <div className="flex items-start justify-between gap-3 pr-8">
+                    <div>
+                      <h2 className="text-lg font-bold text-[#f8fafc] tracking-tight">
+                        {selectedEquipment.tag} {selectedEquipment.name}
+                      </h2>
+                      <div className="text-xs text-[#8a94a6] mt-0.5 font-medium">
+                        {selectedEquipment.class ? `${selectedEquipment.class}-` : ''}{selectedEquipment.name}
+                      </div>
+
+                      <div className="flex items-center gap-2.5 mt-2.5">
+                        <span 
+                          className="bg-[#ef4444] text-white text-[11px] font-bold px-2 py-0.5 rounded flex items-center justify-center shadow-sm cursor-help"
+                          title={`Risk Score: ${modalScore} (${getRiskCategory(modalScore).category})`}
+                        >
+                          {modalScore || selectedEquipment.criticality || '16'}
+                        </span>
+                        <span className="text-[11px] text-[#8a94a6] font-medium">
+                          Overall CBM status: <strong className={`font-semibold ${
+                            modalOverallCondition?.includes('Good') ? 'text-[#10b981]' :
+                            modalOverallCondition?.includes('Degraded') ? 'text-[#f59e0b]' :
+                            modalOverallCondition?.includes('Critical') ? 'text-[#ef4444]' : 'text-[#8a94a6]'
+                          }`}>{modalOverallCondition}</strong>
+                        </span>
+                      </div>
                     </div>
-                    {(() => {
-                      const riskCat = getRiskCategory(modalScore);
-                      return (
-                        <div className="flex items-center gap-1.5">
-                          <span>Risk:</span>
-                          <strong className={`font-bold text-xs ${riskCat.colorClass}`} title={`Risk Score: ${modalScore} (Matrix 3×4)`}>
-                            {riskCat.category} ({modalScore})
-                          </strong>
-                        </div>
-                      );
-                    })()}
                   </div>
                 </div>
               );
@@ -2071,71 +2069,97 @@ export default function MainPage() {
                 return (
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-xs">
                     {/* Vibration Status Card */}
-                    <div className="bg-[#101422]/60 p-3.5 border border-[#202742] rounded-xl flex flex-col justify-between gap-3 h-full">
+                    <div className="bg-[#131929] p-3.5 border border-[#232c45] rounded-xl flex flex-col justify-between gap-3 h-full shadow-sm">
                       {/* Linha 1: Topo (Ícone + Título + Read-only Frequency Badge from DB) */}
                       <div className="flex items-center justify-between gap-2">
                         <div className="flex items-center gap-2 min-w-0">
-                          <div className="w-7 h-7 rounded-lg bg-[#161c30] border border-[#263152] flex items-center justify-center text-[#3b82f6] shrink-0">
+                          <div className="w-7 h-7 rounded-lg bg-[#1a233d] border border-[#2d3a5e] flex items-center justify-center text-[#3b82f6] shrink-0">
                             <svg className="w-3.5 h-3.5 stroke-current" fill="none" viewBox="0 0 24 24" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                               <path d="M2 12h3l3-8 4 16 3-10 2 4h3" />
                             </svg>
                           </div>
-                          <span className="text-text-muted font-bold uppercase text-[10px] tracking-wider whitespace-nowrap truncate">
-                            Vibration Analysis
+                          <span className="text-[#f1f5f9] font-bold uppercase text-[10px] tracking-wider whitespace-nowrap truncate">
+                            VIBRATION ANALYSIS
                           </span>
                         </div>
 
                         {/* Read-only Frequency Badge */}
-                        <span className="bg-[#121626] border border-[#2a3556] text-text-muted text-[10px] font-semibold rounded-full px-2.5 py-0.5 shrink-0" title="Routine collection frequency ingested from database">
+                        <span className="bg-[#1a2034] border border-[#283556] text-[#94a3b8] text-[10px] font-semibold rounded-full px-2.5 py-0.5 shrink-0" title="Routine collection frequency ingested from database">
                           {vibFreq}
                         </span>
                       </div>
 
                       {/* Linha 2: Centro (Status CBM) */}
-                      <div className="flex items-center gap-2 pl-0.5">
-                        {getStatusDot(formatSurveillanceTier(selectedEquipment.vibrationStatus))}
+                      <div className="flex items-center gap-2 pl-0.5 text-xs font-semibold">
+                        <span className={`w-2 h-2 rounded-full ${
+                          selectedEquipment.vibrationStatus?.includes('Good') ? 'bg-[#10b981]' :
+                          selectedEquipment.vibrationStatus?.includes('Degraded') ? 'bg-[#f59e0b]' :
+                          selectedEquipment.vibrationStatus?.includes('Critical') ? 'bg-[#ef4444]' : 'bg-[#6b7280]'
+                        }`} />
+                        <span className={
+                          selectedEquipment.vibrationStatus?.includes('Good') ? 'text-[#10b981]' :
+                          selectedEquipment.vibrationStatus?.includes('Degraded') ? 'text-[#f59e0b]' :
+                          selectedEquipment.vibrationStatus?.includes('Critical') ? 'text-[#f87171]' : 'text-[#94a3b8]'
+                        }>
+                          {selectedEquipment.vibrationStatus || 'Good - Tier 4'}
+                        </span>
                       </div>
 
                       {/* Linha 3: Rodapé (Last & Next) */}
-                      <div className="flex items-center justify-between text-[10px] text-text-muted font-medium pt-2 border-t border-[#1a2035]">
-                        <span>Last: <strong className="text-text-primary">{vibLastDateStr}</strong></span>
-                        <span className={vibNext.isOverdue ? "text-status-error font-bold" : "text-status-ok font-semibold"}>
-                          Next: {vibNext.plannedDateStr}
+                      <div className="flex items-center justify-between text-[11px] text-[#8a94a6] font-medium pt-2 border-t border-[#1e2538]">
+                        <span>Last: <strong className="text-[#f8fafc] font-semibold">{vibLastDateStr}</strong></span>
+                        <span>
+                          Next: <strong className={vibNext.isOverdue ? "text-[#ef4444] font-bold" : "text-[#38bdf8] font-semibold"}>
+                            {vibNext.plannedDateStr}
+                          </strong>
                         </span>
                       </div>
                     </div>
 
                     {/* Lube Oil Status Card */}
-                    <div className="bg-[#101422]/60 p-3.5 border border-[#202742] rounded-xl flex flex-col justify-between gap-3 h-full">
+                    <div className="bg-[#131929] p-3.5 border border-[#232c45] rounded-xl flex flex-col justify-between gap-3 h-full shadow-sm">
                       {/* Linha 1: Topo (Ícone + Título + Read-only Frequency Badge from DB) */}
                       <div className="flex items-center justify-between gap-2">
                         <div className="flex items-center gap-2 min-w-0">
-                          <div className="w-7 h-7 rounded-lg bg-[#161c30] border border-[#263152] flex items-center justify-center text-[#3b82f6] shrink-0">
+                          <div className="w-7 h-7 rounded-lg bg-[#1a233d] border border-[#2d3a5e] flex items-center justify-center text-[#3b82f6] shrink-0">
                             <svg className="w-3.5 h-3.5 stroke-current" fill="none" viewBox="0 0 24 24" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                               <path d="M12 2.69l5.66 5.66a8 8 0 1 1-11.31 0z" />
                             </svg>
                           </div>
-                          <span className="text-text-muted font-bold uppercase text-[10px] tracking-wider whitespace-nowrap truncate">
-                            Lube Oil Analysis
+                          <span className="text-[#f1f5f9] font-bold uppercase text-[10px] tracking-wider whitespace-nowrap truncate">
+                            LUBE OIL ANALYSIS
                           </span>
                         </div>
 
                         {/* Read-only Frequency Badge */}
-                        <span className="bg-[#121626] border border-[#2a3556] text-text-muted text-[10px] font-semibold rounded-full px-2.5 py-0.5 shrink-0" title="Routine collection frequency ingested from database">
+                        <span className="bg-[#1a2034] border border-[#283556] text-[#94a3b8] text-[10px] font-semibold rounded-full px-2.5 py-0.5 shrink-0" title="Routine collection frequency ingested from database">
                           {oilFreq}
                         </span>
                       </div>
 
                       {/* Linha 2: Centro (Status CBM) */}
-                      <div className="flex items-center gap-2 pl-0.5">
-                        {getStatusDot(formatSurveillanceTier(selectedEquipment.lubeOilStatus))}
+                      <div className="flex items-center gap-2 pl-0.5 text-xs font-semibold">
+                        <span className={`w-2 h-2 rounded-full ${
+                          selectedEquipment.lubeOilStatus?.includes('Good') ? 'bg-[#10b981]' :
+                          selectedEquipment.lubeOilStatus?.includes('Degraded') ? 'bg-[#f59e0b]' :
+                          selectedEquipment.lubeOilStatus?.includes('Critical') ? 'bg-[#ef4444]' : 'bg-[#6b7280]'
+                        }`} />
+                        <span className={
+                          selectedEquipment.lubeOilStatus?.includes('Good') ? 'text-[#10b981]' :
+                          selectedEquipment.lubeOilStatus?.includes('Degraded') ? 'text-[#f59e0b]' :
+                          selectedEquipment.lubeOilStatus?.includes('Critical') ? 'text-[#f87171]' : 'text-[#94a3b8]'
+                        }>
+                          {selectedEquipment.lubeOilStatus || 'Good - Tier 4'}
+                        </span>
                       </div>
 
                       {/* Linha 3: Rodapé (Last & Next) */}
-                      <div className="flex items-center justify-between text-[10px] text-text-muted font-medium pt-2 border-t border-[#1a2035]">
-                        <span>Last: <strong className="text-text-primary">{oilLastDateStr}</strong></span>
-                        <span className={oilNext.isOverdue ? "text-status-error font-bold" : "text-status-ok font-semibold"}>
-                          Next: {oilNext.plannedDateStr}
+                      <div className="flex items-center justify-between text-[11px] text-[#8a94a6] font-medium pt-2 border-t border-[#1e2538]">
+                        <span>Last: <strong className="text-[#f8fafc] font-semibold">{oilLastDateStr}</strong></span>
+                        <span>
+                          Next: <strong className={oilNext.isOverdue ? "text-[#ef4444] font-bold" : "text-[#10b981] font-semibold"}>
+                            {oilNext.plannedDateStr}
+                          </strong>
                         </span>
                       </div>
                     </div>
@@ -2144,16 +2168,16 @@ export default function MainPage() {
               })()}
 
               {/* Read-only Observation Card */}
-              <div className="bg-[#101422]/60 p-3.5 border border-[#202742] rounded-xl flex flex-col gap-1.5 text-xs">
-                <span className="text-text-muted font-semibold uppercase text-[9px] tracking-wider">Latest Observation</span>
-                <p className="text-text-primary text-xs leading-relaxed">
+              <div className="bg-[#131929] p-3.5 border border-[#232c45] rounded-xl flex flex-col gap-1.5 text-xs shadow-sm">
+                <span className="text-[#8a94a6] font-bold uppercase text-[10px] tracking-wider">LATEST OBSERVATION</span>
+                <p className="text-[#f1f5f9] text-xs leading-relaxed font-medium">
                   {selectedEquipment.observation || 'No observations registered for this equipment.'}
                 </p>
               </div>
 
               {/* Grafico: Historical condition trend (Multi-line) */}
-              <div className="bg-[#101422]/40 border border-[#202742] p-4 rounded-xl">
-                <h4 className="text-xs font-bold text-text-primary mb-3">Historical condition trend</h4>
+              <div className="bg-[#131929] border border-[#232c45] p-4 rounded-xl shadow-sm">
+                <h4 className="text-xs font-bold text-[#f1f5f9] mb-3">Historical condition trend</h4>
                 
                 {mounted && history.length > 0 ? (
                   <ResponsiveContainer width="100%" height={220}>
@@ -2217,11 +2241,11 @@ export default function MainPage() {
               </div>
 
               {/* Modal Footer with Log New Analysis action button */}
-              <div className="flex items-center justify-end pt-3 border-t border-[#202742]">
+              <div className="flex items-center justify-end pt-3 border-t border-[#232c45]">
                 <button
                   type="button"
                   onClick={openReportForm}
-                  className="border border-[#2a3556] bg-[#121626] text-text-primary hover:border-accent-blue hover:text-accent-blue px-4 py-1.5 rounded-full text-xs font-medium whitespace-nowrap transition-colors cursor-pointer flex items-center gap-1.5"
+                  className="border border-[#2a3656] bg-[#121626] text-text-primary hover:border-accent-blue hover:text-accent-blue px-4 py-1.5 rounded-full text-xs font-medium whitespace-nowrap transition-colors cursor-pointer flex items-center gap-1.5 shadow-sm"
                 >
                   <PlusCircle size={13} />
                   Log new analysis
@@ -2237,259 +2261,273 @@ export default function MainPage() {
         <div className="fixed inset-0 bg-black/75 backdrop-blur-sm z-[999] flex items-center justify-center p-4">
           <form 
             onSubmit={handleReportSubmit}
-            className="bg-bg-card border border-border-panel rounded-card w-full max-w-[760px] relative animate-fadeIn shadow-2xl text-left overflow-hidden flex flex-col max-h-[90vh]"
+            className="bg-[#111625] border border-[#222b45] rounded-xl w-full max-w-[760px] relative animate-fadeIn shadow-2xl text-left overflow-hidden flex flex-col max-h-[90vh]"
           >
-            {/* Header da Modal SLB OptiSite Style */}
-            <div className="p-5 border-b border-border-panel relative">
+            {/* Header da Modal SLB Figma Style */}
+            <div className="px-6 py-5 border-b border-[#222b45] relative bg-[#111625]">
               <button
                 type="button"
                 onClick={() => setReportFormOpen(false)}
-                className="absolute top-4 right-4 text-text-muted hover:text-text-primary transition-colors cursor-pointer"
+                className="absolute top-5 right-5 text-[#8a94a6] hover:text-white transition-colors cursor-pointer p-1"
                 title="Close"
               >
-                <X size={18} />
+                <X size={20} />
               </button>
 
-              <div className="flex items-center gap-2 pr-8">
-                <h2 className="text-base font-bold text-text-primary">
-                  {selectedEquipment.tag} - {selectedEquipment.name.charAt(0).toUpperCase() + selectedEquipment.name.slice(1).toLowerCase()}
-                </h2>
-                <span className="text-[10px] bg-[#222944] text-[#94a3b8] px-2 py-0.5 rounded border border-[#333e68] font-semibold uppercase tracking-wider flex-shrink-0">
-                  {selectedEquipment.system}
-                </span>
-              </div>
+              <h2 className="text-base font-bold text-[#f8fafc] tracking-tight">
+                Submit CBM Analysis Report
+              </h2>
 
-              <div className="flex items-center gap-2 text-xs text-text-muted mt-1.5 font-medium">
+              <div className="flex items-center gap-2 text-xs text-[#8a94a6] mt-2 font-medium">
                 <span>Overall CBM status:</span>
-                <span className={`font-bold ${
-                  selectedEquipment.condition?.startsWith('Good') ? 'text-status-ok' :
-                  selectedEquipment.condition?.startsWith('Degraded') ? 'text-status-warn' :
-                  selectedEquipment.condition?.startsWith('Critical') ? 'text-status-error' : 'text-text-muted'
+                <span className={`font-semibold ${
+                  selectedEquipment.condition?.startsWith('Good') ? 'text-[#10b981]' :
+                  selectedEquipment.condition?.startsWith('Degraded') ? 'text-[#f59e0b]' :
+                  selectedEquipment.condition?.startsWith('Critical') ? 'text-[#f87171]' : 'text-[#8a94a6]'
                 }`}>
                   {selectedEquipment.condition}
                 </span>
               </div>
             </div>
 
-            {/* Conteúdo do Form em 2 Blocos SLB */}
-            <div className="p-5 flex-1 overflow-y-auto text-xs flex flex-col gap-4">
+            {/* Conteúdo do Form em Estilo SLB Figma */}
+            <div className="p-6 flex-1 overflow-y-auto text-xs flex flex-col gap-5 bg-[#111625]">
               
-              {/* Bloco 1: Parâmetros da Análise & Metadados */}
-              <div className="bg-[#101422]/60 p-4 border border-[#202742] rounded-xl flex flex-col gap-4">
-                <h4 className="text-[10px] font-bold text-text-muted uppercase tracking-wider">Analysis Parameters & Metadata</h4>
+              {/* Seção 1: Analysis Parameters & Metadata */}
+              <div className="flex flex-col gap-3">
+                <h4 className="text-[10px] font-bold text-[#8a94a6] uppercase tracking-wider">ANALYSIS PARAMETERS & METADATA</h4>
                 
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5">
                   {/* Analysis Type Dropdown */}
-                  <div className="flex flex-col gap-1.5 md:col-span-1">
-                    <label className="text-text-muted font-semibold uppercase text-[9px] tracking-wider">Analysis Type</label>
-                    <select
-                      value={analysisType}
-                      onChange={(e) => {
-                        const val = e.target.value as 'Vibration' | 'Lube Oil';
-                        setAnalysisType(val);
-                        setFormFields(prev => ({
-                          ...prev,
-                          technology: val === 'Vibration' ? 'Vibration Analysis' : 'Lube Oil Analysis',
-                          failureModeDescription: val === 'Vibration' ? VIBRATION_FAILURE_MODES[0] : OIL_FAILURE_MODES[0].value,
-                        }));
-                      }}
-                      className="bg-[#121626] border border-[#2a3254] rounded-lg p-2.5 text-text-primary focus:border-accent-blue outline-none cursor-pointer text-xs w-full"
-                    >
-                      <option value="Vibration">Vibration Analysis</option>
-                      <option value="Lube Oil">Lube Oil Analysis</option>
-                    </select>
+                  <div className="flex flex-col gap-1.5">
+                    <label className="text-[#94a3b8] font-medium text-xs">Analysis Type</label>
+                    <div className="relative">
+                      <select
+                        value={analysisType}
+                        onChange={(e) => {
+                          const val = e.target.value as 'Vibration' | 'Lube Oil';
+                          setAnalysisType(val);
+                          setFormFields(prev => ({
+                            ...prev,
+                            technology: val === 'Vibration' ? 'Vibration Analysis' : 'Lube Oil Analysis',
+                            failureModeDescription: val === 'Vibration' ? VIBRATION_FAILURE_MODES[0] : OIL_FAILURE_MODES[0].value,
+                          }));
+                        }}
+                        className="w-full bg-[#0c101d] border border-[#232a42] rounded-md px-3 py-2 text-[#f1f5f9] focus:border-[#3b82f6] outline-none cursor-pointer text-xs appearance-none pr-8"
+                      >
+                        <option value="Vibration" className="bg-[#0c101d]">Vibration Analysis</option>
+                        <option value="Lube Oil" className="bg-[#0c101d]">Lube Oil Analysis</option>
+                      </select>
+                      <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2.5 text-[#8a94a6]">
+                        <svg className="w-3.5 h-3.5 fill-current" viewBox="0 0 20 20"><path d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z"/></svg>
+                      </div>
+                    </div>
                   </div>
 
                   {/* Unified CBM Status Dropdown */}
-                  <div className="flex flex-col gap-1.5 md:col-span-2">
-                    <label className="text-text-muted font-semibold uppercase text-[9px] tracking-wider">CBM Status</label>
-                    <select
-                      value={formFields.cbmStatus}
-                      onChange={e => setFormFields({ ...formFields, cbmStatus: e.target.value })}
-                      className="bg-[#121626] border border-[#2a3254] rounded-lg p-2.5 text-text-primary focus:border-accent-blue outline-none cursor-pointer text-xs w-full"
-                    >
-                      <option value="Good - Tier 4" className="bg-[#121626]">Good - Tier 4</option>
-                      <option value="Good - Tier 3" className="bg-[#121626]">Good - Tier 3</option>
-                      <option value="Degraded - Tier 2" className="bg-[#121626]">Degraded - Tier 2</option>
-                      <option value="Critical - Tier 1" className="bg-[#121626]">Critical - Tier 1</option>
-                    </select>
+                  <div className="flex flex-col gap-1.5">
+                    <label className="text-[#94a3b8] font-medium text-xs">CBM Status</label>
+                    <div className="relative">
+                      <select
+                        value={formFields.cbmStatus}
+                        onChange={e => setFormFields({ ...formFields, cbmStatus: e.target.value })}
+                        className="w-full bg-[#0c101d] border border-[#232a42] rounded-md px-3 py-2 text-[#f1f5f9] focus:border-[#3b82f6] outline-none cursor-pointer text-xs appearance-none pr-8"
+                      >
+                        <option value="Good - Tier 4" className="bg-[#0c101d]">Good - Tier 4</option>
+                        <option value="Good - Tier 3" className="bg-[#0c101d]">Good - Tier 3</option>
+                        <option value="Degraded - Tier 2" className="bg-[#0c101d]">Degraded - Tier 2</option>
+                        <option value="Critical - Tier 1" className="bg-[#0c101d]">Critical - Tier 1</option>
+                      </select>
+                      <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2.5 text-[#8a94a6]">
+                        <svg className="w-3.5 h-3.5 fill-current" viewBox="0 0 20 20"><path d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z"/></svg>
+                      </div>
+                    </div>
                   </div>
                 </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5">
                   <div className="flex flex-col gap-1.5">
-                    <label className="text-text-muted font-semibold uppercase text-[9px] tracking-wider">Component</label>
+                    <label className="text-[#94a3b8] font-medium text-xs">Component</label>
                     <input
                       type="text"
                       required
                       placeholder="e.g. Compressor"
                       value={formFields.component}
                       onChange={e => setFormFields({ ...formFields, component: e.target.value })}
-                      className="bg-[#121626] border border-[#2a3254] rounded-lg p-2.5 text-text-primary focus:border-accent-blue outline-none transition-colors text-xs"
+                      className="bg-[#0c101d] border border-[#232a42] rounded-md px-3 py-2 text-[#f1f5f9] focus:border-[#3b82f6] outline-none transition-colors text-xs placeholder:text-[#475569]"
                     />
                   </div>
 
                   <div className="flex flex-col gap-1.5">
-                    <label className="text-text-muted font-semibold uppercase text-[9px] tracking-wider">Raised By</label>
+                    <label className="text-[#94a3b8] font-medium text-xs">Raised By</label>
                     <input
                       type="text"
                       required
                       value={formFields.raisedBy}
                       onChange={e => setFormFields({ ...formFields, raisedBy: e.target.value })}
-                      className="bg-[#121626] border border-[#2a3254] rounded-lg p-2.5 text-text-primary focus:border-accent-blue outline-none transition-colors text-xs"
+                      className="bg-[#0c101d] border border-[#232a42] rounded-md px-3 py-2 text-[#f1f5f9] focus:border-[#3b82f6] outline-none transition-colors text-xs"
                     />
                   </div>
                 </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5">
                   <div className="flex flex-col gap-1.5">
-                    <label className="text-text-muted font-semibold uppercase text-[9px] tracking-wider">Raised Date</label>
+                    <label className="text-[#94a3b8] font-medium text-xs">Raised Date</label>
                     <input
                       type="date"
                       required
                       value={formFields.raisedDate}
                       onChange={e => setFormFields({ ...formFields, raisedDate: e.target.value })}
-                      className="bg-[#121626] border border-[#2a3254] rounded-lg p-2.5 text-text-primary focus:border-accent-blue outline-none transition-colors cursor-pointer text-xs"
+                      className="bg-[#0c101d] border border-[#232a42] rounded-md px-3 py-2 text-[#f1f5f9] focus:border-[#3b82f6] outline-none transition-colors cursor-pointer text-xs"
                     />
                   </div>
                   <div className="flex flex-col gap-1.5">
-                    <label className="text-text-muted font-semibold uppercase text-[9px] tracking-wider">Target Date</label>
+                    <label className="text-[#94a3b8] font-medium text-xs">Target Date</label>
                     <input
                       type="date"
                       required
                       value={formFields.targetDate}
                       onChange={e => setFormFields({ ...formFields, targetDate: e.target.value })}
-                      className="bg-[#121626] border border-[#2a3254] rounded-lg p-2.5 text-text-primary focus:border-accent-blue outline-none transition-colors cursor-pointer text-xs"
+                      className="bg-[#0c101d] border border-[#232a42] rounded-md px-3 py-2 text-[#f1f5f9] focus:border-[#3b82f6] outline-none transition-colors cursor-pointer text-xs"
                     />
                   </div>
                 </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5">
                   <div className="flex flex-col gap-1.5">
-                    <label className="text-text-muted font-semibold uppercase text-[9px] tracking-wider">Short Description</label>
+                    <label className="text-[#94a3b8] font-medium text-xs">Short Description</label>
                     <input
                       type="text"
                       required
                       placeholder="e.g. Instrumentation Failure"
                       value={formFields.shortDescription}
                       onChange={e => setFormFields({ ...formFields, shortDescription: e.target.value })}
-                      className="bg-[#121626] border border-[#2a3254] rounded-lg p-2.5 text-text-primary focus:border-accent-blue outline-none transition-colors text-xs"
+                      className="bg-[#0c101d] border border-[#232a42] rounded-md px-3 py-2 text-[#f1f5f9] focus:border-[#3b82f6] outline-none transition-colors text-xs placeholder:text-[#475569]"
                     />
                   </div>
 
                   <div className="flex flex-col gap-1.5">
-                    <label className="text-text-muted font-semibold uppercase text-[9px] tracking-wider">Work Order Number (Optional)</label>
+                    <label className="text-[#94a3b8] font-medium text-xs">Work Order Number (Optional)</label>
                     <input
                       type="text"
                       placeholder="e.g. 1089487"
                       value={formFields.woNumber}
                       onChange={e => setFormFields({ ...formFields, woNumber: e.target.value })}
-                      className="bg-[#121626] border border-[#2a3254] rounded-lg p-2.5 text-text-primary focus:border-accent-blue outline-none transition-colors text-xs"
+                      className="bg-[#0c101d] border border-[#232a42] rounded-md px-3 py-2 text-[#f1f5f9] focus:border-[#3b82f6] outline-none transition-colors text-xs placeholder:text-[#475569]"
                     />
                   </div>
                 </div>
               </div>
 
-              {/* Bloco Failure Mode Details */}
-              <div className="bg-[#101422]/60 p-4 border border-[#202742] rounded-xl flex flex-col gap-4">
-                <h4 className="text-[10px] font-bold text-text-muted uppercase tracking-wider">Failure Mode Details</h4>
+              {/* Seção 2: Failure Mode Details */}
+              <div className="flex flex-col gap-3 pt-2">
+                <h4 className="text-[10px] font-bold text-[#8a94a6] uppercase tracking-wider">FAILURE MODE DETAILS</h4>
                 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5">
                   {/* Equipment Class (Read-only, loaded from selected equipment) */}
                   <div className="flex flex-col gap-1.5">
                     <div className="flex items-center justify-between">
-                      <label className="text-text-muted font-semibold uppercase text-[9px] tracking-wider">Equipment Class</label>
-                      <span className="text-[9px] text-text-muted/70 italic">Read-only from asset</span>
+                      <label className="text-[#94a3b8] font-medium text-xs">Equipment Class</label>
+                      <span className="text-[10px] text-[#8a94a6]/80 italic">Read-only from asset</span>
                     </div>
                     <input
                       type="text"
                       readOnly
-                      value={selectedEquipment?.class || formFields.equipmentClass || 'equipmentClass_PUCE'}
-                      className="bg-[#121626]/70 border border-[#2a3254]/60 rounded-lg p-2.5 text-text-primary/90 text-xs font-mono cursor-not-allowed select-all"
+                      value={selectedEquipment?.class || formFields.equipmentClass || 'equipmentClass_PKAC'}
+                      className="bg-[#0c101d]/80 border border-[#232a42]/70 rounded-md px-3 py-2 text-[#94a3b8] text-xs font-mono cursor-not-allowed select-all"
                     />
                   </div>
 
-                  {/* Failure Mode Dropdown (Vibration or Oil depending on analysisType) */}
+                  {/* Failure Mode Dropdown */}
                   <div className="flex flex-col gap-1.5">
-                    <label className="text-text-muted font-semibold uppercase text-[9px] tracking-wider">Failure Mode</label>
-                    <select
-                      value={formFields.failureModeDescription || (analysisType === 'Vibration' ? VIBRATION_FAILURE_MODES[0] : OIL_FAILURE_MODES[0].value)}
-                      onChange={e => setFormFields({ ...formFields, failureModeDescription: e.target.value })}
-                      className="bg-[#121626] border border-[#2a3254] rounded-lg p-2.5 text-text-primary focus:border-accent-blue outline-none cursor-pointer text-xs w-full"
-                    >
-                      {analysisType === 'Vibration'
-                        ? VIBRATION_FAILURE_MODES.map((mode) => (
-                            <option key={mode} value={mode} className="bg-[#121626]">
-                              {mode}
-                            </option>
-                          ))
-                        : OIL_FAILURE_MODES.map((oilMode) => (
-                            <option key={oilMode.value} value={oilMode.value} className="bg-[#121626]">
-                              {oilMode.label}
-                            </option>
-                          ))
-                      }
-                    </select>
+                    <label className="text-[#94a3b8] font-medium text-xs">Failure Mode</label>
+                    <div className="relative">
+                      <select
+                        value={formFields.failureModeDescription || (analysisType === 'Vibration' ? VIBRATION_FAILURE_MODES[0] : OIL_FAILURE_MODES[0].value)}
+                        onChange={e => setFormFields({ ...formFields, failureModeDescription: e.target.value })}
+                        className="w-full bg-[#0c101d] border border-[#232a42] rounded-md px-3 py-2 text-[#f1f5f9] focus:border-[#3b82f6] outline-none cursor-pointer text-xs appearance-none pr-8"
+                      >
+                        {analysisType === 'Vibration'
+                          ? VIBRATION_FAILURE_MODES.map((mode) => (
+                              <option key={mode} value={mode} className="bg-[#0c101d]">
+                                {mode}
+                              </option>
+                            ))
+                          : OIL_FAILURE_MODES.map((oilMode) => (
+                              <option key={oilMode.value} value={oilMode.value} className="bg-[#0c101d]">
+                                {oilMode.label}
+                              </option>
+                            ))
+                        }
+                      </select>
+                      <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2.5 text-[#8a94a6]">
+                        <svg className="w-3.5 h-3.5 fill-current" viewBox="0 0 20 20"><path d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z"/></svg>
+                      </div>
+                    </div>
                   </div>
                 </div>
               </div>
 
-              {/* Bloco 2: Avaliação da Condição & Recomendações */}
-              <div className="bg-[#101422]/60 p-4 border border-[#202742] rounded-xl flex flex-col gap-4">
-                <h4 className="text-[10px] font-bold text-text-muted uppercase tracking-wider">Condition Assessment & Recommendations</h4>
+              {/* Seção 3: Condition Assessment & Recommendations */}
+              <div className="flex flex-col gap-3.5 pt-2">
+                <h4 className="text-[10px] font-bold text-[#8a94a6] uppercase tracking-wider">CONDITION ASSESSMENT & RECOMMENDATIONS</h4>
 
                 <div className="flex flex-col gap-1.5">
-                  <label className="text-text-muted font-semibold uppercase text-[9px] tracking-wider">Condition Assessment (Observations)</label>
+                  <label className="text-[#94a3b8] font-medium text-xs">Condition assessment (observations)</label>
                   <textarea
                     rows={3}
                     required
                     placeholder="Insert detailed observations regarding the equipment conditions..."
                     value={formFields.conditionAssessment}
                     onChange={e => setFormFields({ ...formFields, conditionAssessment: e.target.value })}
-                    className="bg-[#121626] border border-[#2a3254] rounded-lg p-2.5 text-text-primary focus:border-accent-blue focus:outline-none transition-colors text-xs resize-none"
+                    className="bg-[#0c101d] border border-[#232a42] rounded-md px-3 py-2 text-[#f1f5f9] focus:border-[#3b82f6] outline-none transition-colors text-xs resize-none placeholder:text-[#475569]"
                   />
                 </div>
 
                 <div className="flex flex-col gap-1.5">
-                  <label className="text-text-muted font-semibold uppercase text-[9px] tracking-wider">Long Description (Recommendations)</label>
+                  <label className="text-[#94a3b8] font-medium text-xs">Long description (recommendations)</label>
                   <textarea
                     rows={3}
                     required
-                    placeholder="Insert recommended maintenance actions (e.g. Check connections, replace sensors, top up oil)..."
+                    placeholder="Insert recommended maintenance actions (e.g.: Check connections, replace sensors, top up oil)..."
                     value={formFields.longDescription}
                     onChange={e => setFormFields({ ...formFields, longDescription: e.target.value })}
-                    className="bg-[#121626] border border-[#2a3254] rounded-lg p-2.5 text-text-primary focus:border-accent-blue focus:outline-none transition-colors text-xs resize-none"
+                    className="bg-[#0c101d] border border-[#232a42] rounded-md px-3 py-2 text-[#f1f5f9] focus:border-[#3b82f6] outline-none transition-colors text-xs resize-none placeholder:text-[#475569]"
                   />
                 </div>
 
-                <div className="flex flex-col gap-1.5">
-                  <label className="text-text-muted font-semibold uppercase text-[9px] tracking-wider">Attach Supporting Image / Screenshot</label>
-                  <div className="bg-[#121626] border border-[#2a3254] rounded-lg p-2 flex items-center gap-3">
-                    <label htmlFor="modal-file-upload" className="px-3 py-1 rounded-full text-xs font-semibold bg-[#60a5fa] text-[#090d16] hover:bg-[#3b82f6] cursor-pointer transition-colors shrink-0">
-                      Choose File
-                    </label>
-                    <span className="text-xs text-text-muted truncate">
-                      {formFields.imageUrl ? 'Image attached' : 'No file chosen'}
-                    </span>
-                    <input
-                      id="modal-file-upload"
-                      type="file"
-                      accept="image/*"
-                      onChange={(e) => {
-                        const file = e.target.files?.[0];
-                        if (file) {
-                          const reader = new FileReader();
-                          reader.onloadend = () => {
-                            setFormFields(prev => ({ ...prev, imageUrl: reader.result as string }));
-                          };
-                          reader.readAsDataURL(file);
-                        }
-                      }}
-                      className="hidden"
-                    />
-                  </div>
+                {/* Seção 4: Attachments (Optional) - Dashed Dropzone */}
+                <div className="flex flex-col gap-1.5 pt-1">
+                  <label className="text-[#94a3b8] font-medium text-xs">Attachments (Optional)</label>
+                  <label
+                    htmlFor="modal-file-upload"
+                    className="border border-dashed border-[#2b3552] hover:border-[#3b82f6] rounded-md p-4 bg-[#0c101d]/60 flex items-center justify-center gap-2 text-xs text-[#8a94a6] cursor-pointer transition-colors group"
+                  >
+                    <svg className="w-4 h-4 stroke-current text-[#8a94a6] group-hover:text-[#3b82f6]" fill="none" viewBox="0 0 24 24" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                      <polyline points="17 8 12 3 7 8" />
+                      <line x1="12" y1="3" x2="12" y2="15" />
+                    </svg>
+                    <span>Drag and drop files or <span className="text-[#4589ff] font-medium hover:underline">browse</span></span>
+                  </label>
+                  <input
+                    id="modal-file-upload"
+                    type="file"
+                    accept="image/*"
+                    onChange={(e) => {
+                      const file = e.target.files?.[0];
+                      if (file) {
+                        const reader = new FileReader();
+                        reader.onloadend = () => {
+                          setFormFields(prev => ({ ...prev, imageUrl: reader.result as string }));
+                        };
+                        reader.readAsDataURL(file);
+                      }
+                    }}
+                    className="hidden"
+                  />
                   {formFields.imageUrl && (
-                    <div className="mt-2 relative w-32 h-20 border border-[#202742] rounded overflow-hidden">
+                    <div className="mt-2 relative w-32 h-20 border border-[#232a42] rounded overflow-hidden">
                       <img src={formFields.imageUrl} alt="Preview" className="w-full h-full object-cover" />
                       <button
                         type="button"
@@ -2506,18 +2544,18 @@ export default function MainPage() {
 
             </div>
 
-            {/* Footer / Navigation Actions SLB Style */}
-            <div className="p-4 border-t border-[#202742] bg-[#101422]/60 flex items-center justify-end gap-3 select-none">
+            {/* Footer com Botões Pílula SLB */}
+            <div className="px-6 py-4 border-t border-[#222b45] bg-[#111625] flex items-center justify-end gap-3 select-none">
               <button
                 type="button"
                 onClick={() => setReportFormOpen(false)}
-                className="border border-[#333e68] text-text-primary px-4 py-1.5 rounded-full text-xs font-medium hover:border-accent-blue transition-colors cursor-pointer"
+                className="border border-[#2b3552] text-[#cbd5e1] hover:text-white hover:border-[#475569] px-6 py-2 rounded-full text-xs font-medium transition-colors cursor-pointer"
               >
                 Cancel
               </button>
               <button
                 type="submit"
-                className="bg-[#60a5fa] hover:bg-[#3b82f6] text-[#090d16] font-semibold px-5 py-1.5 rounded-full text-xs transition-colors cursor-pointer shadow"
+                className="bg-[#5096ff] hover:bg-[#3b82f6] text-[#0a1020] font-semibold px-6 py-2 rounded-full text-xs shadow-md transition-colors cursor-pointer"
               >
                 Submit Report
               </button>
