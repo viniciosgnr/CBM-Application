@@ -48,6 +48,12 @@ import {
   getRiskCategory,
   calculateOverallHealth,
 } from '@/utils/riskMatrix';
+import {
+  TAXONOMY_DATA,
+  EQUIPMENT_CLASS_OPTIONS,
+  FAILURE_MODE_OPTIONS,
+  FAILURE_MECHANISM_SUBDIVISION_OPTIONS,
+} from '@/utils/taxonomy';
 
 interface Equipment {
   id: number;
@@ -803,6 +809,14 @@ export default function MainPage() {
     const today = new Date().toISOString().split('T')[0];
     const target = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]; // +30 days
 
+    const defaultClass = 'Centrifugal Compressor';
+    const availableSubunits = Object.keys(TAXONOMY_DATA[defaultClass] || {});
+    const defaultSubunit = availableSubunits[0] || 'Power Transmission';
+    const availableItems = TAXONOMY_DATA[defaultClass]?.[defaultSubunit] || [];
+    const defaultMaintainableItem = availableItems[0] || 'Coupling to the Driver';
+    const defaultFailureMode = 'VIB - Vibration';
+    const defaultFailureMech = 'Mechanical Failure - Vibration';
+
     setAnalysisType('Vibration');
     setFormFields({
       facility: `FPSO ${selectedEquipment.fpso}`,
@@ -827,11 +841,11 @@ export default function MainPage() {
       lubeOilStatus: selectedEquipment.lubeOilStatus,
       cbmStatus: selectedEquipment.condition || 'Good - Tier 4',
       imageUrl: '',
-      equipmentClass: selectedEquipment.class || 'equipmentClass_PUCE',
-      subunit: '',
-      maintainableItem: '',
-      failureModeDescription: VIBRATION_FAILURE_MODES[0],
-      failureMechanismSubdivision: '',
+      equipmentClass: defaultClass,
+      subunit: defaultSubunit,
+      maintainableItem: defaultMaintainableItem,
+      failureModeDescription: defaultFailureMode,
+      failureMechanismSubdivision: defaultFailureMech,
     });
 
     setReportFormOpen(true);
@@ -2310,7 +2324,6 @@ export default function MainPage() {
                           setFormFields(prev => ({
                             ...prev,
                             technology: val === 'Vibration' ? 'Vibration Analysis' : 'Lube Oil Analysis',
-                            failureModeDescription: val === 'Vibration' ? VIBRATION_FAILURE_MODES[0] : OIL_FAILURE_MODES[0].value,
                           }));
                         }}
                         className="w-full bg-[#0c101d] border border-[#232a42] rounded-md px-3 py-2 text-[#f1f5f9] focus:border-[#3b82f6] outline-none cursor-pointer text-xs appearance-none pr-8"
@@ -2423,42 +2436,179 @@ export default function MainPage() {
               <div className="flex flex-col gap-3 pt-2">
                 <h4 className="text-[10px] font-bold text-[#8a94a6] uppercase tracking-wider">FAILURE MODE DETAILS</h4>
                 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5">
-                  {/* Equipment Class (Read-only, loaded from selected equipment) */}
+                {/* Row 1: Equipment Class, Subunit, Maintainable Item */}
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-3.5">
+                  {/* Equipment Class */}
                   <div className="flex flex-col gap-1.5">
-                    <div className="flex items-center justify-between">
-                      <label className="text-[#94a3b8] font-medium text-xs">Equipment Class</label>
-                      <span className="text-[10px] text-[#8a94a6]/80 italic">Read-only from asset</span>
-                    </div>
-                    <input
-                      type="text"
-                      readOnly
-                      value={selectedEquipment?.class || formFields.equipmentClass || 'equipmentClass_PKAC'}
-                      className="bg-[#0c101d]/80 border border-[#232a42]/70 rounded-md px-3 py-2 text-[#94a3b8] text-xs font-mono cursor-not-allowed select-all"
-                    />
-                  </div>
-
-                  {/* Failure Mode Dropdown */}
-                  <div className="flex flex-col gap-1.5">
-                    <label className="text-[#94a3b8] font-medium text-xs">Failure Mode</label>
+                    <label className="text-[#8a94a6] font-bold text-[10px] uppercase tracking-wider">EQUIPMENT CLASS</label>
                     <div className="relative">
                       <select
-                        value={formFields.failureModeDescription || (analysisType === 'Vibration' ? VIBRATION_FAILURE_MODES[0] : OIL_FAILURE_MODES[0].value)}
-                        onChange={e => setFormFields({ ...formFields, failureModeDescription: e.target.value })}
-                        className="w-full bg-[#0c101d] border border-[#232a42] rounded-md px-3 py-2 text-[#f1f5f9] focus:border-[#3b82f6] outline-none cursor-pointer text-xs appearance-none pr-8"
+                        value={formFields.equipmentClass || EQUIPMENT_CLASS_OPTIONS[0]}
+                        onChange={(e) => {
+                          const newClass = e.target.value;
+                          if (newClass === 'N/A') {
+                            setFormFields({
+                              ...formFields,
+                              equipmentClass: 'N/A',
+                              subunit: 'N/A',
+                              maintainableItem: 'N/A',
+                            });
+                          } else {
+                            const newSubunits = Object.keys(TAXONOMY_DATA[newClass] || {});
+                            const newSubunit = newSubunits[0] || 'N/A';
+                            const newItems = TAXONOMY_DATA[newClass]?.[newSubunit] || [];
+                            const newItem = newItems[0] || 'N/A';
+                            setFormFields({
+                              ...formFields,
+                              equipmentClass: newClass,
+                              subunit: newSubunit,
+                              maintainableItem: newItem,
+                            });
+                          }
+                        }}
+                        className="w-full bg-[#0c101d] border border-[#232a42] rounded-md px-3 py-2 text-[#f1f5f9] focus:border-[#3b82f6] outline-none cursor-pointer text-xs appearance-none pr-8 transition-colors"
                       >
-                        {analysisType === 'Vibration'
-                          ? VIBRATION_FAILURE_MODES.map((mode) => (
-                              <option key={mode} value={mode} className="bg-[#0c101d]">
-                                {mode}
+                        <option value="N/A" className="bg-[#0c101d] text-[#f1f5f9]">
+                          N/A
+                        </option>
+                        {EQUIPMENT_CLASS_OPTIONS.map((cls) => (
+                          <option key={cls} value={cls} className="bg-[#0c101d] text-[#f1f5f9]">
+                            {cls}
+                          </option>
+                        ))}
+                      </select>
+                      <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2.5 text-[#8a94a6]">
+                        <svg className="w-3.5 h-3.5 fill-current" viewBox="0 0 20 20"><path d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z"/></svg>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Subunit */}
+                  <div className="flex flex-col gap-1.5">
+                    <label className="text-[#8a94a6] font-bold text-[10px] uppercase tracking-wider">SUBUNIT</label>
+                    <div className="relative">
+                      {(() => {
+                        const currentClass = formFields.equipmentClass || EQUIPMENT_CLASS_OPTIONS[0];
+                        const isClassNA = currentClass === 'N/A';
+                        const availableSubunits = isClassNA ? ['N/A'] : ['N/A', ...Object.keys(TAXONOMY_DATA[currentClass] || {})];
+                        return (
+                          <select
+                            value={formFields.subunit && availableSubunits.includes(formFields.subunit) ? formFields.subunit : availableSubunits[0] || 'N/A'}
+                            onChange={(e) => {
+                              const newSubunit = e.target.value;
+                              if (newSubunit === 'N/A' || isClassNA) {
+                                setFormFields({
+                                  ...formFields,
+                                  subunit: 'N/A',
+                                  maintainableItem: 'N/A',
+                                });
+                              } else {
+                                const newItems = TAXONOMY_DATA[currentClass]?.[newSubunit] || [];
+                                const newItem = newItems[0] || 'N/A';
+                                setFormFields({
+                                  ...formFields,
+                                  subunit: newSubunit,
+                                  maintainableItem: newItem,
+                                });
+                              }
+                            }}
+                            className="w-full bg-[#0c101d] border border-[#232a42] rounded-md px-3 py-2 text-[#f1f5f9] focus:border-[#3b82f6] outline-none cursor-pointer text-xs appearance-none pr-8 transition-colors"
+                          >
+                            {availableSubunits.map((sub) => (
+                              <option key={sub} value={sub} className="bg-[#0c101d] text-[#f1f5f9]">
+                                {sub}
                               </option>
-                            ))
-                          : OIL_FAILURE_MODES.map((oilMode) => (
-                              <option key={oilMode.value} value={oilMode.value} className="bg-[#0c101d]">
-                                {oilMode.label}
+                            ))}
+                          </select>
+                        );
+                      })()}
+                      <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2.5 text-[#8a94a6]">
+                        <svg className="w-3.5 h-3.5 fill-current" viewBox="0 0 20 20"><path d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z"/></svg>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Maintainable Item */}
+                  <div className="flex flex-col gap-1.5">
+                    <label className="text-[#8a94a6] font-bold text-[10px] uppercase tracking-wider">MAINTAINABLE ITEM</label>
+                    <div className="relative">
+                      {(() => {
+                        const currentClass = formFields.equipmentClass || EQUIPMENT_CLASS_OPTIONS[0];
+                        const isClassNA = currentClass === 'N/A';
+                        const currentSubunit = formFields.subunit || 'N/A';
+                        const isSubunitNA = currentSubunit === 'N/A';
+                        const availableItems = (isClassNA || isSubunitNA)
+                          ? ['N/A']
+                          : ['N/A', ...(TAXONOMY_DATA[currentClass]?.[currentSubunit] || [])];
+                        return (
+                          <select
+                            value={formFields.maintainableItem && availableItems.includes(formFields.maintainableItem) ? formFields.maintainableItem : availableItems[0] || 'N/A'}
+                            onChange={(e) => {
+                              setFormFields({
+                                ...formFields,
+                                maintainableItem: e.target.value,
+                              });
+                            }}
+                            className="w-full bg-[#0c101d] border border-[#232a42] rounded-md px-3 py-2 text-[#f1f5f9] focus:border-[#3b82f6] outline-none cursor-pointer text-xs appearance-none pr-8 transition-colors"
+                          >
+                            {availableItems.map((item) => (
+                              <option key={item} value={item} className="bg-[#0c101d] text-[#f1f5f9]">
+                                {item}
                               </option>
-                            ))
-                        }
+                            ))}
+                          </select>
+                        );
+                      })()}
+                      <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2.5 text-[#8a94a6]">
+                        <svg className="w-3.5 h-3.5 fill-current" viewBox="0 0 20 20"><path d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z"/></svg>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Row 2: Failure Mode Description & Failure Mechanism Subdivision */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5">
+                  {/* Failure Mode Description */}
+                  <div className="flex flex-col gap-1.5">
+                    <label className="text-[#8a94a6] font-bold text-[10px] uppercase tracking-wider">FAILURE MODE DESCRIPTION</label>
+                    <div className="relative">
+                      <select
+                        value={formFields.failureModeDescription || FAILURE_MODE_OPTIONS[0]}
+                        onChange={(e) => setFormFields({ ...formFields, failureModeDescription: e.target.value })}
+                        className="w-full bg-[#0c101d] border border-[#232a42] rounded-md px-3 py-2 text-[#f1f5f9] focus:border-[#3b82f6] outline-none cursor-pointer text-xs appearance-none pr-8 transition-colors"
+                      >
+                        <option value="N/A" className="bg-[#0c101d] text-[#f1f5f9]">
+                          N/A
+                        </option>
+                        {FAILURE_MODE_OPTIONS.map((mode) => (
+                          <option key={mode} value={mode} className="bg-[#0c101d] text-[#f1f5f9]">
+                            {mode}
+                          </option>
+                        ))}
+                      </select>
+                      <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2.5 text-[#8a94a6]">
+                        <svg className="w-3.5 h-3.5 fill-current" viewBox="0 0 20 20"><path d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z"/></svg>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Failure Mechanism Subdivision */}
+                  <div className="flex flex-col gap-1.5">
+                    <label className="text-[#8a94a6] font-bold text-[10px] uppercase tracking-wider">FAILURE MECHANISM SUBDIVISION</label>
+                    <div className="relative">
+                      <select
+                        value={formFields.failureMechanismSubdivision || FAILURE_MECHANISM_SUBDIVISION_OPTIONS[0]}
+                        onChange={(e) => setFormFields({ ...formFields, failureMechanismSubdivision: e.target.value })}
+                        className="w-full bg-[#0c101d] border border-[#232a42] rounded-md px-3 py-2 text-[#f1f5f9] focus:border-[#3b82f6] outline-none cursor-pointer text-xs appearance-none pr-8 transition-colors"
+                      >
+                        <option value="N/A" className="bg-[#0c101d] text-[#f1f5f9]">
+                          N/A
+                        </option>
+                        {FAILURE_MECHANISM_SUBDIVISION_OPTIONS.map((mech) => (
+                          <option key={mech} value={mech} className="bg-[#0c101d] text-[#f1f5f9]">
+                            {mech}
+                          </option>
+                        ))}
                       </select>
                       <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2.5 text-[#8a94a6]">
                         <svg className="w-3.5 h-3.5 fill-current" viewBox="0 0 20 20"><path d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z"/></svg>
