@@ -616,3 +616,10 @@ export function calculateFleetCbmRiskSummary(equipments: Array<any>): FleetCbmRi
     totalRiskCount: riskCount,
   };
 }
+
+export function formatEquipmentClass(rawClass?: string | null): string {
+  if (!rawClass) return 'N/A';
+  const clean = rawClass.trim();
+  const stripped = clean.replace(/^(equipmentClass_|EquipmentClass_)/i, '');
+  return stripped || 'N/A';
+}

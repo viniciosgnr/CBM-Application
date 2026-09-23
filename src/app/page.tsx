@@ -49,10 +49,9 @@ import {
   calculateOverallHealth,
   calculateEquipmentCbmRisk,
   calculateFleetCbmRiskSummary,
+  formatEquipmentClass,
 } from '@/utils/riskMatrix';
 import {
-  TAXONOMY_DATA,
-  EQUIPMENT_CLASS_OPTIONS,
   FAILURE_MODE_OPTIONS,
   FAILURE_MECHANISM_SUBDIVISION_OPTIONS,
 } from '@/utils/taxonomy';
@@ -816,11 +815,7 @@ export default function MainPage() {
     const today = new Date().toISOString().split('T')[0];
     const target = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]; // +30 days
 
-    const defaultClass = 'Centrifugal Compressor';
-    const availableSubunits = Object.keys(TAXONOMY_DATA[defaultClass] || {});
-    const defaultSubunit = availableSubunits[0] || 'Power Transmission';
-    const availableItems = TAXONOMY_DATA[defaultClass]?.[defaultSubunit] || [];
-    const defaultMaintainableItem = availableItems[0] || 'Coupling to the Driver';
+    const eqClassCode = formatEquipmentClass(selectedEquipment.class);
     const defaultFailureMode = 'VIB - Vibration';
     const defaultFailureMech = 'Mechanical Failure - Vibration';
 
@@ -848,9 +843,9 @@ export default function MainPage() {
       lubeOilStatus: selectedEquipment.lubeOilStatus,
       cbmStatus: selectedEquipment.condition || 'Good - Tier 4',
       imageUrl: '',
-      equipmentClass: defaultClass,
-      subunit: defaultSubunit,
-      maintainableItem: defaultMaintainableItem,
+      equipmentClass: eqClassCode,
+      subunit: 'N/A',
+      maintainableItem: 'N/A',
       failureModeDescription: defaultFailureMode,
       failureMechanismSubdivision: defaultFailureMech,
     });
@@ -1144,7 +1139,11 @@ export default function MainPage() {
     },
     { key: 'fpso', header: 'FPSO' },
     { key: 'name', header: 'Name' },
-    { key: 'class', header: 'Equipment Class' },
+    { 
+      key: 'class', 
+      header: 'Equipment Class',
+      render: (val: string) => <span className="font-medium text-text-primary">{formatEquipmentClass(val)}</span>
+    },
     { key: 'system', header: 'System' },
     { key: 'criticality', header: 'Criticality' },
     { key: 'objectType', header: 'Object Type' },
@@ -1163,7 +1162,11 @@ export default function MainPage() {
       render: (val: string) => <span className="font-semibold text-text-primary">{val}</span>
     },
     { key: 'name', header: 'Name' },
-    { key: 'equipmentClass', header: 'Equipment Class' },
+    { 
+      key: 'equipmentClass', 
+      header: 'Equipment Class',
+      render: (val: string) => <span className="font-medium text-text-primary">{formatEquipmentClass(val)}</span>
+    },
     { key: 'analysisType', header: 'Analysis Type' },
     { key: 'shortDescription', header: 'Short Description' },
     { key: 'cbmStatus', header: 'CBM Status', render: (val: string) => getStatusDot(val) },
@@ -2061,7 +2064,7 @@ export default function MainPage() {
                         {selectedEquipment.tag} {selectedEquipment.name}
                       </h2>
                       <div className="text-xs text-[#8a94a6] mt-0.5 font-medium">
-                        {selectedEquipment.class ? `${selectedEquipment.class}-` : ''}{selectedEquipment.name}
+                        {selectedEquipment.class ? `${formatEquipmentClass(selectedEquipment.class)} - ` : ''}{selectedEquipment.name}
                       </div>
 
                       <div className="flex flex-wrap items-center gap-2 mt-2.5">
@@ -2477,138 +2480,20 @@ export default function MainPage() {
               <div className="flex flex-col gap-3 pt-2">
                 <h4 className="text-[10px] font-bold text-[#8a94a6] uppercase tracking-wider">FAILURE MODE DETAILS</h4>
                 
-                {/* Row 1: Equipment Class, Subunit, Maintainable Item */}
+                {/* Single Row: Equipment Class (Read-only), Failure Mode Description, Failure Mechanism Subdivision */}
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-3.5">
-                  {/* Equipment Class */}
+                  {/* Equipment Class (Read-Only) */}
                   <div className="flex flex-col gap-1.5">
                     <label className="text-[#8a94a6] font-bold text-[10px] uppercase tracking-wider">EQUIPMENT CLASS</label>
-                    <div className="relative">
-                      <select
-                        value={formFields.equipmentClass || EQUIPMENT_CLASS_OPTIONS[0]}
-                        onChange={(e) => {
-                          const newClass = e.target.value;
-                          if (newClass === 'N/A') {
-                            setFormFields({
-                              ...formFields,
-                              equipmentClass: 'N/A',
-                              subunit: 'N/A',
-                              maintainableItem: 'N/A',
-                            });
-                          } else {
-                            const newSubunits = Object.keys(TAXONOMY_DATA[newClass] || {});
-                            const newSubunit = newSubunits[0] || 'N/A';
-                            const newItems = TAXONOMY_DATA[newClass]?.[newSubunit] || [];
-                            const newItem = newItems[0] || 'N/A';
-                            setFormFields({
-                              ...formFields,
-                              equipmentClass: newClass,
-                              subunit: newSubunit,
-                              maintainableItem: newItem,
-                            });
-                          }
-                        }}
-                        className="w-full bg-[#0c101d] border border-[#232a42] rounded-md px-3 py-2 text-[#f1f5f9] focus:border-[#3b82f6] outline-none cursor-pointer text-xs appearance-none pr-8 transition-colors"
-                      >
-                        <option value="N/A" className="bg-[#0c101d] text-[#f1f5f9]">
-                          N/A
-                        </option>
-                        {EQUIPMENT_CLASS_OPTIONS.map((cls) => (
-                          <option key={cls} value={cls} className="bg-[#0c101d] text-[#f1f5f9]">
-                            {cls}
-                          </option>
-                        ))}
-                      </select>
-                      <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2.5 text-[#8a94a6]">
-                        <svg className="w-3.5 h-3.5 fill-current" viewBox="0 0 20 20"><path d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z"/></svg>
-                      </div>
-                    </div>
+                    <input
+                      type="text"
+                      readOnly
+                      value={formFields.equipmentClass || 'N/A'}
+                      className="w-full bg-[#0c101d] border border-[#232a42] rounded-md px-3 py-2 text-[#f1f5f9] font-medium text-xs outline-none cursor-default select-all transition-colors"
+                      title="Equipment Class is synchronized from equipment metadata"
+                    />
                   </div>
 
-                  {/* Subunit */}
-                  <div className="flex flex-col gap-1.5">
-                    <label className="text-[#8a94a6] font-bold text-[10px] uppercase tracking-wider">SUBUNIT</label>
-                    <div className="relative">
-                      {(() => {
-                        const currentClass = formFields.equipmentClass || EQUIPMENT_CLASS_OPTIONS[0];
-                        const isClassNA = currentClass === 'N/A';
-                        const availableSubunits = isClassNA ? ['N/A'] : ['N/A', ...Object.keys(TAXONOMY_DATA[currentClass] || {})];
-                        return (
-                          <select
-                            value={formFields.subunit && availableSubunits.includes(formFields.subunit) ? formFields.subunit : availableSubunits[0] || 'N/A'}
-                            onChange={(e) => {
-                              const newSubunit = e.target.value;
-                              if (newSubunit === 'N/A' || isClassNA) {
-                                setFormFields({
-                                  ...formFields,
-                                  subunit: 'N/A',
-                                  maintainableItem: 'N/A',
-                                });
-                              } else {
-                                const newItems = TAXONOMY_DATA[currentClass]?.[newSubunit] || [];
-                                const newItem = newItems[0] || 'N/A';
-                                setFormFields({
-                                  ...formFields,
-                                  subunit: newSubunit,
-                                  maintainableItem: newItem,
-                                });
-                              }
-                            }}
-                            className="w-full bg-[#0c101d] border border-[#232a42] rounded-md px-3 py-2 text-[#f1f5f9] focus:border-[#3b82f6] outline-none cursor-pointer text-xs appearance-none pr-8 transition-colors"
-                          >
-                            {availableSubunits.map((sub) => (
-                              <option key={sub} value={sub} className="bg-[#0c101d] text-[#f1f5f9]">
-                                {sub}
-                              </option>
-                            ))}
-                          </select>
-                        );
-                      })()}
-                      <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2.5 text-[#8a94a6]">
-                        <svg className="w-3.5 h-3.5 fill-current" viewBox="0 0 20 20"><path d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z"/></svg>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Maintainable Item */}
-                  <div className="flex flex-col gap-1.5">
-                    <label className="text-[#8a94a6] font-bold text-[10px] uppercase tracking-wider">MAINTAINABLE ITEM</label>
-                    <div className="relative">
-                      {(() => {
-                        const currentClass = formFields.equipmentClass || EQUIPMENT_CLASS_OPTIONS[0];
-                        const isClassNA = currentClass === 'N/A';
-                        const currentSubunit = formFields.subunit || 'N/A';
-                        const isSubunitNA = currentSubunit === 'N/A';
-                        const availableItems = (isClassNA || isSubunitNA)
-                          ? ['N/A']
-                          : ['N/A', ...(TAXONOMY_DATA[currentClass]?.[currentSubunit] || [])];
-                        return (
-                          <select
-                            value={formFields.maintainableItem && availableItems.includes(formFields.maintainableItem) ? formFields.maintainableItem : availableItems[0] || 'N/A'}
-                            onChange={(e) => {
-                              setFormFields({
-                                ...formFields,
-                                maintainableItem: e.target.value,
-                              });
-                            }}
-                            className="w-full bg-[#0c101d] border border-[#232a42] rounded-md px-3 py-2 text-[#f1f5f9] focus:border-[#3b82f6] outline-none cursor-pointer text-xs appearance-none pr-8 transition-colors"
-                          >
-                            {availableItems.map((item) => (
-                              <option key={item} value={item} className="bg-[#0c101d] text-[#f1f5f9]">
-                                {item}
-                              </option>
-                            ))}
-                          </select>
-                        );
-                      })()}
-                      <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2.5 text-[#8a94a6]">
-                        <svg className="w-3.5 h-3.5 fill-current" viewBox="0 0 20 20"><path d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z"/></svg>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Row 2: Failure Mode Description & Failure Mechanism Subdivision */}
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5">
                   {/* Failure Mode Description */}
                   <div className="flex flex-col gap-1.5">
                     <label className="text-[#8a94a6] font-bold text-[10px] uppercase tracking-wider">FAILURE MODE DESCRIPTION</label>
@@ -2827,7 +2712,7 @@ export default function MainPage() {
                   <div className="border-r border-[#202742] flex">
                     <span className="bg-[#121626] text-text-muted p-2.5 w-[110px] flex-shrink-0 border-r border-[#202742] flex items-center">Equipment Class</span>
                     <span className="p-2.5 text-text-primary flex-1 flex items-center">
-                      {equipments.find(e => e.tag === selectedReport.equipmentTag)?.class || 'N/A'}
+                      {formatEquipmentClass(equipments.find(e => e.tag === selectedReport.equipmentTag)?.class || selectedReport.equipmentClass || 'N/A')}
                     </span>
                   </div>
                   <div className="flex">
@@ -2974,7 +2859,7 @@ export default function MainPage() {
                   <div className="grid grid-cols-2 text-[10px] uppercase font-semibold">
                     <div className="border-r border-b border-[#202742] flex">
                       <span className="bg-[#121626] text-text-muted p-2.5 w-[130px] flex-shrink-0 border-r border-[#202742] flex items-center">Equipment Class</span>
-                      <span className="p-2.5 text-text-primary flex-1 flex items-center">{selectedReport.equipmentClass || equipments.find(e => e.tag === selectedReport.equipmentTag)?.class || 'N/A'}</span>
+                      <span className="p-2.5 text-text-primary flex-1 flex items-center">{formatEquipmentClass(selectedReport.equipmentClass || equipments.find(e => e.tag === selectedReport.equipmentTag)?.class || 'N/A')}</span>
                     </div>
                     <div className="border-b border-[#202742] flex">
                       <span className="bg-[#121626] text-text-muted p-2.5 w-[130px] flex-shrink-0 border-r border-[#202742] flex items-center">Subunit</span>
