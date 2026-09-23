@@ -3,61 +3,82 @@ marp: true
 theme: gaia
 _class: lead
 paginate: true
-backgroundColor: #0c101d
-color: #e2e8f0
+backgroundColor: #ffffff
+color: #0f172a
 style: |
   section {
-    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-    padding: 40px;
-    background-color: #0c101d;
-    color: #e2e8f0;
+    font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, Roboto, sans-serif;
+    padding: 35px 45px;
+    background-color: #ffffff;
+    color: #0f172a;
   }
-  h1, h2, h3 {
-    color: #f8fafc;
+  h1 {
+    color: #002e5d;
+    font-size: 1.7rem;
+    font-weight: 700;
+    margin-bottom: 4px;
   }
-  h1 { font-size: 1.8rem; border-bottom: 2px solid #3b82f6; padding-bottom: 8px; }
-  h2 { font-size: 1.4rem; color: #60a5fa; margin-top: 10px; }
+  h2 {
+    color: #002e5d;
+    font-size: 1.15rem;
+    font-weight: 700;
+    text-decoration: underline;
+    text-decoration-color: #002e5d;
+    margin-top: 10px;
+    margin-bottom: 6px;
+  }
+  .sbm-pill {
+    display: inline-block;
+    width: 14px;
+    height: 24px;
+    background-color: #f15a24;
+    border-radius: 6px;
+    vertical-align: middle;
+    margin-right: 8px;
+  }
+  .sbm-tag {
+    color: #f15a24;
+    font-size: 0.8rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+  .sbm-orange { color: #f15a24; font-weight: 700; }
+  .sbm-navy { color: #002e5d; font-weight: 700; }
   table {
-    font-size: 0.78rem;
+    font-size: 0.72rem;
     border-collapse: collapse;
     width: 100%;
-    margin-top: 12px;
+    margin-top: 8px;
   }
   th {
-    background-color: #1e293b;
-    color: #93c5fd;
-    padding: 6px 10px;
-    border: 1px solid #334155;
+    background-color: #002e5d;
+    color: #ffffff;
+    padding: 5px 8px;
+    border: 1px solid #cbd5e1;
+    font-weight: 600;
   }
   td {
-    padding: 6px 10px;
-    border: 1px solid #334155;
-    background-color: #111827;
+    padding: 5px 8px;
+    border: 1px solid #cbd5e1;
   }
-  .highlight { color: #38bdf8; font-weight: bold; }
-  .badge-crit { background: rgba(239, 68, 68, 0.2); color: #f87171; padding: 2px 6px; border-radius: 4px; font-weight: bold; }
-  .badge-warn { background: rgba(245, 158, 11, 0.2); color: #fbbf24; padding: 2px 6px; border-radius: 4px; font-weight: bold; }
-  .badge-ok { background: rgba(16, 185, 129, 0.2); color: #34d399; padding: 2px 6px; border-radius: 4px; font-weight: bold; }
-  code {
-    background-color: #1e2538;
-    color: #38bdf8;
-    padding: 2px 6px;
-    border-radius: 4px;
-    font-size: 0.85em;
+  .td-green { background-color: #e2efda; font-weight: 700; text-align: center; }
+  .td-yellow { background-color: #fff2cc; font-weight: 700; text-align: center; }
+  .td-orange { background-color: #fce4d6; font-weight: 700; text-align: center; }
+  .td-red { background-color: #f8cecc; font-weight: 700; text-align: center; }
+  .box-card {
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    padding: 10px 14px;
+    margin: 8px 0;
   }
-  .box {
-    background: #111625;
-    border-left: 4px solid #3b82f6;
-    padding: 12px 16px;
+  .box-orange {
+    background: #fffaf8;
+    border-left: 4px solid #f15a24;
     border-radius: 0 8px 8px 0;
-    margin: 10px 0;
-  }
-  .box-amber {
-    background: #18161e;
-    border-left: 4px solid #f59e0b;
-    padding: 12px 16px;
-    border-radius: 0 8px 8px 0;
-    margin: 10px 0;
+    padding: 8px 12px;
+    margin: 6px 0;
   }
   footer {
     font-size: 0.65rem;
@@ -66,302 +87,330 @@ style: |
 ---
 
 <!-- Slide 1: Title Slide -->
-# Condition Based Maintenance (CBM)
-## Fleet Health & Risk Scoring Methodology
-### Mathematical Formulation, Standards Alignment & Fleet Deduction Logic
-
-**Presenter:** Reliability & Condition Monitoring Engineering Team  
-**System:** CBM Application (OptiSite Alignment)  
-**Standard References:** CBMnet User Guide §1.6 & FAR PM Overdue Standard
-
----
-
-<!-- Slide 2: Executive Summary & Objective -->
-# Executive Summary & Objectives
-
-- **Primary Goal**: Establish an objective, transparent, and auditable methodology to quantify:
-  1. **Fault Risk** (Physical asset degradation derived from Vibration & Lube Oil);
-  2. **Compliance Risk** (Operational overdue exposure against planned PM intervals);
-  3. **CBM Total Risk** (Consolidated asset criticality balancing condition and adherence).
-
-- **Fleet Aggregation Innovation**:
-  - Replace ambiguous ordinal rankings with a **unified penalty deduction strategy** over **100% Total Health**.
-  - Provide individual machine risk scores in standard ratio format (`Fault: X/12`, `Compliance: Y/15`, `Total Risk: Z/15`) for immediate offshore decision-making.
-
----
-
-<!-- Slide 3: Reference Baseline 1: CBMnet Standard -->
-# Reference Baseline: CBMnet Risk Levels (§1.6)
-
-In standard CBMnet documentation, asset risk levels are defined by a **5x5 Matrix**:
-
-1. **Fault Risk (Max 25)**:
-   $$\text{Fault Risk} = \text{Highest Likelihood of all Faults (Max 5)} \times \text{Consequence of Failure (Max 5)}$$
-2. **Compliance Risk (Max 25)**:
-   $$\text{Compliance Risk} = \text{Compliance Level (Max 5)} \times \text{Consequence of Failure (Max 5)}$$
-3. **CBMnet Total Risk (Max 30)**:
-   $$\text{CBMnet Total Risk} = \text{Fault Risk} + (20\% \times \text{Compliance Risk})$$
-
-<div class="box">
-<b>Core Design Principle:</b> Condition severity is prioritized as primary, while maintenance compliance acts as a secondary modifier scaled at 20% (Pareto ratio).
+<div style="border-left: 5px solid #f15a24; padding-left: 20px; margin-top: 50px;">
+  <span class="sbm-tag">CONDITION BASED MAINTENANCE (CBM)</span>
+  <h1 style="font-size: 2.2rem; margin: 8px 0; color: #002e5d;">Fleet Health & Risk Scoring Methodology</h1>
+  <p style="font-size: 1.15rem; color: #64748b; margin: 4px 0;">
+    Alignment with SBM LOD2-PM, IFS RAM Severity & CBMnet Standards
+  </p>
+  <p style="font-size: 0.85rem; color: #002e5d; margin-top: 30px; font-weight: 600;">
+    Reliability & Condition Monitoring Engineering Team | Technical Validation Deck
+  </p>
 </div>
 
----
-
-<!-- Slide 4: Reference Baseline 2: PM Overdue Formula -->
-# Reference Baseline: PM Overdue Criteria
-
-The operational delay index is governed by the standard **FAR Overdue PM** formula:
-
-$$\text{PM Overdue (\%)} = \frac{\text{Today} - \text{Due Date}}{\text{PM Interval (Days)}} \times 100\%$$
-
-$$\text{Run-Hour Alternative} = \frac{\text{Current Run Hours since Last PM}}{\text{PM Interval Run Hours}} \times 100\%$$
-
-### Standard Overdue Criteria Intervals:
-| Status | Overdue Range | Description | Delay Severity |
-| :--- | :---: | :--- | :---: |
-| **Not Overdue** | $\le 0\%$ | Route completed on or ahead of schedule | Level 0 |
-| **Early Overdue** | $0\% - 50\%$ | Minor route slippage within allowable grace | Level 1 |
-| **Moderate Overdue** | $50\% - 100\%$ | Exceeded interval by up to 1 full period | Level 2 |
-| **High Overdue** | $100\% - 150\%$ | Double inspection cycle missed | Level 3 |
-| **Severe Overdue** | $150\% - 200\%$ | Prolonged monitoring gap | Level 4 |
-| **Critical Overdue** | $> 200\%$ | Severe blind-spot (> 2x nominal cycle) | Level 5 |
+<footer>© SBM Offshore. All rights reserved. www.sbmoffshore.com</footer>
 
 ---
 
-<!-- Slide 5: Architectural Adaptation for Offshore CBM -->
-# Architectural Adaptation: Real-World Data Integration
+<!-- Slide 2: SBM LOD2-PM & CBMnet Standards -->
+# <span class="sbm-pill"></span>Baseline Context: SBM LOD2-PM & CBMnet Standards
 
-Our industrial production environment integrates with **IFS Enterprise Asset Management (EAM)** and **ISO 17359 / Vibration Condition Tiers**:
+<div style="display: flex; gap: 20px;">
+  <div style="flex: 1;" class="box-card">
+    <h2>SBM LOD2 - PM Standard</h2>
+    <ul style="font-size: 0.78rem; line-height: 1.4; color: #334155;">
+      <li><strong class="sbm-navy">Activation Logic:</strong> Activated when PM is overdue; deactivated upon "Work Done".</li>
+      <li><strong class="sbm-navy">FAR Score Determination:</strong> Likelihood × RAM-based Severity.</li>
+      <li><strong class="sbm-orange">PM Overdue Formula (FAR Standard):</strong><br>
+        <code>PM Overdue (%) = [(Today - Due Date) / PM Interval] × 100%</code>
+      </li>
+      <li><strong class="sbm-navy">Operational Mapping:</strong> Governs surveillance collection adherence into 6 overdue indices (Not Overdue to >200%).</li>
+    </ul>
+  </div>
 
-| Dimension | CBMnet Theoretical | Our CBM Implementation | Justification |
-| :--- | :---: | :---: | :--- |
-| **Consequence / Criticality** | 5 discrete levels | **3 IFS RAM Classes**<br>(Low = 1, Med = 2, High/SECE = 3) | Pre-determined by Project RAM study and mastered in IFS. Avoids subjective re-classification. |
-| **Likelihood / Condition** | 5 arbitrary levels | **4 Standard CBM Tiers**<br>(T4=1, T3=2, T2=3, T1=4) | Certified analyst assessment standard (ISO 10816 / 13373). |
-| **Max Fault Score** | 25 points | **12 points** ($4 \text{ Tiers} \times 3 \text{ Crit}$) | Compact, mathematically robust matrix. |
-| **Max Compliance Score** | 25 points | **15 points** ($3 \text{ Crit} \times 5 \text{ Index}$) | Combines IFS criticality with 6-stage PM Overdue. |
-| **Max Total Risk** | 30 points | **15.0 points** ($12 + 0.2 \times 15$) | Preserves CBMnet's exact 20% compliance weight. |
-
----
-
-<!-- Slide 6: KPI 1 — Fault Risk Calculation -->
-# KPI 1: Fault Risk Formulation (Score 1 to 12)
-
-For each machine $i$, Fault Risk combines analyst surveillance findings with asset criticality:
-
-$$\text{Fault Risk}_i = \text{Worst Condition Tier}_i \times \text{IFS Criticality Weight}_i$$
-
-- **Condition Tier Score**:
-  - $\text{Critical (Tier 1)} = 4$
-  - $\text{Degraded (Tier 2)} = 3$
-  - $\text{Good (Tier 3)} = 2$
-  - $\text{Good (Tier 4)} = 1$
-- **Multi-technique Consolidation**:
-  $$\text{Condition}_i = \max(\text{Tier}(\text{Vibration}_i), \text{Tier}(\text{Lube Oil}_i))$$
-- **IFS Criticality Weight**:
-  - $\text{High / Critical / SECE} = 3$
-  - $\text{Medium} = 2$
-  - $\text{Low} = 1$
-
----
-
-<!-- Slide 7: KPI 1 — Fault Risk Matrix (3 x 4) -->
-# KPI 1: Fault Risk Matrix & Category Mapping
-
-$$\begin{array}{c|c|c|c|c}
-\textbf{IFS Criticality} & \textbf{Tier 4 (Good)} & \textbf{Tier 3 (Good)} & \textbf{Tier 2 (Degraded)} & \textbf{Tier 1 (Critical)} \\
-\hline
-\textbf{High / SECE (3)} & 3 \text{ (Low)} & 6 \text{ (Med)} & 9 \text{ (High)} & 12 \text{ (Critical)} \\
-\hline
-\textbf{Medium (2)} & 2 \text{ (Low)} & 4 \text{ (Med)} & 6 \text{ (Med)} & 8 \text{ (High)} \\
-\hline
-\textbf{Low (1)} & 1 \text{ (Low)} & 2 \text{ (Low)} & 3 \text{ (Low)} & 4 \text{ (Med)} \\
-\end{array}$$
-
-### Fleet Overall Health % (Deduction Logic):
-- **Maximum Fleet Potential**: $\text{Max Fault Points} = N \times 12$
-- **Penalty Deductions**: Deductions occur **only** for assets exhibiting active anomalies:
-  $$\text{Deduction}_i = \begin{cases} \text{Fault Risk}_i, & \text{if Condition}_i \in \{\text{Tier 1}, \text{Tier 2}\} \\ 0, & \text{if Condition}_i \in \{\text{Tier 3}, \text{Tier 4}\} \end{cases}$$
-- **Fleet Fault Health %**:
-  $$\text{Fault Health \%} = \max\left(0, \frac{\text{Max Fault Points} - \sum \text{Deduction}_i}{\text{Max Fault Points}}\right) \times 100\%$$
-
----
-
-<!-- Slide 8: KPI 2 — Compliance Risk Calculation -->
-# KPI 2: Compliance Risk Formulation (Score 0 to 15)
-
-Combines collection overdue status with the consequence of failure:
-
-$$\text{PM Overdue (\%)}_i = \frac{\text{Today} - (\text{Last Survey}_i + \text{PM Frequency}_i)}{\text{PM Frequency}_i} \times 100\%$$
-
-$$\text{Compliance Risk}_i = \text{IFS Criticality Weight}_i \times \text{Overdue Index}_i$$
-
-### Overdue Index Mapping Table:
-$$\begin{array}{|l|c|l|}
-\hline
-\textbf{PM Overdue Range} & \textbf{Overdue Index} & \textbf{Operational Interpretation} \\
-\hline
-\le 0\% & 0 & \text{On Schedule (Inspection valid)} \\
-0\% - 50\% & 1 & \text{Slight delay within routine rescheduling window} \\
-50\% - 100\% & 2 & \text{Moderate delay — 1 missed round} \\
-100\% - 150\% & 3 & \text{Significant delay — inspection overdue by full interval} \\
-150\% - 200\% & 4 & \text{High delay — asset unmonitored for extended period} \\
-> 200\% & 5 & \text{Severe delay — blind spot on operating equipment} \\
-\hline
-\end{array}$$
-
----
-
-<!-- Slide 9: KPI 2 — Compliance Risk Matrix (3 x 6) -->
-# KPI 2: Compliance Risk Matrix & Multi-Technique Rule
-
-$$\begin{array}{c|c|c|c|c|c|c}
-\textbf{IFS Criticality} & \textbf{Index 0} & \textbf{Index 1} & \textbf{Index 2} & \textbf{Index 3} & \textbf{Index 4} & \textbf{Index 5} \\
-\hline
-\textbf{High / SECE (3)} & 0 & 3 & 6 & 9 & 12 & 15 \text{ (Max)} \\
-\hline
-\textbf{Medium (2)} & 0 & 2 & 4 & 6 & 8 & 10 \\
-\hline
-\textbf{Low (1)} & 0 & 1 & 2 & 3 & 4 & 5 \\
-\end{array}$$
-
-- **Dual-Surveillance Rule**: Vibration (e.g. 24-day frequency) and Lube Oil (e.g. 84-day frequency) are tracked independently:
-  $$\text{Compliance Risk}_i = \max(\text{Crit}_i \times \text{Index}(\text{Vib}_i), \text{Crit}_i \times \text{Index}(\text{Oil}_i))$$
-
-### Fleet Overall Compliance % (Deduction Logic):
-$$\text{Max Compliance Points} = N \times 15$$
-$$\text{Compliance \%} = \max\left(0, \frac{\text{Max Compliance Points} - \sum_{i=1}^N \text{Compliance Risk}_i}{\text{Max Compliance Points}}\right) \times 100\%$$
-
----
-
-<!-- Slide 10: KPI 3 — CBM Total Risk Calculation -->
-# KPI 3: CBM Total Risk Formulation (Score 1.0 to 15.0)
-
-CBM Total Risk reconciles the physical machinery health with the surveillance coverage:
-
-$$\text{CBM Total Risk}_i = \text{Fault Risk}_i + (0.20 \times \text{Compliance Risk}_i)$$
-
-- **Minimum possible score**: $1 \times 1 + (0.2 \times 0) = \mathbf{1.0}$ (Good Tier 4, Low Crit, On Schedule).
-- **Maximum possible score**: $4 \times 3 + (0.2 \times 15) = 12 + 3.0 = \mathbf{15.0}$ (Critical Tier 1, High Crit, Severe Delay).
-
-### Severity Classification Thresholds:
-- **Low Risk**: $< 4.0$ (Normal routine operation)
-- **Medium Risk**: $4.0 - 7.9$ (Scheduled review required)
-- **High Risk**: $8.0 - 11.9$ (Active anomaly or high criticality delay)
-- **Critical Risk**: $\ge 12.0$ (Immediate intervention required)
-
----
-
-<!-- Slide 11: KPI 3 — Fleet Total Health % Deduction Logic -->
-# KPI 3: Fleet Total Health % Formulation
-
-The 3rd KPI card reflects the **overall condition integrity of the entire fleet** after accounting for both mechanical defects and overdue monitoring penalties:
-
-$$\text{Max Total Fleet Points} = N \times 15.0$$
-
-$$\text{Machine Deduction}_i = \text{Fault Deduction}_i + (0.20 \times \text{Compliance Risk}_i)$$
-
-$$\text{Fleet Total Health \%} = \max\left(0, \frac{\text{Max Total Points} - \sum_{i=1}^N \text{Machine Deduction}_i}{\text{Max Total Points}}\right) \times 100\%$$
-
-<div class="box">
-<b>Property of Coherence:</b> If all machines are healthy (Tier 3/4) and all PM collections are on schedule, then <code>Total Health = 100.0%</code>. Every anomaly and every delayed PM subtracts strictly bounded penalty points.
+  <div style="flex: 1;" class="box-card">
+    <h2>CBMnet Standard (§1.6)</h2>
+    <ul style="font-size: 0.78rem; line-height: 1.4; color: #334155;">
+      <li><strong class="sbm-navy">Fault Risk (Max 25):</strong> Highest Fault Likelihood (Max 5) × Consequence (Max 5).</li>
+      <li><strong class="sbm-navy">Compliance Risk (Max 25):</strong> Compliance Level (Max 5) × Consequence (Max 5).</li>
+      <li><strong class="sbm-orange">CBMnet Total Risk (Max 30):</strong><br>
+        <code>Total Risk = Fault Risk + (20% × Compliance Risk)</code>
+      </li>
+      <li><strong class="sbm-navy">Pareto Weighting:</strong> Condition severity is primary. Overdue PM acts as a 20% secondary modifier.</li>
+    </ul>
+  </div>
 </div>
 
----
-
-<!-- Slide 12: Unified Score Representation in Equipment Modal -->
-# Equipment Details Modal: Score Harmonization
-
-To avoid cognitive overload during offshore triage, the Equipment Details Modal presents all three parameters as uniform **Scores**:
-
-```
-[ Fault: 8/12 ]       [ Compliance: 6/15 ]       [ Total Risk: 9.2/15 ]
-```
-
-1. **Fault Badge (`X/12`)**:
-   - Explicitly displays condition degradation weighted by criticality.
-   - Example: Degraded pump (Tier 2 = 3) on Medium criticality (2) $\to \mathbf{6/12}$.
-2. **Compliance Badge (`Y/15`)**:
-   - Shows compliance delay weighted by criticality.
-   - Example: High criticality pump (3) delayed by 70% (Index 2) $\to \mathbf{6/15}$.
-3. **Total Risk Badge (`Z/15`)**:
-   - Combined score: $6 + (0.2 \times 6) = \mathbf{7.2/15}$ (Category: Medium Risk).
+<footer>© SBM Offshore. All rights reserved. www.sbmoffshore.com | Slide 2</footer>
 
 ---
 
-<!-- Slide 13: Comparative Architecture Table -->
-# Architecture Alignment: CBMnet Standard vs. CBM App
+<!-- Slide 3: KPI 1 — Fault Risk Formulation & Matrix -->
+# <span class="sbm-pill"></span>KPI 1: Fault Risk Formulation & Matrix (1 to 12)
 
-| Parameter | Standard CBMnet (§1.6) | Our Implemented Model | Validation Note |
-| :--- | :---: | :---: | :--- |
-| **Criticality Input** | 1 to 5 (Qualitative) | **1 to 3 (IFS RAM Master)** | Linked directly to IFS EAM |
-| **Condition Input** | 1 to 5 (Likelihood) | **1 to 4 (ISO 17359 Tiers)** | Driven by certified vibration/oil reports |
-| **Compliance Input** | 1 to 5 (Adherence) | **0 to 5 (PM Overdue % Formula)** | Exact mathematical day/interval ratio |
-| **Fault Risk Max** | 25 points | **12 points** | $4 \times 3$ matrix |
-| **Compliance Risk Max** | 25 points | **15 points** | $3 \times 5$ matrix |
-| **Total Risk Max** | 30 points | **15.0 points** | $12 + (0.2 \times 15)$ |
-| **Weight of Compliance** | 20% | **20%** | Exact preservation of CBMnet standard |
-| **Fleet Level View** | Subjective matrix | **0 - 100% Unified Deductions** | Objective % metric for management |
-
----
-
-<!-- Slide 14: Practical Offshore Scenario Walkthrough -->
-# Practical Example: Offshore Equipment Scoring
-
-### Asset: Crude Oil Export Pump (P-01A)
-- **IFS Criticality**: `High` (Weight = 3)
-- **Vibration Survey**: Tier 2 (Degraded, bearing inner race defect) $\to$ Tier Score = 3
-- **Lube Oil Survey**: Tier 4 (Good) $\to$ Worst Condition = **Tier 2 (Degraded)**
-- **Vibration PM Frequency**: 24 days | Last collection: 42 days ago
-  $$\text{Overdue Days} = 42 - 24 = 18 \text{ days} \implies \text{Overdue \%} = \frac{18}{24} \times 100\% = 75.0\%$$
-  $$75.0\% \text{ falls in } 50\%-100\% \implies \textbf{Overdue Index = 2}$$
-
-### Resulting Scores:
-1. **Fault Risk**: $3 \text{ (Crit)} \times 3 \text{ (Tier 2)} = \mathbf{9 / 12}$ <span class="badge-crit">High Risk</span>
-2. **Compliance Risk**: $3 \text{ (Crit)} \times 2 \text{ (Index)} = \mathbf{6 / 15}$ <span class="badge-warn">Moderate Delay</span>
-3. **CBM Total Risk**: $9 + (0.2 \times 6) = \mathbf{10.2 / 15}$ <span class="badge-crit">High Risk</span>
-4. **Fleet Impact**: Deducts $9$ pts from Fault Health, $6$ pts from Compliance, and $10.2$ pts from Total Health.
-
----
-
-<!-- Slide 15: Management Summary of the 3 KPI Cards -->
-# Summary of the 3 KPI Dashboard Cards
-
-```
-+---------------------------+---------------------------+---------------------------+
-| FAULT RISK & HEALTH       | COMPLIANCE RISK (OVERDUE) | CBM TOTAL RISK            |
-+---------------------------+---------------------------+---------------------------+
-| Donut: 98.3% Health       | Donut: 95.8% Compliance   | Donut: 97.2% Total Health |
-|                           |                           |                           |
-| Avg Fault Risk: 2.1 / 12  | Avg Compliance: 0.8 / 15  | Avg Total Risk: 2.3 / 15  |
-| Evaluated: 104 machines   | On Schedule: 92 machines  | Crit/High: 2 machines     |
-| At Risk: 3 machines       | Overdue PM: 12 machines   | Med/Low: 102 machines     |
-| Deduction: -21 pts        | Deduction: -65 pts        | Deduction: -34.0 pts      |
-+---------------------------+---------------------------+---------------------------+
-```
-
-- **Intuitive Visual Hierarchy**: Donut displays the fleet-wide % health (higher is better).
-- **Transparent Accountability**: Every point deducted is traceable to specific assets and specific defect reports.
-
----
-
-<!-- Slide 16: Verification & Next Steps -->
-# Team Review, Governance & Next Steps
-
-1. **Interactive In-App Tooltips**:
-   - Every KPI card features an **(i)** Info icon with dynamic formula popovers directly inside the app.
-   - Enables any offshore or onshore engineer to immediately review the mathematical logic.
-
-2. **Auditing & Traceability**:
-   - Calculations update reactively as soon as new analysis reports are logged or collection dates advance.
-   - Complete consistency across Fleet Overview, KPI Cards, and Equipment Modal.
-
-3. **Discussion & Approval**:
-   - Open for team feedback on interval definitions or weighting factors.
-
-<br>
-
-<div class="box">
-<b>Documentation Reference:</b> <code>docs/cbm_kpi_methodology_presentation.md</code><br>
-Exportable to PDF / PowerPoint using Marp CLI: <code>npx @marp-team/marp-cli docs/cbm_kpi_methodology_presentation.md --pdf</code>
+<div class="box-orange">
+  <span class="sbm-navy" style="font-size: 0.85rem; font-weight: 700;">FORMULA: Fault Risk = Worst Condition Tier (1 to 4) × IFS RAM Criticality (1 to 3)</span><br>
+  <span style="font-size: 0.72rem; color: #64748b;">Scale: 1 to 12 pts | Rule: Condition = max(Vibration Tier, Lube Oil Tier)</span>
 </div>
+
+<div style="display: flex; gap: 20px; margin-top: 6px;">
+  <div style="flex: 1.2;">
+    <h2>Fault Risk Matrix (4×3)</h2>
+    <table>
+      <tr>
+        <th>IFS Criticality</th>
+        <th>Tier 4 (Good)</th>
+        <th>Tier 3 (Good)</th>
+        <th>Tier 2 (Degr.)</th>
+        <th>Tier 1 (Crit.)</th>
+      </tr>
+      <tr>
+        <td><strong>High / SECE (3)</strong></td>
+        <td class="td-green">3</td>
+        <td class="td-yellow">6</td>
+        <td class="td-orange">9</td>
+        <td class="td-red">12</td>
+      </tr>
+      <tr>
+        <td><strong>Medium (2)</strong></td>
+        <td class="td-green">2</td>
+        <td class="td-yellow">4</td>
+        <td class="td-yellow">6</td>
+        <td class="td-orange">8</td>
+      </tr>
+      <tr>
+        <td><strong>Low (1)</strong></td>
+        <td class="td-green">1</td>
+        <td class="td-green">2</td>
+        <td class="td-green">3</td>
+        <td class="td-yellow">4</td>
+      </tr>
+    </table>
+  </div>
+
+  <div style="flex: 1;" class="box-card">
+    <h2>Fleet Overall Health %</h2>
+    <ul style="font-size: 0.75rem; line-height: 1.35; color: #334155;">
+      <li><strong>Max Fleet Points:</strong> <code>N × 12 points</code></li>
+      <li><strong>Active Defect Penalties Only:</strong>
+        <ul>
+          <li>Tier 1 (Critical): Deducts Fault Risk score</li>
+          <li>Tier 2 (Degraded): Deducts Fault Risk score</li>
+          <li>Tier 3/4 (Good): Deducts 0 pts</li>
+        </ul>
+      </li>
+      <li><strong class="sbm-orange">Formula:</strong><br>
+        <code>Health % = [(Max Pts - Deductions) / Max Pts] × 100%</code>
+      </li>
+    </ul>
+  </div>
+</div>
+
+<footer>© SBM Offshore. All rights reserved. www.sbmoffshore.com | Slide 3</footer>
+
+---
+
+<!-- Slide 4: KPI 2 — Compliance Risk & PM Overdue -->
+# <span class="sbm-pill"></span>KPI 2: Compliance Risk & PM Overdue (0 to 15)
+
+<div class="box-orange">
+  <span class="sbm-navy" style="font-size: 0.85rem; font-weight: 700;">FORMULA: Compliance Risk = IFS RAM Criticality (1 to 3) × PM Overdue Index (0 to 5)</span><br>
+  <span style="font-size: 0.72rem; color: #64748b;">Scale: 0 to 15 pts | PM Overdue (%) = [(Today - Planned Date) / PM Interval] × 100%</span>
+</div>
+
+<div style="display: flex; gap: 20px; margin-top: 6px;">
+  <div style="flex: 1.3;">
+    <h2>Compliance Risk Matrix (3×6)</h2>
+    <table>
+      <tr>
+        <th>IFS Criticality</th>
+        <th>Idx 0 (0%)</th>
+        <th>Idx 1 (50%)</th>
+        <th>Idx 2 (100%)</th>
+        <th>Idx 3 (150%)</th>
+        <th>Idx 4 (200%)</th>
+        <th>Idx 5 (>200%)</th>
+      </tr>
+      <tr>
+        <td><strong>High / SECE (3)</strong></td>
+        <td class="td-green">0</td>
+        <td class="td-green">3</td>
+        <td class="td-yellow">6</td>
+        <td class="td-orange">9</td>
+        <td class="td-red">12</td>
+        <td class="td-red">15</td>
+      </tr>
+      <tr>
+        <td><strong>Medium (2)</strong></td>
+        <td class="td-green">0</td>
+        <td class="td-green">2</td>
+        <td class="td-yellow">4</td>
+        <td class="td-yellow">6</td>
+        <td class="td-orange">8</td>
+        <td class="td-orange">10</td>
+      </tr>
+      <tr>
+        <td><strong>Low (1)</strong></td>
+        <td class="td-green">0</td>
+        <td class="td-green">1</td>
+        <td class="td-green">2</td>
+        <td class="td-green">3</td>
+        <td class="td-yellow">4</td>
+        <td class="td-yellow">5</td>
+      </tr>
+    </table>
+  </div>
+
+  <div style="flex: 0.9;" class="box-card">
+    <h2>Fleet Compliance %</h2>
+    <ul style="font-size: 0.75rem; line-height: 1.35; color: #334155;">
+      <li><strong>Max Fleet Points:</strong> <code>N × 15 points</code></li>
+      <li><strong>Worst-Case Dual Technique:</strong><br>
+        <code>max(Crit × Index(Vib), Crit × Index(Oil))</code>
+      </li>
+      <li><strong>Overdue Penalty:</strong> Every overdue machine subtracts its Compliance Risk score.</li>
+      <li><strong class="sbm-orange">Formula:</strong><br>
+        <code>Compliance % = [(Max Pts - Deductions) / Max Pts] × 100%</code>
+      </li>
+    </ul>
+  </div>
+</div>
+
+<footer>© SBM Offshore. All rights reserved. www.sbmoffshore.com | Slide 4</footer>
+
+---
+
+<!-- Slide 5: KPI 3 — CBM Total Risk Synthesis -->
+# <span class="sbm-pill"></span>KPI 3: CBM Total Risk Synthesis (1.0 to 15.0)
+
+<div class="box-orange">
+  <span class="sbm-navy" style="font-size: 0.85rem; font-weight: 700;">FORMULA: CBM Total Risk = Fault Risk (1 to 12) + (20% × Compliance Risk (0 to 15))</span><br>
+  <span style="font-size: 0.72rem; color: #64748b;">Scale: 1.0 to 15.0 pts (Minimum: 1.0 | Maximum: 12 + 0.2×15 = 15.0 pts)</span>
+</div>
+
+<h2>Risk Severity Classification Tiers</h2>
+<div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-top: 6px;">
+  <div class="box-card" style="border-top: 4px solid #22c55e;">
+    <h3 style="font-size: 0.85rem; color: #166534; margin: 0;">LOW RISK</h3>
+    <p style="font-size: 0.9rem; font-weight: 700; margin: 4px 0;">&lt; 4.0</p>
+    <p style="font-size: 0.68rem; color: #64748b;">Normal baseline operation and on-schedule survey adherence. Routine surveillance.</p>
+  </div>
+
+  <div class="box-card" style="border-top: 4px solid #eab308;">
+    <h3 style="font-size: 0.85rem; color: #854d0e; margin: 0;">MEDIUM RISK</h3>
+    <p style="font-size: 0.9rem; font-weight: 700; margin: 4px 0;">4.0 - 7.9</p>
+    <p style="font-size: 0.68rem; color: #64748b;">Early-stage degradation or moderate overdue PM. Engineering monitoring review.</p>
+  </div>
+
+  <div class="box-card" style="border-top: 4px solid #f97316;">
+    <h3 style="font-size: 0.85rem; color: #9a3412; margin: 0;">HIGH RISK</h3>
+    <p style="font-size: 0.9rem; font-weight: 700; margin: 4px 0;">8.0 - 11.9</p>
+    <p style="font-size: 0.68rem; color: #64748b;">Substantial degradation (Tier 2 on critical machine) or severe inspection blind spot.</p>
+  </div>
+
+  <div class="box-card" style="border-top: 4px solid #ef4444;">
+    <h3 style="font-size: 0.85rem; color: #991b1b; margin: 0;">CRITICAL RISK</h3>
+    <p style="font-size: 0.9rem; font-weight: 700; margin: 4px 0;">&ge; 12.0</p>
+    <p style="font-size: 0.68rem; color: #64748b;">Imminent failure potential (Tier 1 on high criticality machine). Priority intervention.</p>
+  </div>
+</div>
+
+<div class="box-card" style="margin-top: 10px;">
+  <span class="sbm-navy" style="font-size: 0.78rem; font-weight: 700;">Fleet Total Health %:</span>
+  <span style="font-size: 0.75rem; color: #334155;">
+    <code>Max Potential = N × 15.0 pts | Deduction_i = Fault Deduction_i + 0.2 × Compliance Risk_i | Total Health % = [(Max Pts - Total Deductions) / Max Pts] × 100%</code>
+  </span>
+</div>
+
+<footer>© SBM Offshore. All rights reserved. www.sbmoffshore.com | Slide 5</footer>
+
+---
+
+<!-- Slide 6: Score Harmonization & Fleet Dashboard -->
+# <span class="sbm-pill"></span>Score Harmonization & Fleet Dashboard
+
+<h2>Equipment Details Modal: Score Badges</h2>
+<div class="box-card" style="text-align: center; padding: 10px;">
+  <span style="font-size: 1.15rem; font-weight: 700; color: #002e5d;">
+    [ Fault: 8/12 ] &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; [ Compliance: 6/15 ] &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; [ Total Risk: 9.2/15 ]
+  </span>
+</div>
+
+<h2>Fleet KPI Dashboard Cards (100% Potential)</h2>
+<div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; margin-top: 6px;">
+  <div class="box-card">
+    <strong class="sbm-navy" style="font-size: 0.8rem;">FAULT RISK & HEALTH</strong>
+    <h3 style="font-size: 1.6rem; color: #f15a24; text-align: center; margin: 8px 0;">98.3%</h3>
+    <p style="font-size: 0.72rem; text-align: center; font-weight: 700; color: #64748b; margin: 0 0 8px 0;">HEALTH</p>
+    <ul style="font-size: 0.68rem; line-height: 1.35; color: #334155; margin: 0; padding-left: 14px;">
+      <li>Avg Fault Risk: 2.1 / 12</li>
+      <li>Evaluated: 104 machines</li>
+      <li>At Risk: 3 machines (1 Crit, 2 Deg)</li>
+      <li>Deduction: -21 pts</li>
+    </ul>
+  </div>
+
+  <div class="box-card">
+    <strong class="sbm-navy" style="font-size: 0.8rem;">COMPLIANCE RISK</strong>
+    <h3 style="font-size: 1.6rem; color: #f15a24; text-align: center; margin: 8px 0;">95.8%</h3>
+    <p style="font-size: 0.72rem; text-align: center; font-weight: 700; color: #64748b; margin: 0 0 8px 0;">COMPLIANCE</p>
+    <ul style="font-size: 0.68rem; line-height: 1.35; color: #334155; margin: 0; padding-left: 14px;">
+      <li>Avg Compliance: 0.8 / 15</li>
+      <li>On Schedule: 92 machines</li>
+      <li>Overdue PM: 12 machines</li>
+      <li>Deduction: -65 pts</li>
+    </ul>
+  </div>
+
+  <div class="box-card">
+    <strong class="sbm-navy" style="font-size: 0.8rem;">CBM TOTAL RISK</strong>
+    <h3 style="font-size: 1.6rem; color: #f15a24; text-align: center; margin: 8px 0;">97.2%</h3>
+    <p style="font-size: 0.72rem; text-align: center; font-weight: 700; color: #64748b; margin: 0 0 8px 0;">TOTAL HEALTH</p>
+    <ul style="font-size: 0.68rem; line-height: 1.35; color: #334155; margin: 0; padding-left: 14px;">
+      <li>Avg Total Risk: 2.3 / 15</li>
+      <li>Critical / High: 2 machines</li>
+      <li>Medium / Low: 102 machines</li>
+      <li>Deduction: -34.0 pts</li>
+    </ul>
+  </div>
+</div>
+
+<footer>© SBM Offshore. All rights reserved. www.sbmoffshore.com | Slide 6</footer>
+
+---
+
+<!-- Slide 7: Practical Offshore Case Study -->
+# <span class="sbm-pill"></span>Practical Case Study: Crude Export Pump (P-01A)
+
+<div style="display: flex; gap: 20px;">
+  <div style="flex: 1;" class="box-card">
+    <h2>Asset Operational Inputs</h2>
+    <ul style="font-size: 0.78rem; line-height: 1.4; color: #334155;">
+      <li><strong class="sbm-navy">Asset:</strong> P-01A (Crude Oil Export Pump)</li>
+      <li><strong class="sbm-navy">IFS RAM Criticality:</strong> High (Score = 3)</li>
+      <li><strong class="sbm-navy">Surveillance Findings:</strong>
+        <ul>
+          <li>Vibration Survey: Tier 2 (Degraded bearing = 3)</li>
+          <li>Lube Oil Survey: Tier 4 (Good = 1)</li>
+          <li>Resolved Worst Condition = <strong>Tier 2 (Degraded = 3 pts)</strong></li>
+        </ul>
+      </li>
+      <li><strong class="sbm-navy">PM Overdue Adherence:</strong>
+        <ul>
+          <li>Vib PM Frequency: 24 days | Last: 42 days ago</li>
+          <li>Overdue: 18 days &rarr; 75.0% &rarr; <strong>Index 2</strong></li>
+        </ul>
+      </li>
+    </ul>
+  </div>
+
+  <div style="flex: 1;" class="box-card">
+    <h2>Scoring & Fleet Impact</h2>
+    <ul style="font-size: 0.78rem; line-height: 1.4; color: #334155;">
+      <li><strong class="sbm-navy">1. Fault Risk Score:</strong><br>
+        <code>3 (Crit) × 3 (Tier 2) = 9 / 12 pts (High Risk)</code>
+      </li>
+      <li><strong class="sbm-navy">2. Compliance Risk Score:</strong><br>
+        <code>3 (Crit) × 2 (Index) = 6 / 15 pts (Moderate Delay)</code>
+      </li>
+      <li><strong class="sbm-orange">3. CBM Total Risk Score:</strong><br>
+        <code>9 + (0.20 × 6) = 10.2 / 15.0 pts (High Risk)</code>
+      </li>
+      <li><strong class="sbm-navy">4. Fleet Deduction Impact:</strong><br>
+        Deducts 9 pts from Fault Health, 6 pts from Compliance, and 10.2 pts from Total Health. Fully auditable to defect and delay.
+      </li>
+    </ul>
+  </div>
+</div>
+
+<footer>© SBM Offshore. All rights reserved. www.sbmoffshore.com | Slide 7</footer>
