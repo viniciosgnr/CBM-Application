@@ -1873,16 +1873,14 @@ export default function MainPage() {
                 onMaximize={() => setMaximizedChart('kpi-compliance')}
               >
                 <div className="w-full flex flex-col xl:flex-row items-center justify-around gap-4 p-1">
-                  {/* Circular Donut with Compliance Level in center */}
+                  {/* Circular Donut with Compliance % in center */}
                   <div className="relative flex items-center justify-center shrink-0">
                     <ResponsiveContainer width={145} height={145}>
                       <PieChart>
                         <Pie
                           data={[
-                            { name: 'On Schedule (L0)', value: fleetRiskSummary.complianceCount.onSchedule || 0.0001 },
-                            { name: 'Low Delay (L1-2)', value: fleetRiskSummary.complianceCount.lowDelay },
-                            { name: 'Mod/High (L3-4)', value: fleetRiskSummary.complianceCount.moderateDelay },
-                            { name: 'Severe (L5)', value: fleetRiskSummary.complianceCount.severeDelay },
+                            { name: 'Compliance Points', value: Math.max(0, fleetRiskSummary.maxCompliancePoints - fleetRiskSummary.complianceDeductedPoints) },
+                            { name: 'Deducted Points', value: fleetRiskSummary.complianceDeductedPoints },
                           ]}
                           cx="50%"
                           cy="50%"
@@ -1893,19 +1891,23 @@ export default function MainPage() {
                           dataKey="value"
                           stroke="none"
                         >
-                          <Cell fill="#10b981" />
-                          <Cell fill="#84cc16" />
-                          <Cell fill="#f97316" />
-                          <Cell fill="#ef4444" />
+                          <Cell 
+                            fill={
+                              fleetRiskSummary.compliancePercentage >= 95 ? '#10b981' : 
+                              fleetRiskSummary.compliancePercentage >= 90 ? '#3b82f6' : 
+                              fleetRiskSummary.compliancePercentage >= 80 ? '#f97316' : '#f87171'
+                            } 
+                          />
+                          <Cell fill="#1e293b" />
                         </Pie>
                       </PieChart>
                     </ResponsiveContainer>
                     <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none select-none">
                       <span className="text-xl font-extrabold text-text-primary tracking-tight">
-                        {fleetRiskSummary.avgComplianceRisk}
+                        {fleetRiskSummary.compliancePercentage}%
                       </span>
                       <span className="text-[8px] uppercase tracking-wider font-semibold text-text-muted">
-                        Avg Level (0-5)
+                        Compliance
                       </span>
                     </div>
                   </div>
@@ -1913,49 +1915,47 @@ export default function MainPage() {
                   {/* Breakdown list */}
                   <div className="flex flex-col gap-2 text-[11px] flex-1 w-full max-w-[210px]">
                     <div className="flex items-center justify-between">
-                      <span className="text-text-muted font-medium">On Schedule (L0):</span>
+                      <span className="text-text-muted font-medium">Avg Compliance:</span>
+                      <strong className="text-text-primary font-bold">{fleetRiskSummary.avgComplianceRisk} / 15</strong>
+                    </div>
+
+                    <div className="flex items-center justify-between border-t border-border-panel/40 pt-1.5">
+                      <span className="text-text-muted font-medium">On Schedule:</span>
                       <span className="font-semibold text-status-ok">{fleetRiskSummary.complianceCount.onSchedule} machines</span>
                     </div>
 
                     <div className="flex items-center justify-between border-t border-border-panel/40 pt-1.5">
-                      <span className="text-text-muted font-medium">Low Delay (L1-2):</span>
-                      <span className="font-semibold text-lime-400">{fleetRiskSummary.complianceCount.lowDelay} machines</span>
-                    </div>
-
-                    <div className="flex items-center justify-between border-t border-border-panel/40 pt-1.5">
-                      <span className="text-text-muted font-medium">Mod/High (L3-4):</span>
-                      <span className={fleetRiskSummary.complianceCount.moderateDelay > 0 ? 'font-semibold text-orange-400' : 'font-semibold text-text-muted'}>
-                        {fleetRiskSummary.complianceCount.moderateDelay} machines
+                      <span className="text-text-muted font-medium">Overdue PM:</span>
+                      <span className={(fleetRiskSummary.complianceCount.lowDelay + fleetRiskSummary.complianceCount.moderateDelay + fleetRiskSummary.complianceCount.severeDelay) > 0 ? 'font-bold text-orange-400' : 'font-semibold text-status-ok'}>
+                        {fleetRiskSummary.complianceCount.lowDelay + fleetRiskSummary.complianceCount.moderateDelay + fleetRiskSummary.complianceCount.severeDelay} machines
                       </span>
                     </div>
 
                     <div className="flex items-center justify-between border-t border-border-panel/40 pt-1.5">
-                      <span className="text-text-muted font-medium">Severe Delay (L5):</span>
-                      <span className={fleetRiskSummary.complianceCount.severeDelay > 0 ? 'font-bold text-status-error' : 'font-semibold text-text-muted'}>
-                        {fleetRiskSummary.complianceCount.severeDelay} machines
+                      <span className="text-text-muted font-medium">Deduction:</span>
+                      <span className={fleetRiskSummary.complianceDeductedPoints > 0 ? 'font-bold text-status-warn' : 'font-semibold text-status-ok'}>
+                        {fleetRiskSummary.complianceDeductedPoints > 0 ? `-${fleetRiskSummary.complianceDeductedPoints} pts` : '0 pts'}
                       </span>
                     </div>
                   </div>
                 </div>
               </DashboardCard>
 
-              {/* Card 3: CBMnet Total Risk */}
+              {/* Card 3: CBM Total Risk */}
               <DashboardCard
-                title="CBMnet Total Risk"
+                title="CBM Total Risk"
                 timeRange="Current Snapshot"
                 onMaximize={() => setMaximizedChart('kpi-total-risk')}
               >
                 <div className="w-full flex flex-col xl:flex-row items-center justify-around gap-4 p-1">
-                  {/* Circular Donut with Total Risk score in center */}
+                  {/* Circular Donut with Total Health % in center */}
                   <div className="relative flex items-center justify-center shrink-0">
                     <ResponsiveContainer width={145} height={145}>
                       <PieChart>
                         <Pie
                           data={[
-                            { name: 'Low (<4)', value: fleetRiskSummary.totalRiskCount.low || 0.0001 },
-                            { name: 'Medium (4-8)', value: fleetRiskSummary.totalRiskCount.medium },
-                            { name: 'High (8-12)', value: fleetRiskSummary.totalRiskCount.high },
-                            { name: 'Critical (>=12)', value: fleetRiskSummary.totalRiskCount.critical },
+                            { name: 'Total Health Points', value: Math.max(0, fleetRiskSummary.maxTotalPoints - fleetRiskSummary.totalDeductedPoints) },
+                            { name: 'Deducted Points', value: fleetRiskSummary.totalDeductedPoints },
                           ]}
                           cx="50%"
                           cy="50%"
@@ -1966,19 +1966,23 @@ export default function MainPage() {
                           dataKey="value"
                           stroke="none"
                         >
-                          <Cell fill="#22c55e" />
-                          <Cell fill="#eab308" />
-                          <Cell fill="#f97316" />
-                          <Cell fill="#ef4444" />
+                          <Cell 
+                            fill={
+                              fleetRiskSummary.totalHealthPercentage >= 95 ? '#84cc16' : 
+                              fleetRiskSummary.totalHealthPercentage >= 90 ? '#3b82f6' : 
+                              fleetRiskSummary.totalHealthPercentage >= 80 ? '#f97316' : '#f87171'
+                            } 
+                          />
+                          <Cell fill="#1e293b" />
                         </Pie>
                       </PieChart>
                     </ResponsiveContainer>
                     <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none select-none">
                       <span className="text-xl font-extrabold text-text-primary tracking-tight">
-                        {fleetRiskSummary.avgTotalRisk}
+                        {fleetRiskSummary.totalHealthPercentage}%
                       </span>
                       <span className="text-[8px] uppercase tracking-wider font-semibold text-text-muted">
-                        Avg Risk (Max 13)
+                        Total Health
                       </span>
                     </div>
                   </div>
@@ -1986,27 +1990,29 @@ export default function MainPage() {
                   {/* Breakdown list */}
                   <div className="flex flex-col gap-2 text-[11px] flex-1 w-full max-w-[210px]">
                     <div className="flex items-center justify-between">
-                      <span className="text-text-muted font-medium">Critical (&ge;12):</span>
-                      <span className={fleetRiskSummary.totalRiskCount.critical > 0 ? 'font-bold text-status-error' : 'font-semibold text-text-muted'}>
-                        {fleetRiskSummary.totalRiskCount.critical} machines
+                      <span className="text-text-muted font-medium">Avg Total Risk:</span>
+                      <strong className="text-text-primary font-bold">{fleetRiskSummary.avgTotalRisk} / 15</strong>
+                    </div>
+
+                    <div className="flex items-center justify-between border-t border-border-panel/40 pt-1.5">
+                      <span className="text-text-muted font-medium">Crit / High:</span>
+                      <span className={fleetRiskSummary.totalRiskCount.critical + fleetRiskSummary.totalRiskCount.high > 0 ? 'font-bold text-status-error' : 'font-semibold text-text-muted'}>
+                        {fleetRiskSummary.totalRiskCount.critical + fleetRiskSummary.totalRiskCount.high} machines
                       </span>
                     </div>
 
                     <div className="flex items-center justify-between border-t border-border-panel/40 pt-1.5">
-                      <span className="text-text-muted font-medium">High (8-12):</span>
-                      <span className={fleetRiskSummary.totalRiskCount.high > 0 ? 'font-bold text-orange-400' : 'font-semibold text-text-muted'}>
-                        {fleetRiskSummary.totalRiskCount.high} machines
+                      <span className="text-text-muted font-medium">Med / Low:</span>
+                      <span className="font-semibold text-status-ok">
+                        {fleetRiskSummary.totalRiskCount.medium + fleetRiskSummary.totalRiskCount.low} machines
                       </span>
                     </div>
 
                     <div className="flex items-center justify-between border-t border-border-panel/40 pt-1.5">
-                      <span className="text-text-muted font-medium">Medium (4-8):</span>
-                      <span className="font-semibold text-yellow-400">{fleetRiskSummary.totalRiskCount.medium} machines</span>
-                    </div>
-
-                    <div className="flex items-center justify-between border-t border-border-panel/40 pt-1.5">
-                      <span className="text-text-muted font-medium">Low (&lt;4):</span>
-                      <span className="font-semibold text-status-ok">{fleetRiskSummary.totalRiskCount.low} machines</span>
+                      <span className="text-text-muted font-medium">Deduction:</span>
+                      <span className={fleetRiskSummary.totalDeductedPoints > 0 ? 'font-bold text-status-warn' : 'font-semibold text-status-ok'}>
+                        {fleetRiskSummary.totalDeductedPoints > 0 ? `-${fleetRiskSummary.totalDeductedPoints} pts` : '0 pts'}
+                      </span>
                     </div>
                   </div>
                 </div>
@@ -2126,19 +2132,19 @@ export default function MainPage() {
                         {/* Compliance Risk Badge */}
                         <span 
                           className="bg-[#1e2538] border border-[#2b3552] text-[10px] font-semibold px-2.5 py-0.5 rounded-full flex items-center gap-1 shadow-sm cursor-help"
-                          title={`Compliance Risk = Level ${eqCbmRisk.complianceRisk} / 5 (${eqCbmRisk.complianceResult.label}) - Vib Overdue: ${eqCbmRisk.vibOverdue.overduePercent}%, Oil Overdue: ${eqCbmRisk.oilOverdue.overduePercent}%`}
+                          title={`Compliance Risk = Criticality x Overdue Index = ${eqCbmRisk.complianceRisk} / 15 (${eqCbmRisk.complianceResult.label}) - Vib Overdue: ${eqCbmRisk.vibOverdue.overduePercent}%, Oil Overdue: ${eqCbmRisk.oilOverdue.overduePercent}%`}
                         >
                           <span className="text-[#8a94a6]">Compliance:</span>
-                          <span style={{ color: eqCbmRisk.complianceResult.colorHex }} className="font-bold">L{eqCbmRisk.complianceRisk} ({eqCbmRisk.complianceResult.label})</span>
+                          <span style={{ color: eqCbmRisk.complianceResult.colorHex }} className="font-bold">{eqCbmRisk.complianceRisk}/15</span>
                         </span>
 
                         {/* CBM Total Risk Badge */}
                         <span 
-                          className="text-white text-[10px] font-bold px-2.5 py-0.5 rounded-full flex items-center gap-1 shadow-sm cursor-help"
-                          style={{ backgroundColor: eqCbmRisk.totalColorHex }}
-                          title={`CBMnet Total Risk = Fault (${eqCbmRisk.faultRisk}) + 20% x Compliance (${eqCbmRisk.complianceRisk}) = ${eqCbmRisk.totalRisk} (${eqCbmRisk.totalCategory})`}
+                          className="bg-[#1e2538] border border-[#2b3552] text-[10px] font-semibold px-2.5 py-0.5 rounded-full flex items-center gap-1 shadow-sm cursor-help"
+                          title={`CBM Total Risk = Fault (${eqCbmRisk.faultRisk}) + 20% x Compliance (${eqCbmRisk.complianceRisk}) = ${eqCbmRisk.totalRisk} / 15 (${eqCbmRisk.totalCategory})`}
                         >
-                          <span>Total Risk: {eqCbmRisk.totalRisk}</span>
+                          <span className="text-[#8a94a6]">Total Risk:</span>
+                          <span style={{ color: eqCbmRisk.totalColorHex }} className="font-bold">{eqCbmRisk.totalRisk}/15</span>
                         </span>
 
                         <span className="text-[11px] text-[#8a94a6] font-medium ml-1">
@@ -3345,6 +3351,10 @@ export default function MainPage() {
                       <strong className="text-text-primary font-bold">{overallHealthData.totalMachines} machines</strong>
                     </div>
                     <div className="flex items-center justify-between border-t border-border-panel/40 pt-2">
+                      <span className="text-text-muted font-medium">Avg Fault Risk:</span>
+                      <strong className="text-text-primary font-bold">{fleetRiskSummary.avgFaultRisk} / 12</strong>
+                    </div>
+                    <div className="flex items-center justify-between border-t border-border-panel/40 pt-2">
                       <span className="text-text-muted font-medium">Health Points:</span>
                       <span className="font-semibold text-text-primary">{overallHealthData.healthPoints.toLocaleString()} / {overallHealthData.maxPoints.toLocaleString()} pts</span>
                     </div>
@@ -3370,10 +3380,8 @@ export default function MainPage() {
                       <PieChart>
                         <Pie
                           data={[
-                            { name: 'On Schedule (L0)', value: fleetRiskSummary.complianceCount.onSchedule || 0.0001 },
-                            { name: 'Low Delay (L1-2)', value: fleetRiskSummary.complianceCount.lowDelay },
-                            { name: 'Mod/High (L3-4)', value: fleetRiskSummary.complianceCount.moderateDelay },
-                            { name: 'Severe (L5)', value: fleetRiskSummary.complianceCount.severeDelay },
+                            { name: 'Compliance Points', value: Math.max(0, fleetRiskSummary.maxCompliancePoints - fleetRiskSummary.complianceDeductedPoints) },
+                            { name: 'Deducted Points', value: fleetRiskSummary.complianceDeductedPoints },
                           ]}
                           cx="50%"
                           cy="50%"
@@ -3384,19 +3392,23 @@ export default function MainPage() {
                           dataKey="value"
                           stroke="none"
                         >
-                          <Cell fill="#10b981" />
-                          <Cell fill="#84cc16" />
-                          <Cell fill="#f97316" />
-                          <Cell fill="#ef4444" />
+                          <Cell 
+                            fill={
+                              fleetRiskSummary.compliancePercentage >= 95 ? '#10b981' : 
+                              fleetRiskSummary.compliancePercentage >= 90 ? '#3b82f6' : 
+                              fleetRiskSummary.compliancePercentage >= 80 ? '#f97316' : '#f87171'
+                            } 
+                          />
+                          <Cell fill="#1e293b" />
                         </Pie>
                       </PieChart>
                     </ResponsiveContainer>
                     <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none select-none">
                       <span className="text-3xl font-extrabold text-text-primary tracking-tight">
-                        {fleetRiskSummary.avgComplianceRisk}
+                        {fleetRiskSummary.compliancePercentage}%
                       </span>
                       <span className="text-xs uppercase tracking-wider font-semibold text-text-muted">
-                        Avg Level (0-5)
+                        Compliance
                       </span>
                     </div>
                   </div>
@@ -3406,19 +3418,29 @@ export default function MainPage() {
                       <strong className="text-text-primary font-bold">{fleetRiskSummary.totalMachines} machines</strong>
                     </div>
                     <div className="flex items-center justify-between border-t border-border-panel/40 pt-2">
-                      <span className="text-text-muted font-medium">On Schedule (Level 0):</span>
+                      <span className="text-text-muted font-medium">Avg Compliance Score:</span>
+                      <strong className="text-text-primary font-bold">{fleetRiskSummary.avgComplianceRisk} / 15</strong>
+                    </div>
+                    <div className="flex items-center justify-between border-t border-border-panel/40 pt-2">
+                      <span className="text-text-muted font-medium">Deduction:</span>
+                      <span className={fleetRiskSummary.complianceDeductedPoints > 0 ? 'font-bold text-status-warn' : 'font-semibold text-status-ok'}>
+                        {fleetRiskSummary.complianceDeductedPoints > 0 ? `-${fleetRiskSummary.complianceDeductedPoints} pts` : '0 pts'}
+                      </span>
+                    </div>
+                    <div className="flex items-center justify-between border-t border-border-panel/40 pt-2">
+                      <span className="text-text-muted font-medium">On Schedule:</span>
                       <span className="font-semibold text-status-ok">{fleetRiskSummary.complianceCount.onSchedule} machines</span>
                     </div>
                     <div className="flex items-center justify-between border-t border-border-panel/40 pt-2">
-                      <span className="text-text-muted font-medium">Low Delay (Level 1-2):</span>
+                      <span className="text-text-muted font-medium">Low Delay (1-3 pts):</span>
                       <span className="font-semibold text-lime-400">{fleetRiskSummary.complianceCount.lowDelay} machines</span>
                     </div>
                     <div className="flex items-center justify-between border-t border-border-panel/40 pt-2">
-                      <span className="text-text-muted font-medium">Moderate/High Delay (Level 3-4):</span>
+                      <span className="text-text-muted font-medium">Moderate Delay (4-6 pts):</span>
                       <span className="font-semibold text-orange-400">{fleetRiskSummary.complianceCount.moderateDelay} machines</span>
                     </div>
                     <div className="flex items-center justify-between border-t border-border-panel/40 pt-2">
-                      <span className="text-text-muted font-medium">Severe Delay (Level 5):</span>
+                      <span className="text-text-muted font-medium">Severe Delay (&gt;6 pts):</span>
                       <span className={fleetRiskSummary.complianceCount.severeDelay > 0 ? 'font-bold text-status-error' : 'font-semibold text-text-muted'}>
                         {fleetRiskSummary.complianceCount.severeDelay} machines
                       </span>
@@ -3433,10 +3455,8 @@ export default function MainPage() {
                       <PieChart>
                         <Pie
                           data={[
-                            { name: 'Low (<4)', value: fleetRiskSummary.totalRiskCount.low || 0.0001 },
-                            { name: 'Medium (4-8)', value: fleetRiskSummary.totalRiskCount.medium },
-                            { name: 'High (8-12)', value: fleetRiskSummary.totalRiskCount.high },
-                            { name: 'Critical (>=12)', value: fleetRiskSummary.totalRiskCount.critical },
+                            { name: 'Total Health Points', value: Math.max(0, fleetRiskSummary.maxTotalPoints - fleetRiskSummary.totalDeductedPoints) },
+                            { name: 'Deducted Points', value: fleetRiskSummary.totalDeductedPoints },
                           ]}
                           cx="50%"
                           cy="50%"
@@ -3447,19 +3467,23 @@ export default function MainPage() {
                           dataKey="value"
                           stroke="none"
                         >
-                          <Cell fill="#22c55e" />
-                          <Cell fill="#eab308" />
-                          <Cell fill="#f97316" />
-                          <Cell fill="#ef4444" />
+                          <Cell 
+                            fill={
+                              fleetRiskSummary.totalHealthPercentage >= 95 ? '#84cc16' : 
+                              fleetRiskSummary.totalHealthPercentage >= 90 ? '#3b82f6' : 
+                              fleetRiskSummary.totalHealthPercentage >= 80 ? '#f97316' : '#f87171'
+                            } 
+                          />
+                          <Cell fill="#1e293b" />
                         </Pie>
                       </PieChart>
                     </ResponsiveContainer>
                     <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none select-none">
                       <span className="text-3xl font-extrabold text-text-primary tracking-tight">
-                        {fleetRiskSummary.avgTotalRisk}
+                        {fleetRiskSummary.totalHealthPercentage}%
                       </span>
                       <span className="text-xs uppercase tracking-wider font-semibold text-text-muted">
-                        Avg Risk (Max 13)
+                        Total Health
                       </span>
                     </div>
                   </div>
@@ -3467,6 +3491,16 @@ export default function MainPage() {
                     <div className="flex items-center justify-between">
                       <span className="text-text-muted font-medium">Total Scope Machines:</span>
                       <strong className="text-text-primary font-bold">{fleetRiskSummary.totalMachines} machines</strong>
+                    </div>
+                    <div className="flex items-center justify-between border-t border-border-panel/40 pt-2">
+                      <span className="text-text-muted font-medium">Avg Total Risk:</span>
+                      <strong className="text-text-primary font-bold">{fleetRiskSummary.avgTotalRisk} / 15</strong>
+                    </div>
+                    <div className="flex items-center justify-between border-t border-border-panel/40 pt-2">
+                      <span className="text-text-muted font-medium">Deduction:</span>
+                      <span className={fleetRiskSummary.totalDeductedPoints > 0 ? 'font-bold text-status-warn' : 'font-semibold text-status-ok'}>
+                        {fleetRiskSummary.totalDeductedPoints > 0 ? `-${fleetRiskSummary.totalDeductedPoints} pts` : '0 pts'}
+                      </span>
                     </div>
                     <div className="flex items-center justify-between border-t border-border-panel/40 pt-2">
                       <span className="text-text-muted font-medium">Critical Risk (&ge;12):</span>

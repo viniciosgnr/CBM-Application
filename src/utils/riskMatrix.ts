@@ -361,79 +361,76 @@ export function calculatePMOverdue(
   };
 }
 
-export interface ComplianceLevelResult {
-  level: number; // 0 to 5
-  label: 'Not Activated' | 'Very Unlikely' | 'Unlikely' | 'Possible' | 'Likely' | 'Very Likely';
+export function getPMOverdueIndex(overduePercent: number): {
+  index: number; // 0 to 5
+  label: string;
+} {
+  if (overduePercent <= 0) return { index: 0, label: 'Not Overdue' };
+  if (overduePercent <= 50) return { index: 1, label: '0-50%' };
+  if (overduePercent <= 100) return { index: 2, label: '50-100%' };
+  if (overduePercent <= 150) return { index: 3, label: '100-150%' };
+  if (overduePercent <= 200) return { index: 4, label: '150-200%' };
+  return { index: 5, label: '>200%' };
+}
+
+export function getCriticalityWeight(crit?: string | null): number {
+  if (!crit) return 2;
+  const c = crit.trim().toLowerCase();
+  if (c === 'high' || c === 'critical' || c === 'sece') return 3;
+  if (c === 'low') return 1;
+  return 2;
+}
+
+export function getComplianceRiskInfo(score: number): {
+  score: number; // 0 to 15
+  label: string;
   colorHex: string;
   badgeBg: string;
   badgeText: string;
-}
-
-export function getComplianceLevelFromMatrix(
-  overduePercent: number,
-  importance: PMImportanceRanking
-): ComplianceLevelResult {
-  if (overduePercent <= 0) {
+} {
+  if (score <= 0) {
     return {
-      level: 0,
-      label: 'Not Activated',
+      score: 0,
+      label: 'On Schedule',
       colorHex: '#22c55e',
       badgeBg: 'bg-emerald-500/15',
       badgeText: 'text-emerald-400',
     };
   }
-
-  // 0 - 50%
-  if (overduePercent <= 50) {
-    if (importance === 'Low') {
-      return { level: 1, label: 'Very Unlikely', colorHex: '#10b981', badgeBg: 'bg-teal-500/15', badgeText: 'text-teal-400' };
-    }
-    if (importance === 'Medium') {
-      return { level: 2, label: 'Unlikely', colorHex: '#84cc16', badgeBg: 'bg-lime-500/15', badgeText: 'text-lime-400' };
-    }
-    return { level: 4, label: 'Likely', colorHex: '#f97316', badgeBg: 'bg-orange-500/15', badgeText: 'text-orange-400' };
+  if (score <= 3) {
+    return {
+      score,
+      label: 'Low Delay',
+      colorHex: '#10b981',
+      badgeBg: 'bg-teal-500/15',
+      badgeText: 'text-teal-400',
+    };
   }
-
-  // 50 - 100%
-  if (overduePercent <= 100) {
-    if (importance === 'Low') {
-      return { level: 1, label: 'Very Unlikely', colorHex: '#10b981', badgeBg: 'bg-teal-500/15', badgeText: 'text-teal-400' };
-    }
-    if (importance === 'Medium') {
-      return { level: 3, label: 'Possible', colorHex: '#eab308', badgeBg: 'bg-yellow-500/15', badgeText: 'text-yellow-400' };
-    }
-    return { level: 5, label: 'Very Likely', colorHex: '#ef4444', badgeBg: 'bg-red-500/15', badgeText: 'text-red-400' };
+  if (score <= 6) {
+    return {
+      score,
+      label: 'Moderate Delay',
+      colorHex: '#eab308',
+      badgeBg: 'bg-yellow-500/15',
+      badgeText: 'text-yellow-400',
+    };
   }
-
-  // 100 - 150%
-  if (overduePercent <= 150) {
-    if (importance === 'Low') {
-      return { level: 2, label: 'Unlikely', colorHex: '#84cc16', badgeBg: 'bg-lime-500/15', badgeText: 'text-lime-400' };
-    }
-    if (importance === 'Medium') {
-      return { level: 4, label: 'Likely', colorHex: '#f97316', badgeBg: 'bg-orange-500/15', badgeText: 'text-orange-400' };
-    }
-    return { level: 5, label: 'Very Likely', colorHex: '#ef4444', badgeBg: 'bg-red-500/15', badgeText: 'text-red-400' };
+  if (score <= 9) {
+    return {
+      score,
+      label: 'High Delay',
+      colorHex: '#f97316',
+      badgeBg: 'bg-orange-500/15',
+      badgeText: 'text-orange-400',
+    };
   }
-
-  // 150 - 200%
-  if (overduePercent <= 200) {
-    if (importance === 'Low') {
-      return { level: 3, label: 'Possible', colorHex: '#eab308', badgeBg: 'bg-yellow-500/15', badgeText: 'text-yellow-400' };
-    }
-    return { level: 5, label: 'Very Likely', colorHex: '#ef4444', badgeBg: 'bg-red-500/15', badgeText: 'text-red-400' };
-  }
-
-  // 200 - 250%
-  if (overduePercent <= 250) {
-    if (importance === 'Low') {
-      return { level: 4, label: 'Likely', colorHex: '#f97316', badgeBg: 'bg-orange-500/15', badgeText: 'text-orange-400' };
-    }
-    return { level: 5, label: 'Very Likely', colorHex: '#ef4444', badgeBg: 'bg-red-500/15', badgeText: 'text-red-400' };
-  }
-
-  // 250%+
-  return { level: 5, label: 'Very Likely', colorHex: '#ef4444', badgeBg: 'bg-red-500/15', badgeText: 'text-red-400' };
+  return {
+    score,
+    label: 'Severe Delay',
+    colorHex: '#ef4444',
+    badgeBg: 'bg-red-500/15',
+    badgeText: 'text-red-400',
+  };
 }
 
 export function getCbmTotalRiskCategory(score: number): {
@@ -482,11 +479,18 @@ export interface EquipmentCbmRiskResult {
   faultBadgeText: string;
   vibOverdue: PMOverdueResult;
   oilOverdue: PMOverdueResult;
-  vibCompliance: ComplianceLevelResult;
-  oilCompliance: ComplianceLevelResult;
-  complianceRisk: number; // 0 to 5
-  complianceResult: ComplianceLevelResult;
-  totalRisk: number; // Fault Risk + (0.2 * Compliance Risk) e.g. 1.0 to 13.0
+  vibOverdueIndex: number;
+  oilOverdueIndex: number;
+  criticalityWeight: number;
+  complianceRisk: number; // 0 to 15 (Criticality 1-3 * Overdue Index 0-5)
+  complianceResult: {
+    score: number;
+    label: string;
+    colorHex: string;
+    badgeBg: string;
+    badgeText: string;
+  };
+  totalRisk: number; // Fault Risk + (0.2 * Compliance Risk) e.g. 1.0 to 15.0
   totalCategory: RiskMatrixCategory;
   totalColorHex: string;
   totalBadgeBg: string;
@@ -512,7 +516,7 @@ export function calculateEquipmentCbmRisk(eq: {
   const faultRisk = calculateRiskScore(worstCondition, eq.criticality || 'Medium');
   const faultCatInfo = getRiskCategory(faultRisk);
 
-  const importance = getPMImportanceRanking(eq.criticality);
+  const critWeight = getCriticalityWeight(eq.criticality);
 
   const vibDate = eq.lastVibrationUpdate || eq.lastUpdate;
   const oilDate = eq.lastLubeOilUpdate || eq.lastUpdate;
@@ -520,14 +524,17 @@ export function calculateEquipmentCbmRisk(eq: {
   const vibOverdue = calculatePMOverdue(vibDate, eq.vibrationFrequency, 24);
   const oilOverdue = calculatePMOverdue(oilDate, eq.lubeOilFrequency, 84);
 
-  const vibCompliance = getComplianceLevelFromMatrix(vibOverdue.overduePercent, importance);
-  const oilCompliance = getComplianceLevelFromMatrix(oilOverdue.overduePercent, importance);
+  const vibIndexInfo = getPMOverdueIndex(vibOverdue.overduePercent);
+  const oilIndexInfo = getPMOverdueIndex(oilOverdue.overduePercent);
 
-  // Worst case consolidation: higher compliance level represents greater risk
-  const worstCompliance = vibCompliance.level >= oilCompliance.level ? vibCompliance : oilCompliance;
-  const complianceRisk = worstCompliance.level; // 0 to 5 directly as requested by user
+  const vibRisk = critWeight * vibIndexInfo.index;
+  const oilRisk = critWeight * oilIndexInfo.index;
 
-  // CBM Total Risk = Fault Risk + 20% * Compliance Risk (Ranges from 1.0 to 13.0)
+  // Worst case consolidation: higher score represents greater overdue risk (0 to 15)
+  const complianceRisk = Math.max(vibRisk, oilRisk);
+  const complianceResult = getComplianceRiskInfo(complianceRisk);
+
+  // CBM Total Risk = Fault Risk + 20% * Compliance Risk (Ranges from 1.0 to 15.0)
   const rawTotalRisk = faultRisk + (0.2 * complianceRisk);
   const totalRisk = Number(rawTotalRisk.toFixed(1));
   const totalCatInfo = getCbmTotalRiskCategory(totalRisk);
@@ -540,10 +547,11 @@ export function calculateEquipmentCbmRisk(eq: {
     faultBadgeText: faultCatInfo.badgeText,
     vibOverdue,
     oilOverdue,
-    vibCompliance,
-    oilCompliance,
+    vibOverdueIndex: vibIndexInfo.index,
+    oilOverdueIndex: oilIndexInfo.index,
+    criticalityWeight: critWeight,
     complianceRisk,
-    complianceResult: worstCompliance,
+    complianceResult,
     totalRisk,
     totalCategory: totalCatInfo.category,
     totalColorHex: totalCatInfo.colorHex,
@@ -554,15 +562,30 @@ export function calculateEquipmentCbmRisk(eq: {
 
 export interface FleetCbmRiskSummary {
   totalMachines: number;
+  
+  // Fault Risk & Overall Health
   avgFaultRisk: number;
+  maxFaultPoints: number;
+  faultDeductedPoints: number;
+  faultHealthPercentage: number;
+
+  // Compliance Risk (0 to 15 deduction)
   avgComplianceRisk: number;
-  avgTotalRisk: number;
+  maxCompliancePoints: number;
+  complianceDeductedPoints: number;
+  compliancePercentage: number;
   complianceCount: {
-    onSchedule: number; // level 0
-    lowDelay: number;    // level 1-2
-    moderateDelay: number; // level 3-4
-    severeDelay: number; // level 5
+    onSchedule: number;    // risk 0
+    lowDelay: number;      // risk 1-3
+    moderateDelay: number; // risk 4-6
+    severeDelay: number;   // risk >6
   };
+
+  // CBM Total Risk (1 to 15.0 deduction)
+  avgTotalRisk: number;
+  maxTotalPoints: number;
+  totalDeductedPoints: number;
+  totalHealthPercentage: number;
   totalRiskCount: {
     low: number;
     medium: number;
@@ -577,9 +600,18 @@ export function calculateFleetCbmRiskSummary(equipments: Array<any>): FleetCbmRi
     return {
       totalMachines: 0,
       avgFaultRisk: 0,
+      maxFaultPoints: 0,
+      faultDeductedPoints: 0,
+      faultHealthPercentage: 100,
       avgComplianceRisk: 0,
-      avgTotalRisk: 0,
+      maxCompliancePoints: 0,
+      complianceDeductedPoints: 0,
+      compliancePercentage: 100,
       complianceCount: { onSchedule: 0, lowDelay: 0, moderateDelay: 0, severeDelay: 0 },
+      avgTotalRisk: 0,
+      maxTotalPoints: 0,
+      totalDeductedPoints: 0,
+      totalHealthPercentage: 100,
       totalRiskCount: { low: 0, medium: 0, high: 0, critical: 0 },
     };
   }
@@ -587,6 +619,11 @@ export function calculateFleetCbmRiskSummary(equipments: Array<any>): FleetCbmRi
   let sumFault = 0;
   let sumComp = 0;
   let sumTotal = 0;
+
+  let faultDeducted = 0;
+  let compDeducted = 0;
+  let totalDeducted = 0;
+
   const compCount = { onSchedule: 0, lowDelay: 0, moderateDelay: 0, severeDelay: 0 };
   const riskCount = { low: 0, medium: 0, high: 0, critical: 0 };
 
@@ -596,9 +633,29 @@ export function calculateFleetCbmRiskSummary(equipments: Array<any>): FleetCbmRi
     sumComp += res.complianceRisk;
     sumTotal += res.totalRisk;
 
+    // Fault deduction: applies when machine has an active anomaly (Tier 1 or Tier 2)
+    const resolvedCondition = getWorstTechniqueStatus(
+      eq.vibrationStatus,
+      eq.lubeOilStatus,
+      eq.condition || 'Good - Tier 4'
+    );
+    const isAnomaly = resolvedCondition.includes('Tier 1') || 
+                      resolvedCondition.includes('Critical') || 
+                      resolvedCondition.includes('Tier 2') || 
+                      resolvedCondition.includes('Degraded');
+    const machineFaultDeduction = isAnomaly ? res.faultRisk : 0;
+    faultDeducted += machineFaultDeduction;
+
+    // Compliance deduction: complianceRisk (0 if on-schedule, 1-15 if overdue)
+    compDeducted += res.complianceRisk;
+
+    // Total deduction: combined fault deduction + 20% of compliance risk
+    const machineTotalDeduction = machineFaultDeduction + (0.2 * res.complianceRisk);
+    totalDeducted += machineTotalDeduction;
+
     if (res.complianceRisk === 0) compCount.onSchedule++;
-    else if (res.complianceRisk <= 2) compCount.lowDelay++;
-    else if (res.complianceRisk <= 4) compCount.moderateDelay++;
+    else if (res.complianceRisk <= 3) compCount.lowDelay++;
+    else if (res.complianceRisk <= 6) compCount.moderateDelay++;
     else compCount.severeDelay++;
 
     if (res.totalCategory === 'Critical') riskCount.critical++;
@@ -607,12 +664,30 @@ export function calculateFleetCbmRiskSummary(equipments: Array<any>): FleetCbmRi
     else riskCount.low++;
   }
 
+  const maxFaultPoints = total * 12;
+  const faultHealthPercentage = Number((Math.max(0, maxFaultPoints - faultDeducted) / maxFaultPoints * 100).toFixed(1));
+
+  const maxCompliancePoints = total * 15;
+  const compliancePercentage = Number((Math.max(0, maxCompliancePoints - compDeducted) / maxCompliancePoints * 100).toFixed(1));
+
+  const maxTotalPoints = total * 15.0;
+  const totalHealthPercentage = Number((Math.max(0, maxTotalPoints - totalDeducted) / maxTotalPoints * 100).toFixed(1));
+
   return {
     totalMachines: total,
     avgFaultRisk: Number((sumFault / total).toFixed(1)),
+    maxFaultPoints,
+    faultDeductedPoints: faultDeducted,
+    faultHealthPercentage,
     avgComplianceRisk: Number((sumComp / total).toFixed(1)),
-    avgTotalRisk: Number((sumTotal / total).toFixed(1)),
+    maxCompliancePoints,
+    complianceDeductedPoints: compDeducted,
+    compliancePercentage,
     complianceCount: compCount,
+    avgTotalRisk: Number((sumTotal / total).toFixed(1)),
+    maxTotalPoints,
+    totalDeductedPoints: Number(totalDeducted.toFixed(1)),
+    totalHealthPercentage,
     totalRiskCount: riskCount,
   };
 }
