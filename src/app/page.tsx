@@ -1209,11 +1209,7 @@ export default function MainPage() {
       render: (val: string) => <span className="font-medium text-text-primary">{formatEquipmentClass(val)}</span>
     },
     { key: 'analysisType', header: 'Analysis Type' },
-    { 
-      key: 'effectiveness', 
-      header: 'Effectiveness', 
-      render: (val: string) => <span className="font-medium text-text-primary">{val || 'N/A'}</span> 
-    },
+    { key: 'shortDescription', header: 'Short Description' },
     { key: 'cbmStatus', header: 'CBM Status', render: (val: string) => getStatusDot(val) },
     { key: 'failureModeDescription', header: 'Failure Mode Description' },
     { key: 'raisedDate', header: 'Raised Date' },
@@ -1301,7 +1297,7 @@ export default function MainPage() {
       equipmentClass: r.equipmentClass || 'Centrifugal Compressor',
       analysisType: r.technology || 'Vibration Analysis',
       effectiveness: r.effectiveness || 'N/A',
-      shortDescription: r.shortDescription,
+      shortDescription: r.shortDescription || '-',
       cbmStatus: formatSurveillanceTier(techniqueStatus),
       failureModeDescription: r.failureModeDescription || '-',
       raisedDate: r.raisedDate,
