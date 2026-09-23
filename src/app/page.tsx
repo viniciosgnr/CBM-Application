@@ -1796,6 +1796,36 @@ export default function MainPage() {
                 title={kpiFpsoLabel === 'All FPSOs' ? 'Fault Risk & Overall Health' : `${kpiFpsoLabel} Fault Risk & Health`}
                 timeRange="Current Snapshot"
                 onMaximize={() => setMaximizedChart('kpi-health')}
+                infoTitle="Fault Risk & Fleet Health Methodology"
+                infoContent={
+                  <div className="space-y-2">
+                    <div>
+                      <span className="font-semibold text-accent-blue block text-[11px]">Formula:</span>
+                      <code className="text-[10px] block mt-0.5 bg-[#141a29] p-1.5 rounded border border-[#232d48]">
+                        Fault Risk = Condition Tier (1 to 4) × IFS Criticality (1 to 3)
+                      </code>
+                      <span className="text-[10px] text-text-muted mt-0.5 block">Scale: 1 to 12 pts (Critical: ≥12, High: 8-11, Medium: 4-7, Low: 1-3)</span>
+                    </div>
+
+                    <div className="border-t border-[#1e2538] pt-1.5">
+                      <span className="font-semibold text-accent-blue block text-[11px]">Variables:</span>
+                      <ul className="list-disc pl-4 text-[10px] space-y-0.5 text-[#94a3b8]">
+                        <li><strong className="text-[#f8fafc]">Condition:</strong> Worst of Vibration & Lube Oil (Tier 1 Crit = 4, Tier 2 Deg = 3, Tier 3 Good = 2, Tier 4 Good = 1).</li>
+                        <li><strong className="text-[#f8fafc]">IFS Criticality:</strong> High / SECE = 3, Medium = 2, Low = 1 (from IFS RAM master).</li>
+                      </ul>
+                    </div>
+
+                    <div className="border-t border-[#1e2538] pt-1.5">
+                      <span className="font-semibold text-accent-blue block text-[11px]">Fleet Health Deduction (100%):</span>
+                      <p className="text-[10px] text-[#94a3b8] leading-tight">
+                        Max fleet potential is <code>N × 12 pts</code>. Machines with active anomalies (Tier 1 & 2) deduct their Fault Risk score. Tier 3 & 4 deduct 0.
+                      </p>
+                      <code className="text-[10px] block mt-1 bg-[#141a29] p-1.5 rounded border border-[#232d48]">
+                        Health % = [(Max Points - Deductions) / Max Points] × 100%
+                      </code>
+                    </div>
+                  </div>
+                }
               >
                 <div className="w-full flex flex-col xl:flex-row items-center justify-around gap-4 p-1">
                   {/* Circular Donut with percentage in center */}
@@ -1871,6 +1901,43 @@ export default function MainPage() {
                 title="Compliance Risk (Overdue PM)"
                 timeRange="Current Snapshot"
                 onMaximize={() => setMaximizedChart('kpi-compliance')}
+                infoTitle="Compliance Risk & Overdue PM Methodology"
+                infoContent={
+                  <div className="space-y-2">
+                    <div>
+                      <span className="font-semibold text-accent-blue block text-[11px]">Formula:</span>
+                      <code className="text-[10px] block mt-0.5 bg-[#141a29] p-1.5 rounded border border-[#232d48]">
+                        Compliance Risk = IFS Criticality (1 to 3) × Overdue Index (0 to 5)
+                      </code>
+                      <span className="text-[10px] text-text-muted mt-0.5 block">Scale: 0 to 15 pts (Worst of Vibration & Lube Oil delay)</span>
+                    </div>
+
+                    <div className="border-t border-[#1e2538] pt-1.5">
+                      <span className="font-semibold text-accent-blue block text-[11px]">PM Overdue Formula (FAR Standard):</span>
+                      <code className="text-[10px] block mt-0.5 bg-[#141a29] p-1.5 rounded border border-[#232d48]">
+                        Overdue % = [(Today - Due Date) / PM Interval] × 100%
+                      </code>
+                      <div className="grid grid-cols-2 gap-1 text-[9px] text-[#94a3b8] mt-1 bg-[#141a29] p-1.5 rounded border border-[#232d48]">
+                        <span>≤0%: Index 0 (On Sched)</span>
+                        <span>0-50%: Index 1 (Low)</span>
+                        <span>50-100%: Index 2 (Mod)</span>
+                        <span>100-150%: Index 3 (High)</span>
+                        <span>150-200%: Index 4 (Severe)</span>
+                        <span>&gt;200%: Index 5 (Crit)</span>
+                      </div>
+                    </div>
+
+                    <div className="border-t border-[#1e2538] pt-1.5">
+                      <span className="font-semibold text-accent-blue block text-[11px]">Fleet Compliance Deduction (100%):</span>
+                      <p className="text-[10px] text-[#94a3b8] leading-tight">
+                        Max fleet potential is <code>N × 15 pts</code>. Every overdue machine deducts its Compliance Risk score.
+                      </p>
+                      <code className="text-[10px] block mt-1 bg-[#141a29] p-1.5 rounded border border-[#232d48]">
+                        Compliance % = [(Max Points - Deductions) / Max Points] × 100%
+                      </code>
+                    </div>
+                  </div>
+                }
               >
                 <div className="w-full flex flex-col xl:flex-row items-center justify-around gap-4 p-1">
                   {/* Circular Donut with Compliance % in center */}
@@ -1946,6 +2013,35 @@ export default function MainPage() {
                 title="CBM Total Risk"
                 timeRange="Current Snapshot"
                 onMaximize={() => setMaximizedChart('kpi-total-risk')}
+                infoTitle="CBM Total Risk Methodology (CBMnet §1.6)"
+                infoContent={
+                  <div className="space-y-2">
+                    <div>
+                      <span className="font-semibold text-accent-blue block text-[11px]">Formula (CBMnet Aligned):</span>
+                      <code className="text-[10px] block mt-0.5 bg-[#141a29] p-1.5 rounded border border-[#232d48]">
+                        CBM Total Risk = Fault Risk + (20% × Compliance Risk)
+                      </code>
+                      <span className="text-[10px] text-text-muted mt-0.5 block">Scale: 1.0 to 15.0 pts (Critical: ≥12, High: 8-11.9, Med: 4-7.9, Low: &lt;4)</span>
+                    </div>
+
+                    <div className="border-t border-[#1e2538] pt-1.5">
+                      <span className="font-semibold text-accent-blue block text-[11px]">Weighting Rationale:</span>
+                      <p className="text-[10px] text-[#94a3b8] leading-tight">
+                        Condition is prioritized as primary risk (Fault Risk up to 12). Operational compliance delay acts as a 20% modifier (up to 3.0 pts).
+                      </p>
+                    </div>
+
+                    <div className="border-t border-[#1e2538] pt-1.5">
+                      <span className="font-semibold text-accent-blue block text-[11px]">Fleet Total Health Deduction (100%):</span>
+                      <p className="text-[10px] text-[#94a3b8] leading-tight">
+                        Max fleet potential is <code>N × 15.0 pts</code>. Deductions combine active fault penalties plus 20% of overdue compliance penalties.
+                      </p>
+                      <code className="text-[10px] block mt-1 bg-[#141a29] p-1.5 rounded border border-[#232d48]">
+                        Total Health % = [(Max Points - Total Deductions) / Max Points] × 100%
+                      </code>
+                    </div>
+                  </div>
+                }
               >
                 <div className="w-full flex flex-col xl:flex-row items-center justify-around gap-4 p-1">
                   {/* Circular Donut with Total Health % in center */}
@@ -3346,6 +3442,11 @@ export default function MainPage() {
                     </div>
                   </div>
                   <div className="flex flex-col gap-3 text-sm flex-1 max-w-sm w-full">
+                    <div className="bg-[#0c101d] border border-[#1e2538] p-2.5 rounded-lg text-xs text-[#94a3b8]">
+                      <span className="font-semibold text-accent-blue block text-[11px] mb-0.5">Formula (4×3 Matrix):</span>
+                      <code className="text-[10px] text-[#38bdf8]">Fault Risk = Condition Tier (1 to 4) × IFS Criticality (1 to 3)</code>
+                      <span className="block text-[10px] text-text-muted mt-0.5">Scale: 1 to 12 | Health % = [(Max Potential - Deductions) / Max Potential] × 100%</span>
+                    </div>
                     <div className="flex items-center justify-between">
                       <span className="text-text-muted font-medium">Evaluated Machines:</span>
                       <strong className="text-text-primary font-bold">{overallHealthData.totalMachines} machines</strong>
@@ -3413,6 +3514,11 @@ export default function MainPage() {
                     </div>
                   </div>
                   <div className="flex flex-col gap-3 text-sm flex-1 max-w-sm w-full">
+                    <div className="bg-[#0c101d] border border-[#1e2538] p-2.5 rounded-lg text-xs text-[#94a3b8]">
+                      <span className="font-semibold text-accent-blue block text-[11px] mb-0.5">Formula (3×5 Matrix):</span>
+                      <code className="text-[10px] text-[#38bdf8]">Compliance Risk = IFS Criticality (1 to 3) × Overdue Index (0 to 5)</code>
+                      <span className="block text-[10px] text-text-muted mt-0.5">Scale: 0 to 15 | Overdue % = (Today - Due Date) / PM Interval × 100%</span>
+                    </div>
                     <div className="flex items-center justify-between">
                       <span className="text-text-muted font-medium">Total Scope Machines:</span>
                       <strong className="text-text-primary font-bold">{fleetRiskSummary.totalMachines} machines</strong>
@@ -3488,6 +3594,11 @@ export default function MainPage() {
                     </div>
                   </div>
                   <div className="flex flex-col gap-3 text-sm flex-1 max-w-sm w-full">
+                    <div className="bg-[#0c101d] border border-[#1e2538] p-2.5 rounded-lg text-xs text-[#94a3b8]">
+                      <span className="font-semibold text-accent-blue block text-[11px] mb-0.5">Formula (CBMnet §1.6):</span>
+                      <code className="text-[10px] text-[#38bdf8]">CBM Total Risk = Fault Risk + (20% × Compliance Risk)</code>
+                      <span className="block text-[10px] text-text-muted mt-0.5">Scale: 1.0 to 15.0 | Total Health % = [(Max Potential - Deductions) / Max Potential] × 100%</span>
+                    </div>
                     <div className="flex items-center justify-between">
                       <span className="text-text-muted font-medium">Total Scope Machines:</span>
                       <strong className="text-text-primary font-bold">{fleetRiskSummary.totalMachines} machines</strong>
