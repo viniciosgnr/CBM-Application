@@ -1214,7 +1214,18 @@ export default function MainPage() {
     { key: 'failureModeDescription', header: 'Failure Mode Description' },
     { key: 'raisedDate', header: 'Raised Date' },
     { key: 'raisedBy', header: 'Raised By' },
-    { key: 'recommendation', header: 'Recommendation' },
+    { 
+      key: 'recommendation', 
+      header: 'Recommendation',
+      render: (val: string) => (
+        <span 
+          className="block max-w-[280px] truncate text-[#a2b4cd]" 
+          title={val}
+        >
+          {val ? val.replace(/\s+/g, ' ') : '-'}
+        </span>
+      )
+    },
   ];
 
   const formattedEquipments = equipments
