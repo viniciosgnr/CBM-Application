@@ -47,6 +47,8 @@ import {
   getWorstTechniqueStatus,
   getRiskCategory,
   calculateOverallHealth,
+  calculateEquipmentCbmRisk,
+  calculateFleetCbmRiskSummary,
 } from '@/utils/riskMatrix';
 import {
   TAXONOMY_DATA,
@@ -327,6 +329,11 @@ export default function MainPage() {
   // Overall Health calculation (Strictly from Equipment List table)
   const overallHealthData = useMemo(() => {
     return calculateOverallHealth(currentKpiEquipments);
+  }, [currentKpiEquipments]);
+
+  // CBMnet Fleet Risk Summary (Fault Risk, Compliance Risk, CBM Total Risk)
+  const fleetRiskSummary = useMemo(() => {
+    return calculateFleetCbmRiskSummary(currentKpiEquipments);
   }, [currentKpiEquipments]);
 
   // Compliance Calculation based on routine frequency (24 DAY)
@@ -1735,9 +1742,9 @@ export default function MainPage() {
 
             {/* Row 1: 3 KPI Snapshot Cards Side-by-Side */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-              {/* Card 1: Overall Health Indicator */}
+              {/* Card 1: Fault Risk & Overall Health */}
               <DashboardCard
-                title={kpiFpsoLabel === 'All FPSOs' ? 'Overall Fleet Health' : `${kpiFpsoLabel} Health`}
+                title={kpiFpsoLabel === 'All FPSOs' ? 'Fault Risk & Overall Health' : `${kpiFpsoLabel} Fault Risk & Health`}
                 timeRange="Current Snapshot"
                 onMaximize={() => setMaximizedChart('kpi-health')}
               >
@@ -1784,13 +1791,13 @@ export default function MainPage() {
                   {/* Breakdown list */}
                   <div className="flex flex-col gap-2 text-[11px] flex-1 w-full max-w-[210px]">
                     <div className="flex items-center justify-between">
-                      <span className="text-text-muted font-medium">Evaluated:</span>
-                      <strong className="text-text-primary font-bold">{overallHealthData.totalMachines} machines</strong>
+                      <span className="text-text-muted font-medium">Avg Fault Risk:</span>
+                      <strong className="text-text-primary font-bold">{fleetRiskSummary.avgFaultRisk} / 12</strong>
                     </div>
 
                     <div className="flex items-center justify-between border-t border-border-panel/40 pt-1.5">
-                      <span className="text-text-muted font-medium">Health Points:</span>
-                      <span className="font-semibold text-text-primary">{overallHealthData.healthPoints.toLocaleString()} / {overallHealthData.maxPoints.toLocaleString()}</span>
+                      <span className="text-text-muted font-medium">Evaluated:</span>
+                      <span className="font-semibold text-text-primary">{overallHealthData.totalMachines} machines</span>
                     </div>
 
                     <div className="flex items-center justify-between border-t border-border-panel/40 pt-1.5">
@@ -1810,21 +1817,23 @@ export default function MainPage() {
                 </div>
               </DashboardCard>
 
-              {/* Card 2: CBM Surveillance Compliance */}
+              {/* Card 2: Compliance Risk (FAR Overdue PM Matrix) */}
               <DashboardCard
-                title="Surveillance Compliance"
+                title="Compliance Risk (Overdue PM)"
                 timeRange="Current Snapshot"
                 onMaximize={() => setMaximizedChart('kpi-compliance')}
               >
                 <div className="w-full flex flex-col xl:flex-row items-center justify-around gap-4 p-1">
-                  {/* Circular Donut with compliance percentage in center */}
+                  {/* Circular Donut with Compliance Level in center */}
                   <div className="relative flex items-center justify-center shrink-0">
                     <ResponsiveContainer width={145} height={145}>
                       <PieChart>
                         <Pie
                           data={[
-                            { name: 'Collected', value: complianceData.collected },
-                            { name: 'Overdue', value: complianceData.overdue },
+                            { name: 'On Schedule (L0)', value: fleetRiskSummary.complianceCount.onSchedule || 0.0001 },
+                            { name: 'Low Delay (L1-2)', value: fleetRiskSummary.complianceCount.lowDelay },
+                            { name: 'Mod/High (L3-4)', value: fleetRiskSummary.complianceCount.moderateDelay },
+                            { name: 'Severe (L5)', value: fleetRiskSummary.complianceCount.severeDelay },
                           ]}
                           cx="50%"
                           cy="50%"
@@ -1835,23 +1844,19 @@ export default function MainPage() {
                           dataKey="value"
                           stroke="none"
                         >
-                          <Cell 
-                            fill={
-                              complianceData.percentage >= 95 ? '#84cc16' : 
-                              complianceData.percentage >= 85 ? '#3b82f6' : 
-                              complianceData.percentage >= 75 ? '#f97316' : '#f87171'
-                            } 
-                          />
-                          <Cell fill="#1e293b" />
+                          <Cell fill="#10b981" />
+                          <Cell fill="#84cc16" />
+                          <Cell fill="#f97316" />
+                          <Cell fill="#ef4444" />
                         </Pie>
                       </PieChart>
                     </ResponsiveContainer>
                     <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none select-none">
                       <span className="text-xl font-extrabold text-text-primary tracking-tight">
-                        {complianceData.percentage}%
+                        {fleetRiskSummary.avgComplianceRisk}
                       </span>
                       <span className="text-[8px] uppercase tracking-wider font-semibold text-text-muted">
-                        Compliance
+                        Avg Level (0-5)
                       </span>
                     </div>
                   </div>
@@ -1859,38 +1864,50 @@ export default function MainPage() {
                   {/* Breakdown list */}
                   <div className="flex flex-col gap-2 text-[11px] flex-1 w-full max-w-[210px]">
                     <div className="flex items-center justify-between">
-                      <span className="text-text-muted font-medium">Total Scope:</span>
-                      <strong className="text-text-primary font-bold">{complianceData.total} machines</strong>
+                      <span className="text-text-muted font-medium">On Schedule (L0):</span>
+                      <span className="font-semibold text-status-ok">{fleetRiskSummary.complianceCount.onSchedule} machines</span>
                     </div>
 
                     <div className="flex items-center justify-between border-t border-border-panel/40 pt-1.5">
-                      <span className="text-text-muted font-medium">Collected:</span>
-                      <span className="font-semibold text-status-ok">{complianceData.collected} machines</span>
+                      <span className="text-text-muted font-medium">Low Delay (L1-2):</span>
+                      <span className="font-semibold text-lime-400">{fleetRiskSummary.complianceCount.lowDelay} machines</span>
                     </div>
 
                     <div className="flex items-center justify-between border-t border-border-panel/40 pt-1.5">
-                      <span className="text-text-muted font-medium">Overdue:</span>
-                      <span className={complianceData.overdue > 0 ? 'font-bold text-status-warn' : 'font-semibold text-status-ok'}>
-                        {complianceData.overdue} machines
+                      <span className="text-text-muted font-medium">Mod/High (L3-4):</span>
+                      <span className={fleetRiskSummary.complianceCount.moderateDelay > 0 ? 'font-semibold text-orange-400' : 'font-semibold text-text-muted'}>
+                        {fleetRiskSummary.complianceCount.moderateDelay} machines
+                      </span>
+                    </div>
+
+                    <div className="flex items-center justify-between border-t border-border-panel/40 pt-1.5">
+                      <span className="text-text-muted font-medium">Severe Delay (L5):</span>
+                      <span className={fleetRiskSummary.complianceCount.severeDelay > 0 ? 'font-bold text-status-error' : 'font-semibold text-text-muted'}>
+                        {fleetRiskSummary.complianceCount.severeDelay} machines
                       </span>
                     </div>
                   </div>
                 </div>
               </DashboardCard>
 
-              {/* Card 3: Open Action Items */}
+              {/* Card 3: CBMnet Total Risk */}
               <DashboardCard
-                title="Open Action Items"
+                title="CBMnet Total Risk"
                 timeRange="Current Snapshot"
-                onMaximize={() => setMaximizedChart('kpi-actions')}
+                onMaximize={() => setMaximizedChart('kpi-total-risk')}
               >
                 <div className="w-full flex flex-col xl:flex-row items-center justify-around gap-4 p-1">
-                  {/* Circular Donut with open count in center */}
+                  {/* Circular Donut with Total Risk score in center */}
                   <div className="relative flex items-center justify-center shrink-0">
                     <ResponsiveContainer width={145} height={145}>
                       <PieChart>
                         <Pie
-                          data={openActionsData.donutData}
+                          data={[
+                            { name: 'Low (<4)', value: fleetRiskSummary.totalRiskCount.low || 0.0001 },
+                            { name: 'Medium (4-8)', value: fleetRiskSummary.totalRiskCount.medium },
+                            { name: 'High (8-12)', value: fleetRiskSummary.totalRiskCount.high },
+                            { name: 'Critical (>=12)', value: fleetRiskSummary.totalRiskCount.critical },
+                          ]}
                           cx="50%"
                           cy="50%"
                           innerRadius={46}
@@ -1900,18 +1917,19 @@ export default function MainPage() {
                           dataKey="value"
                           stroke="none"
                         >
-                          {openActionsData.donutData.map((entry, index) => (
-                            <Cell key={`cell-${index}`} fill={entry.color} />
-                          ))}
+                          <Cell fill="#22c55e" />
+                          <Cell fill="#eab308" />
+                          <Cell fill="#f97316" />
+                          <Cell fill="#ef4444" />
                         </Pie>
                       </PieChart>
                     </ResponsiveContainer>
                     <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none select-none">
                       <span className="text-xl font-extrabold text-text-primary tracking-tight">
-                        {openActionsData.openCount}
+                        {fleetRiskSummary.avgTotalRisk}
                       </span>
                       <span className="text-[8px] uppercase tracking-wider font-semibold text-text-muted">
-                        Open Actions
+                        Avg Risk (Max 13)
                       </span>
                     </div>
                   </div>
@@ -1919,25 +1937,27 @@ export default function MainPage() {
                   {/* Breakdown list */}
                   <div className="flex flex-col gap-2 text-[11px] flex-1 w-full max-w-[210px]">
                     <div className="flex items-center justify-between">
-                      <span className="text-text-muted font-medium">In Progress:</span>
-                      <span className="font-semibold text-[#3b82f6]">{openActionsData.inProgress} orders</span>
-                    </div>
-
-                    <div className="flex items-center justify-between border-t border-border-panel/40 pt-1.5">
-                      <span className="text-text-muted font-medium">Pending:</span>
-                      <span className="font-semibold text-[#64748b]">{openActionsData.pending} orders</span>
-                    </div>
-
-                    <div className="flex items-center justify-between border-t border-border-panel/40 pt-1.5">
-                      <span className="text-text-muted font-medium">Accepted:</span>
-                      <span className="font-semibold text-[#93c5fd]">{openActionsData.accepted} orders</span>
-                    </div>
-
-                    <div className="flex items-center justify-between border-t border-border-panel/40 pt-1.5">
-                      <span className="text-text-muted font-medium">Past Due Date:</span>
-                      <span className={openActionsData.overdueDue > 0 ? 'font-bold text-status-warn' : 'font-semibold text-status-ok'}>
-                        {openActionsData.overdueDue} overdue
+                      <span className="text-text-muted font-medium">Critical (&ge;12):</span>
+                      <span className={fleetRiskSummary.totalRiskCount.critical > 0 ? 'font-bold text-status-error' : 'font-semibold text-text-muted'}>
+                        {fleetRiskSummary.totalRiskCount.critical} machines
                       </span>
+                    </div>
+
+                    <div className="flex items-center justify-between border-t border-border-panel/40 pt-1.5">
+                      <span className="text-text-muted font-medium">High (8-12):</span>
+                      <span className={fleetRiskSummary.totalRiskCount.high > 0 ? 'font-bold text-orange-400' : 'font-semibold text-text-muted'}>
+                        {fleetRiskSummary.totalRiskCount.high} machines
+                      </span>
+                    </div>
+
+                    <div className="flex items-center justify-between border-t border-border-panel/40 pt-1.5">
+                      <span className="text-text-muted font-medium">Medium (4-8):</span>
+                      <span className="font-semibold text-yellow-400">{fleetRiskSummary.totalRiskCount.medium} machines</span>
+                    </div>
+
+                    <div className="flex items-center justify-between border-t border-border-panel/40 pt-1.5">
+                      <span className="text-text-muted font-medium">Low (&lt;4):</span>
+                      <span className="font-semibold text-status-ok">{fleetRiskSummary.totalRiskCount.low} machines</span>
                     </div>
                   </div>
                 </div>
@@ -2025,7 +2045,7 @@ export default function MainPage() {
                 selectedEquipment.lubeOilStatus,
                 selectedEquipment.condition
               );
-              const modalScore = calculateRiskScore(modalOverallCondition, selectedEquipment.criticality);
+              const eqCbmRisk = calculateEquipmentCbmRisk(selectedEquipment);
 
               return (
                 <div className="mb-3">
@@ -2034,7 +2054,7 @@ export default function MainPage() {
                     Equipment Detail
                   </div>
 
-                  {/* Header: Tag + Name + Classification + Criticality Badge */}
+                  {/* Header: Tag + Name + Classification + Risk Badges */}
                   <div className="flex items-start justify-between gap-3 pr-8">
                     <div>
                       <h2 className="text-lg font-bold text-[#f8fafc] tracking-tight">
@@ -2044,15 +2064,36 @@ export default function MainPage() {
                         {selectedEquipment.class ? `${selectedEquipment.class}-` : ''}{selectedEquipment.name}
                       </div>
 
-                      <div className="flex items-center gap-2.5 mt-2.5">
+                      <div className="flex flex-wrap items-center gap-2 mt-2.5">
+                        {/* Fault Risk Badge */}
                         <span 
-                          className="bg-[#ef4444] text-white text-[11px] font-bold px-2 py-0.5 rounded flex items-center justify-center shadow-sm cursor-help"
-                          title={`Risk Score: ${modalScore} (${getRiskCategory(modalScore).category})`}
+                          className="bg-[#1e2538] border border-[#2b3552] text-[10px] font-semibold px-2.5 py-0.5 rounded-full flex items-center gap-1 shadow-sm cursor-help"
+                          title={`Fault Risk = Condition Tier x Criticality = ${eqCbmRisk.faultRisk} / 12 (${eqCbmRisk.faultCategory})`}
                         >
-                          {modalScore || selectedEquipment.criticality || '16'}
+                          <span className="text-[#8a94a6]">Fault:</span>
+                          <span style={{ color: eqCbmRisk.faultColorHex }} className="font-bold">{eqCbmRisk.faultRisk}/12</span>
                         </span>
-                        <span className="text-[11px] text-[#8a94a6] font-medium">
-                          Overall CBM status: <strong className={`font-semibold ${
+
+                        {/* Compliance Risk Badge */}
+                        <span 
+                          className="bg-[#1e2538] border border-[#2b3552] text-[10px] font-semibold px-2.5 py-0.5 rounded-full flex items-center gap-1 shadow-sm cursor-help"
+                          title={`Compliance Risk = Level ${eqCbmRisk.complianceRisk} / 5 (${eqCbmRisk.complianceResult.label}) - Vib Overdue: ${eqCbmRisk.vibOverdue.overduePercent}%, Oil Overdue: ${eqCbmRisk.oilOverdue.overduePercent}%`}
+                        >
+                          <span className="text-[#8a94a6]">Compliance:</span>
+                          <span style={{ color: eqCbmRisk.complianceResult.colorHex }} className="font-bold">L{eqCbmRisk.complianceRisk} ({eqCbmRisk.complianceResult.label})</span>
+                        </span>
+
+                        {/* CBM Total Risk Badge */}
+                        <span 
+                          className="text-white text-[10px] font-bold px-2.5 py-0.5 rounded-full flex items-center gap-1 shadow-sm cursor-help"
+                          style={{ backgroundColor: eqCbmRisk.totalColorHex }}
+                          title={`CBMnet Total Risk = Fault (${eqCbmRisk.faultRisk}) + 20% x Compliance (${eqCbmRisk.complianceRisk}) = ${eqCbmRisk.totalRisk} (${eqCbmRisk.totalCategory})`}
+                        >
+                          <span>Total Risk: {eqCbmRisk.totalRisk}</span>
+                        </span>
+
+                        <span className="text-[11px] text-[#8a94a6] font-medium ml-1">
+                          Status: <strong className={`font-semibold ${
                             modalOverallCondition?.includes('Good') ? 'text-[#10b981]' :
                             modalOverallCondition?.includes('Degraded') ? 'text-[#f59e0b]' :
                             modalOverallCondition?.includes('Critical') ? 'text-[#ef4444]' : 'text-[#8a94a6]'
@@ -3284,8 +3325,8 @@ export default function MainPage() {
               {maximizedChart === 'equip-condition' && 'Equipment by CBM Condition (Maximized View)'}
               {maximizedChart === 'cbm-criticality' && 'CBM Condition by Equipment Criticality (Maximized View)'}
               {maximizedChart === 'kpi-health' && (kpiFpsoLabel === 'All FPSOs' ? 'Overall Fleet Health (Maximized View)' : `${kpiFpsoLabel} Health (Maximized View)`)}
-              {maximizedChart === 'kpi-compliance' && 'Surveillance Compliance (Maximized View)'}
-              {maximizedChart === 'kpi-actions' && 'Open Action Items & Maintenance Backlog (Maximized View)'}
+              {maximizedChart === 'kpi-compliance' && 'Compliance Risk - FAR Overdue PM (Maximized View)'}
+              {maximizedChart === 'kpi-total-risk' && 'CBMnet Total Risk (Maximized View)'}
               {maximizedChart === 'kpi-trend' && 'Overall Health Trend (Maximized View)'}
             </h2>
             <div className="h-[360px] flex items-center justify-center">
@@ -3363,8 +3404,10 @@ export default function MainPage() {
                       <PieChart>
                         <Pie
                           data={[
-                            { name: 'Collected', value: complianceData.collected },
-                            { name: 'Overdue', value: complianceData.overdue },
+                            { name: 'On Schedule (L0)', value: fleetRiskSummary.complianceCount.onSchedule || 0.0001 },
+                            { name: 'Low Delay (L1-2)', value: fleetRiskSummary.complianceCount.lowDelay },
+                            { name: 'Mod/High (L3-4)', value: fleetRiskSummary.complianceCount.moderateDelay },
+                            { name: 'Severe (L5)', value: fleetRiskSummary.complianceCount.severeDelay },
                           ]}
                           cx="50%"
                           cy="50%"
@@ -3375,51 +3418,60 @@ export default function MainPage() {
                           dataKey="value"
                           stroke="none"
                         >
-                          <Cell 
-                            fill={
-                              complianceData.percentage >= 95 ? '#84cc16' : 
-                              complianceData.percentage >= 85 ? '#3b82f6' : 
-                              complianceData.percentage >= 75 ? '#f97316' : '#f87171'
-                            } 
-                          />
-                          <Cell fill="#1e293b" />
+                          <Cell fill="#10b981" />
+                          <Cell fill="#84cc16" />
+                          <Cell fill="#f97316" />
+                          <Cell fill="#ef4444" />
                         </Pie>
                       </PieChart>
                     </ResponsiveContainer>
                     <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none select-none">
                       <span className="text-3xl font-extrabold text-text-primary tracking-tight">
-                        {complianceData.percentage}%
+                        {fleetRiskSummary.avgComplianceRisk}
                       </span>
                       <span className="text-xs uppercase tracking-wider font-semibold text-text-muted">
-                        Compliance
+                        Avg Level (0-5)
                       </span>
                     </div>
                   </div>
                   <div className="flex flex-col gap-3 text-sm flex-1 max-w-sm w-full">
                     <div className="flex items-center justify-between">
                       <span className="text-text-muted font-medium">Total Scope Machines:</span>
-                      <strong className="text-text-primary font-bold">{complianceData.total} machines</strong>
+                      <strong className="text-text-primary font-bold">{fleetRiskSummary.totalMachines} machines</strong>
                     </div>
                     <div className="flex items-center justify-between border-t border-border-panel/40 pt-2">
-                      <span className="text-text-muted font-medium">Collected (On-Time):</span>
-                      <span className="font-semibold text-status-ok">{complianceData.collected} machines</span>
+                      <span className="text-text-muted font-medium">On Schedule (Level 0):</span>
+                      <span className="font-semibold text-status-ok">{fleetRiskSummary.complianceCount.onSchedule} machines</span>
                     </div>
                     <div className="flex items-center justify-between border-t border-border-panel/40 pt-2">
-                      <span className="text-text-muted font-medium">Overdue (Pending):</span>
-                      <span className={complianceData.overdue > 0 ? 'font-bold text-status-warn' : 'font-semibold text-status-ok'}>
-                        {complianceData.overdue} machines
+                      <span className="text-text-muted font-medium">Low Delay (Level 1-2):</span>
+                      <span className="font-semibold text-lime-400">{fleetRiskSummary.complianceCount.lowDelay} machines</span>
+                    </div>
+                    <div className="flex items-center justify-between border-t border-border-panel/40 pt-2">
+                      <span className="text-text-muted font-medium">Moderate/High Delay (Level 3-4):</span>
+                      <span className="font-semibold text-orange-400">{fleetRiskSummary.complianceCount.moderateDelay} machines</span>
+                    </div>
+                    <div className="flex items-center justify-between border-t border-border-panel/40 pt-2">
+                      <span className="text-text-muted font-medium">Severe Delay (Level 5):</span>
+                      <span className={fleetRiskSummary.complianceCount.severeDelay > 0 ? 'font-bold text-status-error' : 'font-semibold text-text-muted'}>
+                        {fleetRiskSummary.complianceCount.severeDelay} machines
                       </span>
                     </div>
                   </div>
                 </div>
               )}
-              {maximizedChart === 'kpi-actions' && (
+              {maximizedChart === 'kpi-total-risk' && (
                 <div className="w-full flex flex-col sm:flex-row items-center justify-around gap-8 p-4">
                   <div className="relative flex items-center justify-center shrink-0">
                     <ResponsiveContainer width={240} height={240}>
                       <PieChart>
                         <Pie
-                          data={openActionsData.donutData}
+                          data={[
+                            { name: 'Low (<4)', value: fleetRiskSummary.totalRiskCount.low || 0.0001 },
+                            { name: 'Medium (4-8)', value: fleetRiskSummary.totalRiskCount.medium },
+                            { name: 'High (8-12)', value: fleetRiskSummary.totalRiskCount.high },
+                            { name: 'Critical (>=12)', value: fleetRiskSummary.totalRiskCount.critical },
+                          ]}
                           cx="50%"
                           cy="50%"
                           innerRadius={75}
@@ -3429,39 +3481,46 @@ export default function MainPage() {
                           dataKey="value"
                           stroke="none"
                         >
-                          {openActionsData.donutData.map((entry, index) => (
-                            <Cell key={`cell-modal-${index}`} fill={entry.color} />
-                          ))}
+                          <Cell fill="#22c55e" />
+                          <Cell fill="#eab308" />
+                          <Cell fill="#f97316" />
+                          <Cell fill="#ef4444" />
                         </Pie>
                       </PieChart>
                     </ResponsiveContainer>
                     <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none select-none">
                       <span className="text-3xl font-extrabold text-text-primary tracking-tight">
-                        {openActionsData.openCount}
+                        {fleetRiskSummary.avgTotalRisk}
                       </span>
                       <span className="text-xs uppercase tracking-wider font-semibold text-text-muted">
-                        Open Actions
+                        Avg Risk (Max 13)
                       </span>
                     </div>
                   </div>
                   <div className="flex flex-col gap-3 text-sm flex-1 max-w-sm w-full">
                     <div className="flex items-center justify-between">
-                      <span className="text-text-muted font-medium">In Progress:</span>
-                      <span className="font-semibold text-[#3b82f6]">{openActionsData.inProgress} orders</span>
+                      <span className="text-text-muted font-medium">Total Scope Machines:</span>
+                      <strong className="text-text-primary font-bold">{fleetRiskSummary.totalMachines} machines</strong>
                     </div>
                     <div className="flex items-center justify-between border-t border-border-panel/40 pt-2">
-                      <span className="text-text-muted font-medium">Pending Review:</span>
-                      <span className="font-semibold text-[#64748b]">{openActionsData.pending} orders</span>
-                    </div>
-                    <div className="flex items-center justify-between border-t border-border-panel/40 pt-2">
-                      <span className="text-text-muted font-medium">Accepted:</span>
-                      <span className="font-semibold text-[#93c5fd]">{openActionsData.accepted} orders</span>
-                    </div>
-                    <div className="flex items-center justify-between border-t border-border-panel/40 pt-2">
-                      <span className="text-text-muted font-medium">Overdue Target Date:</span>
-                      <span className={openActionsData.overdueDue > 0 ? 'font-bold text-status-warn' : 'font-semibold text-status-ok'}>
-                        {openActionsData.overdueDue} overdue
+                      <span className="text-text-muted font-medium">Critical Risk (&ge;12):</span>
+                      <span className={fleetRiskSummary.totalRiskCount.critical > 0 ? 'font-bold text-status-error' : 'font-semibold text-text-muted'}>
+                        {fleetRiskSummary.totalRiskCount.critical} machines
                       </span>
+                    </div>
+                    <div className="flex items-center justify-between border-t border-border-panel/40 pt-2">
+                      <span className="text-text-muted font-medium">High Risk (8 - 11.9):</span>
+                      <span className={fleetRiskSummary.totalRiskCount.high > 0 ? 'font-bold text-orange-400' : 'font-semibold text-text-muted'}>
+                        {fleetRiskSummary.totalRiskCount.high} machines
+                      </span>
+                    </div>
+                    <div className="flex items-center justify-between border-t border-border-panel/40 pt-2">
+                      <span className="text-text-muted font-medium">Medium Risk (4 - 7.9):</span>
+                      <span className="font-semibold text-yellow-400">{fleetRiskSummary.totalRiskCount.medium} machines</span>
+                    </div>
+                    <div className="flex items-center justify-between border-t border-border-panel/40 pt-2">
+                      <span className="text-text-muted font-medium">Low Risk (&lt;4):</span>
+                      <span className="font-semibold text-status-ok">{fleetRiskSummary.totalRiskCount.low} machines</span>
                     </div>
                   </div>
                 </div>
