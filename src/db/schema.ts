@@ -69,6 +69,7 @@ export const analysisReports = sqliteTable('analysis_reports', {
   maintainableItem: text('maintainable_item'),
   failureModeDescription: text('failure_mode_description'),
   failureMechanismSubdivision: text('failure_mechanism_subdivision'),
+  effectiveness: text('effectiveness'),
 
   createdAt: text('created_at').notNull(),
 });

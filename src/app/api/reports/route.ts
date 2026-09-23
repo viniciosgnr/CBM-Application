@@ -61,6 +61,7 @@ export async function POST(request: Request) {
       maintainableItem,
       failureModeDescription,
       failureMechanismSubdivision,
+      effectiveness,
     } = body;
 
     // Validate required fields
@@ -77,6 +78,11 @@ export async function POST(request: Request) {
     ) {
       return NextResponse.json({ error: 'Missing required report fields' }, { status: 400 });
     }
+
+    // Default effectiveness based on condition if not provided
+    const resolvedEffectiveness = effectiveness || (
+      conditionAssessment.toLowerCase().includes('good') ? 'N/A' : 'Not Yet Assessable'
+    );
 
     // Use transaction to update equipment, history and save report
     const result = db.transaction((tx) => {
@@ -178,6 +184,7 @@ export async function POST(request: Request) {
           maintainableItem: maintainableItem || null,
           failureModeDescription: failureModeDescription || null,
           failureMechanismSubdivision: failureMechanismSubdivision || null,
+          effectiveness: resolvedEffectiveness,
           createdAt: nowIso,
         })
         .returning()
@@ -196,14 +203,26 @@ export async function POST(request: Request) {
 export async function PUT(request: Request) {
   try {
     const body = await request.json();
-    const { id, imageUrl } = body;
+    const { id, imageUrl, effectiveness } = body;
     if (!id) {
       return NextResponse.json({ error: 'Missing report id' }, { status: 400 });
     }
 
+    const updateData: Record<string, any> = {};
+    if ('imageUrl' in body) {
+      updateData.imageUrl = imageUrl || null;
+    }
+    if ('effectiveness' in body) {
+      updateData.effectiveness = effectiveness || null;
+    }
+
+    if (Object.keys(updateData).length === 0) {
+      return NextResponse.json({ error: 'No fields provided to update' }, { status: 400 });
+    }
+
     const updated = await db
       .update(analysisReports)
-      .set({ imageUrl: imageUrl || null })
+      .set(updateData)
       .where(eq(analysisReports.id, Number(id)))
       .returning();
 
@@ -213,8 +232,8 @@ export async function PUT(request: Request) {
 
     return NextResponse.json(updated[0]);
   } catch (error) {
-    console.error('Failed to update report image:', error);
-    return NextResponse.json({ error: 'Failed to update report image' }, { status: 500 });
+    console.error('Failed to update report:', error);
+    return NextResponse.json({ error: 'Failed to update report' }, { status: 500 });
   }
 }
 

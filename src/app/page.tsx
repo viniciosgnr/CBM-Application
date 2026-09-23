@@ -15,6 +15,7 @@ import {
   Hash,
   Wrench,
   AlertCircle,
+  CheckCircle2,
   ChevronDown,
   Search,
   Activity,
@@ -118,8 +119,17 @@ interface AnalysisReport {
   maintainableItem?: string | null;
   failureModeDescription?: string | null;
   failureMechanismSubdivision?: string | null;
+  effectiveness?: string | null;
   createdAt: string;
 }
+
+const EFFECTIVENESS_DESCRIPTIONS: Record<string, string> = {
+  'Effective': 'Effective: the executed action addressed the identified condition and the available evidence supports the intended technical outcome;',
+  'Partially Effective': 'Partially Effective: the action addressed part of the identified condition, but further action or monitoring remains necessary;',
+  'Ineffective': 'Ineffective: the action did not address the identified condition or did not produce the intended technical outcome; or',
+  'Not Yet Assessable': 'Not Yet Assessable: available feedback or post-action evidence is insufficient to determine effectiveness.',
+  'N/A': 'N/A: Not applicable (routine baseline surveillance with no corrective action required).',
+};
 
 interface WorkOrder {
   id: number;
@@ -598,6 +608,7 @@ export default function MainPage() {
   // Report Detail Viewer state
   const [selectedReport, setSelectedReport] = useState<AnalysisReport | null>(null);
   const [reportDetailsOpen, setReportDetailsOpen] = useState(false);
+  const [isSavingEffectiveness, setIsSavingEffectiveness] = useState(false);
 
   // States and Handlers for Work Order (Fault Report) creation
   const [workOrderFormOpen, setWorkOrderFormOpen] = useState(false);
@@ -922,6 +933,36 @@ export default function MainPage() {
     reader.readAsDataURL(file);
   };
 
+  // Handle updating recommendation effectiveness classification
+  const handleEffectivenessChange = async (newVal: string) => {
+    if (!selectedReport) return;
+    setIsSavingEffectiveness(true);
+
+    // Optimistic UI update
+    const updated = { ...selectedReport, effectiveness: newVal };
+    setSelectedReport(updated);
+    setReports(prev => prev.map(r => r.id === selectedReport.id ? { ...r, effectiveness: newVal } : r));
+
+    try {
+      const res = await fetch('/api/reports', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id: selectedReport.id, effectiveness: newVal }),
+      });
+      if (res.ok) {
+        const saved = await res.json();
+        setSelectedReport(saved);
+        await fetchReports();
+      } else {
+        console.error('Failed to update effectiveness');
+      }
+    } catch (err) {
+      console.error('Error updating effectiveness:', err);
+    } finally {
+      setIsSavingEffectiveness(false);
+    }
+  };
+
   function parseDate(dateStr?: string | null): Date | null {
     if (!dateStr) return null;
     if (dateStr.includes('/')) {
@@ -1168,7 +1209,11 @@ export default function MainPage() {
       render: (val: string) => <span className="font-medium text-text-primary">{formatEquipmentClass(val)}</span>
     },
     { key: 'analysisType', header: 'Analysis Type' },
-    { key: 'shortDescription', header: 'Short Description' },
+    { 
+      key: 'effectiveness', 
+      header: 'Effectiveness', 
+      render: (val: string) => <span className="font-medium text-text-primary">{val || 'N/A'}</span> 
+    },
     { key: 'cbmStatus', header: 'CBM Status', render: (val: string) => getStatusDot(val) },
     { key: 'failureModeDescription', header: 'Failure Mode Description' },
     { key: 'raisedDate', header: 'Raised Date' },
@@ -1255,6 +1300,7 @@ export default function MainPage() {
       name: r.machineName || r.component || 'Compressor Performance',
       equipmentClass: r.equipmentClass || 'Centrifugal Compressor',
       analysisType: r.technology || 'Vibration Analysis',
+      effectiveness: r.effectiveness || 'N/A',
       shortDescription: r.shortDescription,
       cbmStatus: formatSurveillanceTier(techniqueStatus),
       failureModeDescription: r.failureModeDescription || '-',
@@ -2856,25 +2902,17 @@ export default function MainPage() {
                     <AlertCircle size={12} className="text-status-warn" />
                     Failure Mode Information
                   </div>
-                  <div className="grid grid-cols-2 text-[10px] uppercase font-semibold">
+                  <div className="grid grid-cols-1 md:grid-cols-2 text-[10px] uppercase font-semibold">
                     <div className="border-r border-b border-[#202742] flex">
-                      <span className="bg-[#121626] text-text-muted p-2.5 w-[130px] flex-shrink-0 border-r border-[#202742] flex items-center">Equipment Class</span>
+                      <span className="bg-[#121626] text-text-muted p-2.5 w-[130px] sm:w-[155px] flex-shrink-0 border-r border-[#202742] flex items-center">Equipment Class</span>
                       <span className="p-2.5 text-text-primary flex-1 flex items-center">{formatEquipmentClass(selectedReport.equipmentClass || equipments.find(e => e.tag === selectedReport.equipmentTag)?.class || 'N/A')}</span>
                     </div>
                     <div className="border-b border-[#202742] flex">
-                      <span className="bg-[#121626] text-text-muted p-2.5 w-[130px] flex-shrink-0 border-r border-[#202742] flex items-center">Subunit</span>
-                      <span className="p-2.5 text-text-primary flex-1 flex items-center">{selectedReport.subunit || 'N/A'}</span>
-                    </div>
-                    <div className="border-r border-b border-[#202742] flex">
-                      <span className="bg-[#121626] text-text-muted p-2.5 w-[130px] flex-shrink-0 border-r border-[#202742] flex items-center">Maintainable Item</span>
-                      <span className="p-2.5 text-text-primary flex-1 flex items-center">{selectedReport.maintainableItem || 'N/A'}</span>
-                    </div>
-                    <div className="border-b border-[#202742] flex">
-                      <span className="bg-[#121626] text-text-muted p-2.5 w-[130px] flex-shrink-0 border-r border-[#202742] flex items-center">Mechanism Subdivision</span>
+                      <span className="bg-[#121626] text-text-muted p-2.5 w-[145px] sm:w-[165px] flex-shrink-0 border-r border-[#202742] flex items-center">Failure Mechanism Subdivision</span>
                       <span className="p-2.5 text-text-primary flex-1 flex items-center">{selectedReport.failureMechanismSubdivision || 'N/A'}</span>
                     </div>
-                    <div className="col-span-2 flex">
-                      <span className="bg-[#121626] text-text-muted p-2.5 w-[130px] flex-shrink-0 border-r border-[#202742] flex items-center">Failure Mode Desc.</span>
+                    <div className="col-span-1 md:col-span-2 flex">
+                      <span className="bg-[#121626] text-text-muted p-2.5 w-[130px] sm:w-[155px] flex-shrink-0 border-r border-[#202742] flex items-center">Failure Mode Description</span>
                       <span className="p-2.5 text-text-primary flex-1 flex items-center font-bold text-[#f59e0b]">{selectedReport.failureModeDescription || 'N/A'}</span>
                     </div>
                   </div>
@@ -2888,6 +2926,49 @@ export default function MainPage() {
                   </div>
                   <div className="p-3.5 text-text-primary leading-relaxed text-[11px] whitespace-pre-line bg-[#101422]/40">
                     {selectedReport.longDescription}
+                  </div>
+                </div>
+
+                {/* Recommendation Effectiveness Classification (ISO 6.4.6.1) */}
+                <div className="border-t border-[#202742] text-[10px]">
+                  <div className="bg-[#121626] text-text-muted p-2.5 font-bold uppercase tracking-wider border-b border-[#202742] flex items-center justify-between">
+                    <div className="flex items-center gap-1.5">
+                      <CheckCircle2 size={12} className="text-[#10b981]" />
+                      Recommendation Effectiveness Classification (ISO 6.4.6.1)
+                    </div>
+                    {isSavingEffectiveness && (
+                      <span className="text-[9px] text-[#60a5fa] font-semibold animate-pulse lowercase">
+                        saving...
+                      </span>
+                    )}
+                  </div>
+                  <div className="p-3.5 bg-[#101422]/60 flex flex-col gap-2.5">
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                      <label className="text-[#8a94a6] font-bold text-[10px] uppercase tracking-wider">
+                        Effectiveness Status:
+                      </label>
+                      <div className="relative min-w-[210px]">
+                        <select
+                          value={selectedReport.effectiveness || 'Not Yet Assessable'}
+                          onChange={(e) => handleEffectivenessChange(e.target.value)}
+                          className="w-full bg-[#0c101d] border border-[#232a42] rounded-md px-3 py-1.5 text-[#f1f5f9] focus:border-[#3b82f6] outline-none cursor-pointer text-xs appearance-none pr-8 transition-colors font-semibold"
+                        >
+                          <option value="N/A" className="bg-[#0c101d] text-[#f1f5f9]">N/A</option>
+                          <option value="Not Yet Assessable" className="bg-[#0c101d] text-[#f1f5f9]">Not Yet Assessable</option>
+                          <option value="Effective" className="bg-[#0c101d] text-[#f1f5f9]">Effective</option>
+                          <option value="Partially Effective" className="bg-[#0c101d] text-[#f1f5f9]">Partially Effective</option>
+                          <option value="Ineffective" className="bg-[#0c101d] text-[#f1f5f9]">Ineffective</option>
+                        </select>
+                        <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2.5 text-[#8a94a6]">
+                          <svg className="w-3.5 h-3.5 fill-current" viewBox="0 0 20 20"><path d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z"/></svg>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Explanatory description from standard */}
+                    <div className="text-[11px] text-[#94a3b8] italic bg-[#0c101d]/80 border border-[#1e2538] rounded p-2.5 leading-relaxed">
+                      {EFFECTIVENESS_DESCRIPTIONS[selectedReport.effectiveness || 'Not Yet Assessable'] || EFFECTIVENESS_DESCRIPTIONS['Not Yet Assessable']}
+                    </div>
                   </div>
                 </div>
               </div>

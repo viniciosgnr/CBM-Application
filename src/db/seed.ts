@@ -560,6 +560,9 @@ export async function seed() {
   try {
     await db.run(sql`ALTER TABLE analysis_reports ADD COLUMN failure_mechanism_subdivision TEXT;`);
   } catch {}
+  try {
+    await db.run(sql`ALTER TABLE analysis_reports ADD COLUMN effectiveness TEXT;`);
+  } catch {}
 
   await db.delete(workOrders);
   await db.delete(analysisReports);
@@ -752,10 +755,15 @@ export async function seed() {
     eqClassMap.set(e.tag, e.class);
   });
 
-  const enrichedReports = mockReports.map((r) => ({
-    ...r,
-    equipmentClass: eqClassMap.get(r.equipmentTag) || 'equipmentClass_PUCE',
-  }));
+  const enrichedReports = mockReports.map((r) => {
+    const isGood = (r.conditionAssessment || '').toLowerCase().includes('good') || 
+                   (r.overallCondition || '').toLowerCase().includes('good');
+    return {
+      ...r,
+      equipmentClass: eqClassMap.get(r.equipmentTag) || 'equipmentClass_PUCE',
+      effectiveness: isGood ? 'N/A' : 'Not Yet Assessable',
+    };
+  });
 
   // Insert reports first and get their inserted IDs
   const insertedReports = await db.insert(analysisReports).values(enrichedReports).returning();
