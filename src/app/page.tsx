@@ -3012,17 +3012,13 @@ export default function MainPage() {
                     Failure Mode Information
                   </div>
                   <div className="grid grid-cols-1 md:grid-cols-2 text-[10px] uppercase font-semibold">
-                    <div className="border-r border-b border-[#202742] flex">
-                      <span className="bg-[#121626] text-text-muted p-2.5 w-[130px] sm:w-[155px] flex-shrink-0 border-r border-[#202742] flex items-center">Equipment Class</span>
-                      <span className="p-2.5 text-text-primary flex-1 flex items-center">{formatEquipmentClass(selectedReport.equipmentClass || equipments.find(e => e.tag === selectedReport.equipmentTag)?.class || 'N/A')}</span>
-                    </div>
-                    <div className="border-b border-[#202742] flex">
-                      <span className="bg-[#121626] text-text-muted p-2.5 w-[145px] sm:w-[165px] flex-shrink-0 border-r border-[#202742] flex items-center">Failure Mechanism Subdivision</span>
-                      <span className="p-2.5 text-text-primary flex-1 flex items-center">{selectedReport.failureMechanismSubdivision || 'N/A'}</span>
-                    </div>
-                    <div className="col-span-1 md:col-span-2 flex">
-                      <span className="bg-[#121626] text-text-muted p-2.5 w-[130px] sm:w-[155px] flex-shrink-0 border-r border-[#202742] flex items-center">Failure Mode Description</span>
+                    <div className="border-r border-[#202742] flex">
+                      <span className="bg-[#121626] text-text-muted p-2.5 w-[140px] sm:w-[160px] flex-shrink-0 border-r border-[#202742] flex items-center">Failure Mode Description</span>
                       <span className="p-2.5 text-text-primary flex-1 flex items-center font-bold text-[#f59e0b]">{selectedReport.failureModeDescription || 'N/A'}</span>
+                    </div>
+                    <div className="flex">
+                      <span className="bg-[#121626] text-text-muted p-2.5 w-[145px] sm:w-[170px] flex-shrink-0 border-r border-[#202742] flex items-center">Failure Mechanism Subdivision</span>
+                      <span className="p-2.5 text-text-primary flex-1 flex items-center">{selectedReport.failureMechanismSubdivision || 'N/A'}</span>
                     </div>
                   </div>
                 </div>
