@@ -497,7 +497,7 @@ export interface EquipmentCbmRiskResult {
   totalBadgeText: string;
 }
 
-export function calculateEquipmentCbmRisk(eq: {
+export type EquipmentRiskInput = {
   condition?: string | null;
   vibrationStatus?: string | null;
   lubeOilStatus?: string | null;
@@ -507,7 +507,9 @@ export function calculateEquipmentCbmRisk(eq: {
   lastLubeOilUpdate?: string | null;
   vibrationFrequency?: string | null;
   lubeOilFrequency?: string | null;
-}): EquipmentCbmRiskResult {
+};
+
+export function calculateEquipmentCbmRisk(eq: EquipmentRiskInput): EquipmentCbmRiskResult {
   const worstCondition = getWorstTechniqueStatus(
     eq.vibrationStatus,
     eq.lubeOilStatus,
@@ -594,7 +596,7 @@ export interface FleetCbmRiskSummary {
   };
 }
 
-export function calculateFleetCbmRiskSummary(equipments: Array<any>): FleetCbmRiskSummary {
+export function calculateFleetCbmRiskSummary(equipments: Array<EquipmentRiskInput>): FleetCbmRiskSummary {
   const total = equipments.length;
   if (total === 0) {
     return {

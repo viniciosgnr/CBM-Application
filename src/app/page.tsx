@@ -46,7 +46,6 @@ import {
   calculateCombinedRisk,
   calculateRiskScore,
   getWorstTechniqueStatus,
-  getRiskCategory,
   calculateOverallHealth,
   calculateEquipmentCbmRisk,
   calculateFleetCbmRiskSummary,
@@ -170,36 +169,6 @@ const CHART_VALUE_MAP: Record<string, number> = {
   'Critical': 1,
   'Machine Off': 0,
 };
-
-const VIBRATION_FAILURE_MODES = [
-  'LUBRICATION DEFICIENCY',
-  'STRUCTURAL CLEARANCE',
-  'CAVITATION',
-  'BEARING INNER RACE',
-  'BEARING OUTER RACE',
-  'BEARING CAGE',
-  'BEARING ROLLING ELEMENTS',
-  'EXCESSIVE CLEARANCE (SHAFT, BEARINGS, BEARING HOUSING, GEAR)',
-  'GEAR EFFORT',
-  'ROTOR BAR PASS - ELECTRICAL',
-  'UNBALANCE',
-  'MISALIGNMENT',
-  'PUMP ROTOR BLADES WEAR',
-  'RESONANCE',
-  'TEMPERATURE OVER THE LIMITS',
-  'AXIAL DISPLACEMENT',
-];
-
-const OIL_FAILURE_MODES = [
-  { value: 'WATER > 1%', label: 'WATER > 1% (WATER ABOVE 10,000 PPM)', directive: 'WATER ABOVE 10,000 PPM' },
-  { value: 'WATER < 1%', label: 'WATER < 1% (WATER BELLOW 10,000 PPM)', directive: 'WATER BELLOW 10,000 PPM' },
-  { value: 'EXTERNAL CONTAMINATION', label: 'EXTERNAL CONTAMINATION (PRESENCE OF EXTERNAL MATERIALS (Si, Na, B))', directive: 'PRESENCE OF EXTERNAL MATERIALS (Si, Na, B)' },
-  { value: 'WEAR', label: 'WEAR (PRESENCE OF WEAR METALS (Fe, Cu, Al, Cr, etc))', directive: 'PRESENCE OF WEAR METALS (Fe, Cu, Al, Cr, etc)' },
-  { value: 'VISCOSITY ABOVE NORMAL', label: 'VISCOSITY ABOVE NORMAL (COMERCIAL VISCOSITY +10%)', directive: 'COMERCIAL VISCOSITY +10%' },
-  { value: 'VISCOSITY BELOW NORMAL', label: 'VISCOSITY BELOW NORMAL (COMERCIAL VISCOSITY -10%)', directive: 'COMERCIAL VISCOSITY -10%' },
-  { value: 'ADDITIVE DEPLETION', label: 'ADDITIVE DEPLETION (TAN > 1,5 OR TBN < 4)', directive: 'TAN > 1,5 OR TBN < 4' },
-  { value: 'HIGH PARTICLE COUNT', label: 'HIGH PARTICLE COUNT (NAS OVER THE LIMITS)', directive: 'NAS OVER THE LIMITS' },
-];
 
 const ALL_RECOM_FPSOS = ['DNY', 'UNY', 'PTY', 'ONE'];
 
@@ -345,36 +314,6 @@ export default function MainPage() {
     return calculateFleetCbmRiskSummary(currentKpiEquipments);
   }, [currentKpiEquipments]);
 
-  // Compliance Calculation based on routine frequency (24 DAY)
-  const complianceData = useMemo(() => {
-    const total = currentKpiEquipments.length;
-    if (total === 0) {
-      return { total: 0, collected: 0, overdue: 0, percentage: 100 };
-    }
-
-    const now = new Date('2026-09-04T00:00:00Z').getTime();
-    let collected = 0;
-    let overdue = 0;
-
-    currentKpiEquipments.forEach(eq => {
-      const parts = (eq.lastUpdate || '').split(',')[0].trim().split('/');
-      if (parts.length === 3) {
-        const d = new Date(parseInt(parts[2], 10), parseInt(parts[1], 10) - 1, parseInt(parts[0], 10));
-        const diffDays = (now - d.getTime()) / (1000 * 60 * 60 * 24);
-        if (diffDays <= 24) {
-          collected++;
-        } else {
-          overdue++;
-        }
-      } else {
-        overdue++;
-      }
-    });
-
-    const percentage = Number(((collected / total) * 100).toFixed(1));
-    return { total, collected, overdue, percentage };
-  }, [currentKpiEquipments]);
-
   // Reports state
   const [reports, setReports] = useState<AnalysisReport[]>([]);
   const [loadingReports, setLoadingReports] = useState(true);
@@ -505,66 +444,6 @@ export default function MainPage() {
   const [loadingWorkOrders, setLoadingWorkOrders] = useState(true);
   const [woSearchQuery, setWoSearchQuery] = useState('');
 
-  // Target Work Orders for KPI calculation based on selected vessel trigrams
-  const currentKpiWorkOrders = useMemo(() => {
-    if (selectedKpiFpsos.size === 0 || selectedKpiFpsos.size === availableKpiFpsos.length) {
-      return workOrders;
-    }
-    return workOrders.filter(w => {
-      const trigram = (w.fpso || '').replace(/^FPSO\s+/i, '').trim().toUpperCase();
-      return selectedKpiFpsos.has(trigram);
-    });
-  }, [workOrders, selectedKpiFpsos, availableKpiFpsos]);
-
-  // Open Action Items calculation (Backlog snapshot)
-  const openActionsData = useMemo(() => {
-    const total = currentKpiWorkOrders.length;
-    const now = new Date('2026-09-04T00:00:00Z').getTime();
-    let openCount = 0;
-    let closedCount = 0;
-    let inProgress = 0;
-    let pending = 0;
-    let accepted = 0;
-    let overdueDue = 0;
-
-    currentKpiWorkOrders.forEach(w => {
-      const s = w.status;
-      if (s === 'Finished' || s === 'Completed' || s === 'Cancelled' || s === 'Rejected') {
-        closedCount++;
-        return;
-      }
-      openCount++;
-      if (s === 'In Progress') inProgress++;
-      else if (s === 'Pending' || s === 'Observed') pending++;
-      else if (s === 'Accepted') accepted++;
-      else inProgress++;
-
-      const parts = (w.dueDate || '').split(',')[0].trim().split('/');
-      if (parts.length === 3) {
-        const d = new Date(parseInt(parts[2], 10), parseInt(parts[1], 10) - 1, parseInt(parts[0], 10));
-        if (d.getTime() < now) {
-          overdueDue++;
-        }
-      }
-    });
-
-    return {
-      total,
-      openCount,
-      closedCount,
-      inProgress,
-      pending,
-      accepted,
-      overdueDue,
-      donutData: openCount === 0 
-        ? [{ name: 'All Completed', value: 1, color: '#84cc16' }]
-        : [
-            { name: 'In Progress', value: inProgress, color: '#3b82f6' },
-            { name: 'Pending', value: pending, color: '#64748b' },
-            { name: 'Accepted', value: accepted, color: '#93c5fd' },
-          ].filter(item => item.value > 0)
-    };
-  }, [currentKpiWorkOrders]);
 
   // Modal states (Equipment Detail View)
   const [selectedEquipment, setSelectedEquipment] = useState<Equipment | null>(null);

@@ -208,7 +208,7 @@ export async function PUT(request: Request) {
       return NextResponse.json({ error: 'Missing report id' }, { status: 400 });
     }
 
-    const updateData: Record<string, any> = {};
+    const updateData: Record<string, string | null> = {};
     if ('imageUrl' in body) {
       updateData.imageUrl = imageUrl || null;
     }
