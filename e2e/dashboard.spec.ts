@@ -57,6 +57,11 @@ test.describe('CBM Dashboard E2E Smoke Tests', () => {
   });
 
   test('deve exibir e persistir a razão de não coleta (Non-collection Reason) geral quando qualquer técnica estiver overdue', async ({ page }) => {
+    // Reseta a razão para null antes do teste para garantir idempotência
+    await page.request.put('/api/equipments/DNY_111-PKPD-0300', {
+      data: { nonCollectionReason: null }
+    });
+
     await page.goto('/');
 
     // Navega para a aba de Equipamentos
@@ -105,5 +110,32 @@ test.describe('CBM Dashboard E2E Smoke Tests', () => {
     await overdueRow.click();
     await expect(drawer).toBeVisible();
     await expect(reasonSelect).toHaveValue('Awaiting Maintenance');
+  });
+
+  test('deve exibir a coluna Next Collect na tabela de Equipamentos com ordenação funcional', async ({ page }) => {
+    await page.goto('/');
+
+    // Navega para a aba de Equipamentos
+    const equipmentTab = page.getByRole('button', { name: /^Equipment$/i });
+    await expect(equipmentTab).toBeVisible();
+    await equipmentTab.click();
+
+    // Valida a presença da coluna Next Collect no cabeçalho da tabela
+    const nextCollectHeader = page.getByTitle('Sort by Next Collect');
+    await expect(nextCollectHeader).toBeVisible();
+
+    // Valida que a coluna Observation foi removida da tabela
+    await expect(page.locator('table thead').getByText('Observation')).not.toBeVisible();
+
+    // Valida que a tabela já inicia com indicador de ordenação ascendente (▲)
+    await expect(nextCollectHeader.locator('text=▲')).toBeVisible();
+
+    // Clica para ordenar de forma descendente (▼)
+    await nextCollectHeader.click();
+    await expect(nextCollectHeader.locator('text=▼')).toBeVisible();
+
+    // Clica novamente para retornar a ordenação ascendente (▲)
+    await nextCollectHeader.click();
+    await expect(nextCollectHeader.locator('text=▲')).toBeVisible();
   });
 });

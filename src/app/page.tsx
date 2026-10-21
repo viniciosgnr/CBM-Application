@@ -1089,9 +1089,14 @@ export default function MainPage() {
     { key: 'criticality', header: 'Criticality' },
     { key: 'objectType', header: 'Object Type' },
     { key: 'collectionStatus', header: 'Collection Status', render: (val: string) => getStatusDot(val) },
+    { 
+      key: 'nextCollect', 
+      header: 'Next Collect',
+      sortable: true,
+      render: (val: string) => <span className="font-normal text-text-primary">{val || '-'}</span>
+    },
     { key: 'condition', header: 'Equip. CBM Condition', render: (val: string) => getStatusDot(val) },
     { key: 'lastUpdate', header: 'Last Update' },
-    { key: 'observation', header: 'Observation' },
   ];
 
   // Definição de colunas para Tabela de Recomendações (Reports) - 11 colunas conforme ISO 14224
@@ -1141,6 +1146,14 @@ export default function MainPage() {
       const isOverdue = nextVib.isOverdue || nextOil.isOverdue;
       const collectionStatus = isOverdue ? 'Overdue' : 'On Time';
 
+      // Earliest next collection date between Vibration and Lube Oil
+      const dVib = parseDate(nextVib.plannedDateStr);
+      const dOil = parseDate(nextOil.plannedDateStr);
+      let nextCollect = nextVib.plannedDateStr;
+      if (dOil && (!dVib || dOil.getTime() < dVib.getTime())) {
+        nextCollect = nextOil.plannedDateStr;
+      }
+
       // Overall condition is the worst outcome between individual surveillance techniques (Vibration and Lube Oil)
       const overallCondition = getWorstTechniqueStatus(e.vibrationStatus, e.lubeOilStatus, e.condition);
       const riskCalc = calculateCombinedRisk(e.criticality, overallCondition, collectionStatus);
@@ -1164,6 +1177,7 @@ export default function MainPage() {
         vibrationFrequency: vibFreq,
         lubeOilFrequency: oilFreq,
         collectionStatus,
+        nextCollect,
         plannedNextVibrationDate: nextVib.plannedDateStr,
         plannedNextOilDate: nextOil.plannedDateStr,
         vibrationNonCollectionReason: e.vibrationNonCollectionReason || '',
@@ -1410,6 +1424,8 @@ export default function MainPage() {
                   selectedFiltersState={selectedEquipmentFilters}
                   onFilterChange={setSelectedEquipmentFilters}
                   onClearFilters={handleClearAllEquipFilters}
+                  initialSortColumn="nextCollect"
+                  initialSortDirection="asc"
                 />
               )}
             </div>

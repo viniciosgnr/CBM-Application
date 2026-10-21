@@ -26,6 +26,8 @@ interface CustomTableProps {
   selectedFiltersState?: Record<string, Set<string>>;
   onFilterChange?: (filters: Record<string, Set<string>>) => void;
   onClearFilters?: () => void;
+  initialSortColumn?: string | null;
+  initialSortDirection?: 'asc' | 'desc';
 }
 
 export const TIME_RANGE_OPTIONS = [
@@ -45,7 +47,9 @@ export default function CustomTable({
   onTimeRangeChange,
   selectedFiltersState,
   onFilterChange,
-  onClearFilters
+  onClearFilters,
+  initialSortColumn,
+  initialSortDirection
 }: CustomTableProps) {
   // Column popover state
   const [activeFilterCol, setActiveFilterCol] = useState<string | null>(null);
@@ -68,8 +72,8 @@ export default function CustomTable({
 
   const [currentPage, setCurrentPage] = useState(1);
   const [rowsPerPage, setRowsPerPage] = useState(10);
-  const [sortColumn, setSortColumn] = useState<string | null>(null);
-  const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc');
+  const [sortColumn, setSortColumn] = useState<string | null>(initialSortColumn ?? null);
+  const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>(initialSortDirection ?? 'asc');
   
   const popoverRef = useRef<HTMLDivElement>(null);
 
@@ -170,12 +174,26 @@ export default function CustomTable({
     });
   });
 
-  // Sorting logic (numeric-aware)
+  // Sorting logic (date-aware and numeric-aware)
   const sortedData = useMemo(() => {
     if (!sortColumn) return filteredData;
     return [...filteredData].sort((a, b) => {
       const valA = a[sortColumn];
       const valB = b[sortColumn];
+
+      // 1. Date comparison for DD/MM/YYYY format
+      const dateRegex = /^\d{2}\/\d{2}\/\d{4}/;
+      if (typeof valA === 'string' && typeof valB === 'string' && dateRegex.test(valA) && dateRegex.test(valB)) {
+        const parseD = (s: string) => {
+          const parts = s.split(',')[0].trim().split('/');
+          return new Date(Number(parts[2]), Number(parts[1]) - 1, Number(parts[0])).getTime();
+        };
+        const timeA = parseD(valA);
+        const timeB = parseD(valB);
+        if (!isNaN(timeA) && !isNaN(timeB)) {
+          return sortDirection === 'asc' ? timeA - timeB : timeB - timeA;
+        }
+      }
 
       const numA = Number(valA);
       const numB = Number(valB);
