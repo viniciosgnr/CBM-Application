@@ -57,9 +57,14 @@ test.describe('CBM Dashboard E2E Smoke Tests', () => {
   });
 
   test('deve exibir e persistir a razão de não coleta (Non-collection Reason) geral quando qualquer técnica estiver overdue', async ({ page }) => {
-    // Reseta a razão para null antes do teste para garantir idempotência
+    // Reseta a razão e garante datas de atraso (Overdue) antes do teste para garantir idempotência
     await page.request.put('/api/equipments/DNY_111-PKPD-0300', {
-      data: { nonCollectionReason: null }
+      data: {
+        condition: 'Good - Tier 4',
+        lastVibrationUpdate: '01/07/2026, 10:30:00',
+        lastLubeOilUpdate: '01/05/2026, 10:00:00',
+        nonCollectionReason: null
+      }
     });
 
     await page.goto('/');
@@ -137,5 +142,49 @@ test.describe('CBM Dashboard E2E Smoke Tests', () => {
     // Clica novamente para retornar a ordenação ascendente (▲)
     await nextCollectHeader.click();
     await expect(nextCollectHeader.locator('text=▲')).toBeVisible();
+  });
+
+  test('deve permitir seleção em batelada e atualização automática de status (Bulk Update) para equipamentos Overdue Good Tier 4', async ({ page }) => {
+    // Garante que o equipamento DNY_111-PKPD-0300 está em Overdue Good - Tier 4
+    await page.request.put('/api/equipments/DNY_111-PKPD-0300', {
+      data: {
+        condition: 'Good - Tier 4',
+        lastVibrationUpdate: '01/07/2026, 10:30:00',
+        lastLubeOilUpdate: '01/05/2026, 10:00:00',
+        nonCollectionReason: null
+      }
+    });
+
+    await page.goto('/');
+
+    // Navega para a aba de Equipamentos
+    const equipmentTab = page.getByRole('button', { name: /^Equipment$/i });
+    await expect(equipmentTab).toBeVisible();
+    await equipmentTab.click();
+
+    // Valida o checkbox de seleção geral no cabeçalho
+    const selectAllCheckbox = page.locator('th input[aria-label="Select all eligible equipments"]');
+    await expect(selectAllCheckbox).toBeVisible();
+
+    // Clica para selecionar todos os elegíveis da tabela
+    await selectAllCheckbox.click();
+
+    // O botão de Bulk Update deve aparecer no topo da tabela
+    const bulkButton = page.getByRole('button', { name: /Update Status in Bulk/i });
+    await expect(bulkButton).toBeVisible();
+
+    // Clica no botão para abrir o modal de confirmação
+    await bulkButton.click();
+
+    // Valida o modal de confirmação em inglês
+    await expect(page.getByText('Good - Tier 4 Overdue Surveillance')).toBeVisible();
+    await expect(page.getByText(/Confirm update of/i)).toBeVisible();
+
+    // Clica em Confirm
+    const confirmBtn = page.getByRole('button', { name: 'Confirm' });
+    await confirmBtn.click();
+
+    // O modal deve fechar e o botão de bulk sumir (pois seleções foram processadas)
+    await expect(bulkButton).not.toBeVisible();
   });
 });

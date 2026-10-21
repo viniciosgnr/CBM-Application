@@ -454,6 +454,11 @@ export default function MainPage() {
   const [history, setHistory] = useState<HistoryEntry[]>([]);
   const [modalOpen, setModalOpen] = useState(false);
 
+  // Bulk Update State (Overdue + Good - Tier 4)
+  const [selectedBulkTags, setSelectedBulkTags] = useState<Set<string>>(new Set());
+  const [bulkConfirmModalOpen, setBulkConfirmModalOpen] = useState(false);
+  const [isBulkUpdating, setIsBulkUpdating] = useState(false);
+
 
   // Report Creation Form state
   const [reportFormOpen, setReportFormOpen] = useState(false);
@@ -807,6 +812,52 @@ export default function MainPage() {
       }
     } catch (err) {
       console.error('Failed to update non-collection reason:', err);
+    }
+  };
+
+  const isEquipmentEligibleForBulkUpdate = (row: Record<string, string>) => {
+    return row.collectionStatus === 'Overdue' && (row.condition.includes('Good - Tier 4') || row.condition === 'Good');
+  };
+
+  const handleExecuteBulkUpdate = async () => {
+    if (selectedBulkTags.size === 0) return;
+    setIsBulkUpdating(true);
+    try {
+      const tagsArray = Array.from(selectedBulkTags);
+      const res = await fetch('/api/equipments/bulk-update', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ tags: tagsArray }),
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setEquipments(prev => prev.map(eq => {
+          if (selectedBulkTags.has(eq.tag)) {
+            return {
+              ...eq,
+              lastUpdate: data.updatedDate,
+              lastVibrationUpdate: data.updatedDate,
+              lastLubeOilUpdate: data.updatedDate,
+              vibrationStatus: 'Good - Tier 4',
+              lubeOilStatus: 'Good - Tier 4',
+              condition: 'Good - Tier 4',
+              nonCollectionReason: null,
+              vibrationNonCollectionReason: null,
+              lubeOilNonCollectionReason: null,
+            };
+          }
+          return eq;
+        }));
+        setSelectedBulkTags(new Set());
+        setBulkConfirmModalOpen(false);
+      } else {
+        const err = await res.json();
+        alert(`Failed to perform bulk update: ${err.error || 'Unknown error'}`);
+      }
+    } catch (err) {
+      console.error('Failed to execute bulk update:', err);
+    } finally {
+      setIsBulkUpdating(false);
     }
   };
 
@@ -1426,6 +1477,12 @@ export default function MainPage() {
                   onClearFilters={handleClearAllEquipFilters}
                   initialSortColumn="nextCollect"
                   initialSortDirection="asc"
+                  selectable={true}
+                  isRowSelectable={isEquipmentEligibleForBulkUpdate}
+                  selectedRowKeys={selectedBulkTags}
+                  onSelectionChange={setSelectedBulkTags}
+                  bulkActionLabel={`Update Status in Bulk (${selectedBulkTags.size})`}
+                  onBulkAction={() => setBulkConfirmModalOpen(true)}
                 />
               )}
             </div>
@@ -2110,6 +2167,47 @@ export default function MainPage() {
         onLogNewAnalysis={openReportForm}
         onUpdateNonCollectionReason={handleUpdateNonCollectionReason}
       />
+
+      {/* Confirmation Modal para Bulk Update */}
+      {bulkConfirmModalOpen && (
+        <div className="fixed inset-0 bg-black/75 backdrop-blur-sm z-[999] flex items-center justify-center p-4">
+          <div className="bg-[#0f172a] border border-[#1e293b] rounded-xl w-full max-w-md p-6 shadow-2xl animate-fadeIn text-left">
+            <div className="flex items-center gap-3 mb-4">
+              <div className="w-10 h-10 rounded-full bg-[#0284c7]/20 border border-[#0284c7]/40 flex items-center justify-center shrink-0">
+                <CheckCircle2 className="text-[#38bdf8]" size={20} />
+              </div>
+              <div>
+                <h3 className="text-sm font-bold text-[#f8fafc]">Update Status in Bulk</h3>
+                <p className="text-[11px] text-[#94a3b8]">Good - Tier 4 Overdue Surveillance</p>
+              </div>
+            </div>
+
+            <p className="text-xs text-[#cbd5e1] leading-relaxed mb-6">
+              Confirm update of <strong className="text-[#38bdf8] font-bold">{selectedBulkTags.size}</strong> equipment(s) to the current date maintaining <span className="text-[#10b981] font-semibold">Good - Tier 4</span>?
+            </p>
+
+            <div className="flex items-center justify-end gap-3">
+              <button
+                type="button"
+                onClick={() => setBulkConfirmModalOpen(false)}
+                disabled={isBulkUpdating}
+                className="px-4 py-2 text-xs font-semibold rounded-lg border border-[#334155] text-[#94a3b8] hover:text-[#f8fafc] hover:bg-[#1e293b] transition-colors cursor-pointer"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={handleExecuteBulkUpdate}
+                disabled={isBulkUpdating}
+                className="px-4 py-2 text-xs font-semibold rounded-lg bg-[#0284c7] hover:bg-[#0369a1] text-white transition-colors flex items-center gap-2 shadow-md cursor-pointer"
+              >
+                {isBulkUpdating && <RefreshCw className="animate-spin" size={13} />}
+                Confirm
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
 
       {/* Modal Form para preencher Relatório de CBM (Excel Digitization) */}

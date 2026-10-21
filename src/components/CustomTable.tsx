@@ -6,7 +6,8 @@ import {
   ChevronsLeft,
   ChevronsRight,
   SlidersHorizontal,
-  Search
+  Search,
+  CheckCircle2,
 } from 'lucide-react';
 
 interface Column {
@@ -28,6 +29,13 @@ interface CustomTableProps {
   onClearFilters?: () => void;
   initialSortColumn?: string | null;
   initialSortDirection?: 'asc' | 'desc';
+  selectable?: boolean;
+  isRowSelectable?: (row: Record<string, string>) => boolean;
+  selectedRowKeys?: Set<string>;
+  onSelectionChange?: (selectedKeys: Set<string>) => void;
+  rowKey?: string;
+  bulkActionLabel?: string;
+  onBulkAction?: () => void;
 }
 
 export const TIME_RANGE_OPTIONS = [
@@ -49,7 +57,14 @@ export default function CustomTable({
   onFilterChange,
   onClearFilters,
   initialSortColumn,
-  initialSortDirection
+  initialSortDirection,
+  selectable = false,
+  isRowSelectable,
+  selectedRowKeys,
+  onSelectionChange,
+  rowKey = 'tag',
+  bulkActionLabel,
+  onBulkAction,
 }: CustomTableProps) {
   // Column popover state
   const [activeFilterCol, setActiveFilterCol] = useState<string | null>(null);
@@ -220,6 +235,37 @@ export default function CustomTable({
   const paginatedData = sortedData.slice(startIndex, startIndex + rowsPerPage);
   const totalPages = Math.ceil(totalRows / rowsPerPage) || 1;
 
+  // Bulk selection logic
+  const eligibleData = useMemo(() => {
+    if (!selectable) return [];
+    return filteredData.filter(row => !isRowSelectable || isRowSelectable(row));
+  }, [selectable, filteredData, isRowSelectable]);
+
+  const isAllEligibleSelected = selectable && eligibleData.length > 0 && selectedRowKeys !== undefined && eligibleData.every(row => selectedRowKeys.has(row[rowKey]));
+  const isSomeEligibleSelected = selectable && selectedRowKeys !== undefined && selectedRowKeys.size > 0 && !isAllEligibleSelected;
+
+  const handleToggleSelectAllEligible = () => {
+    if (!onSelectionChange) return;
+    if (isAllEligibleSelected) {
+      onSelectionChange(new Set());
+    } else {
+      const nextKeys = new Set<string>();
+      eligibleData.forEach(row => nextKeys.add(row[rowKey]));
+      onSelectionChange(nextKeys);
+    }
+  };
+
+  const handleToggleRow = (keyVal: string) => {
+    if (!onSelectionChange || !selectedRowKeys) return;
+    const next = new Set(selectedRowKeys);
+    if (next.has(keyVal)) {
+      next.delete(keyVal);
+    } else {
+      next.add(keyVal);
+    }
+    onSelectionChange(next);
+  };
+
   return (
     <div className="w-full flex flex-col">
       <div className="mb-4 flex items-center justify-between">
@@ -234,6 +280,18 @@ export default function CustomTable({
               className="text-[10px] bg-accent-blue/10 border border-accent-blue/30 text-accent-blue hover:bg-accent-blue/20 px-2 py-0.5 rounded font-semibold transition-colors cursor-pointer"
             >
               Reset Filters
+            </button>
+          )}
+
+          {/* Optional Bulk Action Button */}
+          {selectable && selectedRowKeys && selectedRowKeys.size > 0 && onBulkAction && (
+            <button
+              type="button"
+              onClick={onBulkAction}
+              className="bg-[#0284c7] hover:bg-[#0369a1] text-white text-xs font-semibold px-3 py-1.5 rounded-lg transition-all shadow-md flex items-center gap-1.5 cursor-pointer animate-fadeIn"
+            >
+              <CheckCircle2 size={13} />
+              {bulkActionLabel || `Update Status in Bulk (${selectedRowKeys.size})`}
             </button>
           )}
         </div>
@@ -262,6 +320,25 @@ export default function CustomTable({
         <table className="w-full text-left border-collapse">
           <thead className="relative z-30">
             <tr className="border-b border-border-panel bg-bg-panel/40 select-none">
+              {selectable && (
+                <th className="px-3 py-3 w-10 text-center relative border-b border-border-panel bg-bg-panel/40">
+                  <div className="flex flex-col items-center justify-center">
+                    <input
+                      type="checkbox"
+                      aria-label="Select all eligible equipments"
+                      title={eligibleData.length > 0 ? `Select all ${eligibleData.length} eligible equipments` : 'No eligible equipments'}
+                      disabled={eligibleData.length === 0}
+                      checked={isAllEligibleSelected}
+                      ref={el => {
+                        if (el) el.indeterminate = isSomeEligibleSelected;
+                      }}
+                      onChange={handleToggleSelectAllEligible}
+                      className="w-3.5 h-3.5 rounded border-[#2d3a58] bg-[#0c1220] accent-[#38bdf8] cursor-pointer"
+                    />
+                    <div className="h-[21px] mt-1.5" />
+                  </div>
+                </th>
+              )}
               {columns.map((col, colIdx) => {
                 const uniqueValues = getUniqueValues(col.key);
                 const selectedSet = getSelectedSet(col.key);
@@ -413,6 +490,21 @@ export default function CustomTable({
                     onRowClick ? 'cursor-pointer' : ''
                   }`}
                 >
+                  {selectable && (
+                    <td className="px-3 py-2.5 w-10 text-center" onClick={(e) => e.stopPropagation()}>
+                      {(!isRowSelectable || isRowSelectable(row)) ? (
+                        <input
+                          type="checkbox"
+                          aria-label={`Select ${row[rowKey]}`}
+                          checked={selectedRowKeys ? selectedRowKeys.has(row[rowKey]) : false}
+                          onChange={() => handleToggleRow(row[rowKey])}
+                          className="w-3.5 h-3.5 rounded border-[#2d3a58] bg-[#0c1220] accent-[#38bdf8] cursor-pointer"
+                        />
+                      ) : (
+                        <span className="inline-block w-3.5 h-3.5 text-text-muted/30 select-none text-[10px]" title="Not eligible (must be Overdue and Good - Tier 4)">-</span>
+                      )}
+                    </td>
+                  )}
                   {columns.map(col => (
                     <td
                       key={col.key}
@@ -425,7 +517,7 @@ export default function CustomTable({
               ))
             ) : (
               <tr>
-                <td colSpan={columns.length} className="px-4 py-8 text-center text-text-muted text-xs font-medium">
+                <td colSpan={columns.length + (selectable ? 1 : 0)} className="px-4 py-8 text-center text-text-muted text-xs font-medium">
                   No records found.
                 </td>
               </tr>
