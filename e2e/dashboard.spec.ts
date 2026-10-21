@@ -16,4 +16,43 @@ test.describe('CBM Dashboard E2E Smoke Tests', () => {
     await expect(page.getByText('Work Order by Status')).toBeVisible();
     await expect(page.getByText('Days Left to Due')).toBeVisible();
   });
+
+  test('deve abrir o Drawer lateral de equipamento padronizado no Design System SLB', async ({ page }) => {
+    await page.goto('/');
+
+    // Navega para a aba de Equipamentos
+    const equipmentTab = page.getByRole('button', { name: /^Equipment$/i });
+    await expect(equipmentTab).toBeVisible();
+    await equipmentTab.click();
+
+    // Clica no primeiro equipamento da tabela para abrir o Drawer
+    const firstEquipmentRow = page.locator('table tbody tr').first();
+    await expect(firstEquipmentRow).toBeVisible();
+    await firstEquipmentRow.click();
+
+    // Valida os componentes do Design System SLB no Drawer lateral
+    const drawer = page.locator('aside');
+    await expect(drawer.getByText('Overall Status')).toBeVisible();
+    await expect(drawer.getByText('Equipment Class')).toBeVisible();
+    await expect(drawer.getByText('Latest Observation')).toBeVisible();
+    await expect(drawer.getByText('Risk Indicators')).toBeVisible();
+    await expect(drawer.getByText('Vibration Analysis')).toBeVisible();
+    await expect(drawer.getByText('Lube Oil Analysis')).toBeVisible();
+    await expect(drawer.getByText('Historical condition trend')).toBeVisible();
+    await expect(drawer.getByRole('button', { name: /Log New Analysis/i })).toBeVisible();
+
+    // Valida o botão de expandir/recolher
+    const expandBtn = page.getByTitle('Expand drawer');
+    await expect(expandBtn).toBeVisible();
+    await expandBtn.click();
+    await expect(page.getByTitle('Collapse drawer')).toBeVisible();
+
+    // Fecha o Drawer pelo botão X
+    const closeBtn = page.getByTitle('Close drawer');
+    await expect(closeBtn).toBeVisible();
+    await closeBtn.click();
+
+    // Verifica que o Drawer fechou
+    await expect(page.getByText('Overall Status')).not.toBeVisible();
+  });
 });
