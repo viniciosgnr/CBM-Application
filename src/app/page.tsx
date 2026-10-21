@@ -5,6 +5,7 @@ import Sidebar from '@/components/Sidebar';
 import DashboardCard from '@/components/DashboardCard';
 import CustomTable from '@/components/CustomTable';
 import EquipmentDetailModal from '@/components/EquipmentDetailModal';
+import MonthlyCbmReportTable from '@/components/MonthlyCbmReportTable';
 import { 
   ArrowLeft, 
   X, 
@@ -188,6 +189,26 @@ export default function MainPage() {
   const kpiFpsoPopoverRef = useRef<HTMLDivElement>(null);
   const [kpiTrendTimeRange, setKpiTrendTimeRange] = useState<string>('Last 6 Months');
 
+  // Technology, Month & Trend Tab filters for KPIs
+  const [selectedKpiTechnology, setSelectedKpiTechnology] = useState<'Vibration' | 'Lub Oil'>('Vibration');
+  const [selectedKpiMonth, setSelectedKpiMonth] = useState<string>('2026-10');
+  const [kpiMonthPopoverOpen, setKpiMonthPopoverOpen] = useState(false);
+  const kpiMonthPopoverRef = useRef<HTMLDivElement>(null);
+  const [selectedTrendTab, setSelectedTrendTab] = useState<'health' | 'compliance' | 'risk'>('health');
+
+  const availableKpiMonths = useMemo(() => [
+    { key: '2026-10', label: '26/Oct (Current)', shortLabel: '26/oct', prevKey: '2026-09', prevShortLabel: '26/sep' },
+    { key: '2026-09', label: '26/Sep', shortLabel: '26/sep', prevKey: '2026-08', prevShortLabel: '26/aug' },
+    { key: '2026-08', label: '26/Aug', shortLabel: '26/aug', prevKey: '2026-07', prevShortLabel: '26/jul' },
+    { key: '2026-07', label: '26/Jul', shortLabel: '26/jul', prevKey: '2026-06', prevShortLabel: '26/jun' },
+    { key: '2026-06', label: '26/Jun', shortLabel: '26/jun', prevKey: '2026-05', prevShortLabel: '26/may' },
+    { key: '2026-05', label: '26/May', shortLabel: '26/may', prevKey: '2026-04', prevShortLabel: '26/apr' },
+  ], []);
+
+  const currentMonthConfig = useMemo(() => {
+    return availableKpiMonths.find(m => m.key === selectedKpiMonth) || availableKpiMonths[0];
+  }, [availableKpiMonths, selectedKpiMonth]);
+
   // Per-chart time range states
   const [woStatusTimeRange, setWoStatusTimeRange] = useState('Last Month');
   const [daysLeftTimeRange, setDaysLeftTimeRange] = useState('Last Week');
@@ -308,56 +329,62 @@ export default function MainPage() {
     return `${selectedKpiFpsos.size} FPSOs`;
   }, [selectedKpiFpsos, availableKpiFpsos]);
 
-  // Overall Health calculation (Strictly from Equipment List table)
+  // Overall Health calculation (dynamically filtered by vessel scope and selected technology)
   const overallHealthData = useMemo(() => {
-    return calculateOverallHealth(currentKpiEquipments);
-  }, [currentKpiEquipments]);
+    return calculateOverallHealth(currentKpiEquipments, selectedKpiTechnology);
+  }, [currentKpiEquipments, selectedKpiTechnology]);
 
-  // CBMnet Fleet Risk Summary (Fault Risk, Compliance Risk, CBM Total Risk)
+  // CBMnet Fleet Risk Summary (Fault Risk, Compliance Risk, CBM Total Risk for selected technology)
   const fleetRiskSummary = useMemo(() => {
-    return calculateFleetCbmRiskSummary(currentKpiEquipments);
-  }, [currentKpiEquipments]);
+    return calculateFleetCbmRiskSummary(currentKpiEquipments, selectedKpiTechnology);
+  }, [currentKpiEquipments, selectedKpiTechnology]);
 
   // Reports state
   const [reports, setReports] = useState<AnalysisReport[]>([]);
   const [loadingReports, setLoadingReports] = useState(true);
 
-  // Overall Health Trend Data aggregated monthly based on Report Date and vessel scope
+  // Multi-Index Trend Data aggregated monthly based on Report Date and vessel scope
   const overallHealthTrendData = useMemo(() => {
     const currentScore = overallHealthData.healthPercentage;
     const currentPts = overallHealthData.healthPoints;
     const maxPts = overallHealthData.maxPoints;
     const currentAtRisk = overallHealthData.tier1Count + overallHealthData.tier2Count;
+    const currentCompliance = fleetRiskSummary.compliancePercentage;
+    const currentTotalHealth = fleetRiskSummary.totalHealthPercentage;
+    const currentOverdue =
+      fleetRiskSummary.complianceCount.lowDelay +
+      fleetRiskSummary.complianceCount.moderateDelay +
+      fleetRiskSummary.complianceCount.severeDelay;
 
-    // Pure monthly aggregation configs matching selected time range (no weekly subdivisions)
+    // Monthly aggregation configs matching selected time range
     const monthConfigs = kpiTrendTimeRange === 'Last Month'
       ? [
-          { key: '2026-08', label: 'Aug 26' },
           { key: '2026-09', label: 'Sep 26' },
+          { key: '2026-10', label: 'Oct 26' },
         ]
       : kpiTrendTimeRange === 'Last 3 Months'
       ? [
-          { key: '2026-07', label: 'Jul 26' },
           { key: '2026-08', label: 'Aug 26' },
           { key: '2026-09', label: 'Sep 26' },
+          { key: '2026-10', label: 'Oct 26' },
         ]
       : kpiTrendTimeRange === 'Last 6 Months'
       ? [
-          { key: '2026-04', label: 'Apr 26' },
           { key: '2026-05', label: 'May 26' },
           { key: '2026-06', label: 'Jun 26' },
           { key: '2026-07', label: 'Jul 26' },
           { key: '2026-08', label: 'Aug 26' },
           { key: '2026-09', label: 'Sep 26' },
+          { key: '2026-10', label: 'Oct 26' },
         ]
       : [
-          { key: '2026-03', label: 'Mar 26' },
           { key: '2026-04', label: 'Apr 26' },
           { key: '2026-05', label: 'May 26' },
           { key: '2026-06', label: 'Jun 26' },
           { key: '2026-07', label: 'Jul 26' },
           { key: '2026-08', label: 'Aug 26' },
           { key: '2026-09', label: 'Sep 26' },
+          { key: '2026-10', label: 'Oct 26' },
         ];
 
     // Filter reports in vessel scope
@@ -372,17 +399,29 @@ export default function MainPage() {
     const vesselMaxPts = totalMachines * 12;
 
     if (totalMachines === 0) {
-      return monthConfigs.map(m => ({ label: m.label, healthPercentage: 100, points: 0, maxPoints: 0, atRisk: 0 }));
+      return monthConfigs.map(m => ({
+        label: m.label,
+        healthPercentage: 100,
+        compliancePercentage: 100,
+        totalHealthPercentage: 100,
+        points: 0,
+        maxPoints: 0,
+        atRisk: 0,
+        overdueCount: 0,
+      }));
     }
 
     return monthConfigs.map(cfg => {
-      if (cfg.key === '2026-09') {
+      if (cfg.key === '2026-10') {
         return {
           label: cfg.label,
           healthPercentage: currentScore,
+          compliancePercentage: currentCompliance,
+          totalHealthPercentage: currentTotalHealth,
           points: currentPts,
           maxPoints: maxPts,
           atRisk: currentAtRisk,
+          overdueCount: currentOverdue,
         };
       }
 
@@ -401,16 +440,18 @@ export default function MainPage() {
 
       const latestCondition = new Map<string, string>();
       sorted.forEach(r => {
-        if (r.equipmentTag && r.overallCondition) {
-          latestCondition.set(r.equipmentTag, r.overallCondition);
+        if (r.equipmentTag) {
+          const techStatus = selectedKpiTechnology === 'Vibration' ? r.vibrationStatus : r.lubeOilStatus;
+          latestCondition.set(r.equipmentTag, techStatus || r.overallCondition);
         }
       });
 
       let deducted = 0;
       let atRisk = 0;
+      let overdueCount = 0;
 
       currentKpiEquipments.forEach(eq => {
-        const cond = latestCondition.get(eq.tag) || 'Good - Tier 4';
+        const cond = latestCondition.get(eq.tag) || (selectedKpiTechnology === 'Vibration' ? eq.vibrationStatus : eq.lubeOilStatus) || 'Good - Tier 4';
         const crit = eq.criticality || 'Medium';
 
         if (cond.includes('Tier 1') || cond.includes('Critical')) {
@@ -422,20 +463,48 @@ export default function MainPage() {
           deducted += score;
           atRisk++;
         }
+
+        const activeReason = selectedKpiTechnology === 'Vibration'
+          ? (eq.vibrationNonCollectionReason || eq.nonCollectionReason)
+          : (eq.lubeOilNonCollectionReason || eq.nonCollectionReason);
+        if (activeReason && activeReason.trim() !== '') {
+          overdueCount++;
+        }
       });
 
       const healthPts = Math.max(0, vesselMaxPts - deducted);
       const healthPct = Number(((healthPts / vesselMaxPts) * 100).toFixed(1));
 
+      // Historical compliance & total risk
+      const compDeduction = overdueCount * 5; // delay points
+      const maxCompPts = totalMachines * 15;
+      const compPct = Number((Math.max(0, maxCompPts - compDeduction) / maxCompPts * 100).toFixed(1));
+
+      const totalDeduction = deducted + (0.2 * compDeduction);
+      const maxTotalPts = totalMachines * 15;
+      const totalPct = Number((Math.max(0, maxTotalPts - totalDeduction) / maxTotalPts * 100).toFixed(1));
+
       return {
         label: cfg.label,
         healthPercentage: healthPct,
+        compliancePercentage: compPct,
+        totalHealthPercentage: totalPct,
         points: healthPts,
         maxPoints: vesselMaxPts,
         atRisk,
+        overdueCount,
       };
     });
-  }, [overallHealthData, kpiTrendTimeRange, reports, selectedKpiFpsos, availableKpiFpsos, currentKpiEquipments]);
+  }, [
+    overallHealthData,
+    fleetRiskSummary,
+    kpiTrendTimeRange,
+    reports,
+    selectedKpiFpsos,
+    availableKpiFpsos,
+    currentKpiEquipments,
+    selectedKpiTechnology,
+  ]);
   const [selectedRecomFpsos, setSelectedRecomFpsos] = useState<Set<string>>(new Set(ALL_RECOM_FPSOS));
   const [recomFpsoPopoverOpen, setRecomFpsoPopoverOpen] = useState(false);
   const [recomFpsoSearch, setRecomFpsoSearch] = useState('');
@@ -663,11 +732,18 @@ export default function MainPage() {
         setKpiFpsoPopoverOpen(false);
       }
     }
+    function handleClickOutsideKpiMonth(event: MouseEvent) {
+      if (kpiMonthPopoverRef.current && !kpiMonthPopoverRef.current.contains(event.target as Node)) {
+        setKpiMonthPopoverOpen(false);
+      }
+    }
     document.addEventListener('mousedown', handleClickOutsideRecomFpso);
     document.addEventListener('mousedown', handleClickOutsideKpiFpso);
+    document.addEventListener('mousedown', handleClickOutsideKpiMonth);
     return () => {
       document.removeEventListener('mousedown', handleClickOutsideRecomFpso);
       document.removeEventListener('mousedown', handleClickOutsideKpiFpso);
+      document.removeEventListener('mousedown', handleClickOutsideKpiMonth);
     };
   }, []);
 
@@ -816,7 +892,13 @@ export default function MainPage() {
   };
 
   const isEquipmentEligibleForBulkUpdate = (row: Record<string, string>) => {
-    return row.collectionStatus === 'Overdue' && (row.condition.includes('Good - Tier 4') || row.condition === 'Good');
+    return (
+      row.collectionStatus === 'Overdue' &&
+      (row.condition === 'Good - Tier 4' || row.condition.includes('Tier 4') || row.condition === 'Good') &&
+      !row.condition.includes('Tier 3') &&
+      !row.condition.includes('Tier 2') &&
+      !row.condition.includes('Tier 1')
+    );
   };
 
   const handleExecuteBulkUpdate = async () => {
@@ -1671,103 +1753,178 @@ export default function MainPage() {
         {/* Lógica SPA: Tela de KPIs & Overall Health (Strictly SLB Optisite DashboardCards) */}
         {activeTab === 'kpis' && (
           <div className="flex flex-col gap-6 animate-fadeIn">
-            {/* Top Vessel Scope Capsule Filter Bar (SLB Optisite Pill) */}
-            <div className="flex items-center justify-between gap-4 bg-bg-card border border-border-panel rounded-card px-4 py-2.5 shadow-sm select-none">
-              <div className="flex items-center gap-3">
-                <span className="text-xs text-text-muted font-medium">Vessel Scope:</span>
-                {/* SLB Capsule Popover Filter */}
-                <div className="relative" ref={kpiFpsoPopoverRef}>
-                  <button
-                    type="button"
-                    onClick={() => setKpiFpsoPopoverOpen(prev => !prev)}
-                    className="flex items-center gap-2 bg-[#0c101d] hover:bg-[#121829] border border-[#202742] hover:border-accent-blue/80 rounded-full px-3.5 py-1.5 cursor-pointer transition-all shadow-sm text-xs"
-                    title="Filter by FPSO"
-                  >
-                    <Filter size={12} className="text-accent-blue shrink-0" />
-                    <span className="font-semibold text-text-primary tracking-wide">{kpiFpsoLabel}</span>
-                    <ChevronDown size={12} className={`text-text-muted transition-transform shrink-0 ${kpiFpsoPopoverOpen ? 'rotate-180 text-accent-blue' : ''}`} />
-                  </button>
+            {/* Top Filter Bar: Vessel Scope, Month, Technology (SLB Optisite Standard) */}
+            <div className="flex flex-wrap items-center justify-between gap-4 bg-bg-card border border-border-panel rounded-card px-4 py-2.5 shadow-sm select-none">
+              <div className="flex flex-wrap items-center gap-4">
+                {/* 1. Vessel Scope Filter */}
+                <div className="flex items-center gap-2">
+                  <span className="text-xs text-text-muted font-medium">Vessel Scope:</span>
+                  <div className="relative" ref={kpiFpsoPopoverRef}>
+                    <button
+                      type="button"
+                      onClick={() => setKpiFpsoPopoverOpen(prev => !prev)}
+                      className="flex items-center gap-2 bg-[#0c101d] hover:bg-[#121829] border border-[#202742] hover:border-accent-blue/80 rounded-full px-3.5 py-1.5 cursor-pointer transition-all shadow-sm text-xs"
+                      title="Filter by FPSO"
+                    >
+                      <Filter size={12} className="text-accent-blue shrink-0" />
+                      <span className="font-semibold text-text-primary tracking-wide">{kpiFpsoLabel}</span>
+                      <ChevronDown size={12} className={`text-text-muted transition-transform shrink-0 ${kpiFpsoPopoverOpen ? 'rotate-180 text-accent-blue' : ''}`} />
+                    </button>
 
-                  {/* Multi-Select Capsule Popover */}
-                  {kpiFpsoPopoverOpen && (
-                    <div className="absolute top-full left-0 mt-2 w-64 bg-[#0c101d] border border-[#202742] rounded-2xl shadow-2xl p-3 z-50 animate-fadeIn text-left text-xs text-text-primary">
-                      {/* Search Input */}
-                      <div className="relative mb-2.5">
-                        <Search size={13} className="absolute left-2.5 top-2.5 text-text-muted" />
-                        <input
-                          type="text"
-                          value={kpiFpsoSearch}
-                          onChange={e => setKpiFpsoSearch(e.target.value)}
-                          placeholder="Search FPSO..."
-                          className="w-full bg-[#111728] border border-[#202742] rounded-xl pl-8 pr-2.5 py-1.5 text-xs text-text-primary focus:border-accent-blue focus:outline-none placeholder:text-text-muted/60"
-                        />
-                      </div>
-
-                      {/* Options Checklist */}
-                      <div className="flex flex-col gap-0.5 max-h-52 overflow-y-auto pr-1">
-                        {/* (Select All) Checkbox */}
-                        <label className="flex items-center gap-2.5 px-2.5 py-1.5 rounded-lg hover:bg-[#172033] cursor-pointer font-semibold select-none text-text-primary transition-colors">
+                    {/* Multi-Select Capsule Popover */}
+                    {kpiFpsoPopoverOpen && (
+                      <div className="absolute top-full left-0 mt-2 w-64 bg-[#0c101d] border border-[#202742] rounded-2xl shadow-2xl p-3 z-50 animate-fadeIn text-left text-xs text-text-primary">
+                        {/* Search Input */}
+                        <div className="relative mb-2.5">
+                          <Search size={13} className="absolute left-2.5 top-2.5 text-text-muted" />
                           <input
-                            type="checkbox"
-                            checked={selectedKpiFpsos.size === availableKpiFpsos.length || selectedKpiFpsos.size === 0}
-                            ref={el => {
-                              if (el) {
-                                el.indeterminate =
-                                  selectedKpiFpsos.size > 0 &&
-                                  selectedKpiFpsos.size < availableKpiFpsos.length;
-                              }
-                            }}
-                            onChange={() => {
-                              if (selectedKpiFpsos.size === availableKpiFpsos.length || selectedKpiFpsos.size === 0) {
-                                setSelectedKpiFpsos(new Set());
-                              } else {
-                                setSelectedKpiFpsos(new Set(availableKpiFpsos));
-                              }
-                            }}
-                            className="accent-accent-blue cursor-pointer rounded"
+                            type="text"
+                            value={kpiFpsoSearch}
+                            onChange={e => setKpiFpsoSearch(e.target.value)}
+                            placeholder="Search FPSO..."
+                            className="w-full bg-[#111728] border border-[#202742] rounded-xl pl-8 pr-2.5 py-1.5 text-xs text-text-primary focus:border-accent-blue focus:outline-none placeholder:text-text-muted/60"
                           />
-                          <span className="text-xs font-semibold">(Select All)</span>
-                        </label>
+                        </div>
 
-                        <hr className="border-[#202742] my-1" />
+                        {/* Options Checklist */}
+                        <div className="flex flex-col gap-0.5 max-h-52 overflow-y-auto pr-1">
+                          {/* (Select All) Checkbox */}
+                          <label className="flex items-center gap-2.5 px-2.5 py-1.5 rounded-lg hover:bg-[#172033] cursor-pointer font-semibold select-none text-text-primary transition-colors">
+                            <input
+                              type="checkbox"
+                              checked={selectedKpiFpsos.size === availableKpiFpsos.length || selectedKpiFpsos.size === 0}
+                              ref={el => {
+                                if (el) {
+                                  el.indeterminate =
+                                    selectedKpiFpsos.size > 0 &&
+                                    selectedKpiFpsos.size < availableKpiFpsos.length;
+                                }
+                              }}
+                              onChange={() => {
+                                if (selectedKpiFpsos.size === availableKpiFpsos.length || selectedKpiFpsos.size === 0) {
+                                  setSelectedKpiFpsos(new Set());
+                                } else {
+                                  setSelectedKpiFpsos(new Set(availableKpiFpsos));
+                                }
+                              }}
+                              className="accent-accent-blue cursor-pointer rounded"
+                            />
+                            <span className="text-xs font-semibold">(Select All)</span>
+                          </label>
 
-                        {availableKpiFpsos
-                          .filter(f => f.toLowerCase().includes(kpiFpsoSearch.toLowerCase()))
-                          .map(trigram => {
-                            const isChecked = selectedKpiFpsos.has(trigram) || selectedKpiFpsos.size === 0;
-                            return (
-                              <label
-                                key={trigram}
-                                className="flex items-center justify-between px-2.5 py-1.5 rounded-lg hover:bg-[#172033] cursor-pointer select-none text-text-primary transition-colors"
-                              >
-                                <div className="flex items-center gap-2.5">
-                                  <input
-                                    type="checkbox"
-                                    checked={isChecked}
-                                    onChange={() => {
-                                      const next = new Set(selectedKpiFpsos.size === 0 ? availableKpiFpsos : selectedKpiFpsos);
-                                      if (next.has(trigram)) {
-                                        next.delete(trigram);
-                                      } else {
-                                        next.add(trigram);
-                                      }
-                                      setSelectedKpiFpsos(next);
-                                    }}
-                                    className="accent-accent-blue cursor-pointer rounded"
-                                  />
-                                  <span className="text-xs font-medium">{trigram}</span>
-                                </div>
-                              </label>
-                            );
-                          })}
+                          <hr className="border-[#202742] my-1" />
+
+                          {availableKpiFpsos
+                            .filter(f => f.toLowerCase().includes(kpiFpsoSearch.toLowerCase()))
+                            .map(trigram => {
+                              const isChecked = selectedKpiFpsos.has(trigram) || selectedKpiFpsos.size === 0;
+                              return (
+                                <label
+                                  key={trigram}
+                                  className="flex items-center justify-between px-2.5 py-1.5 rounded-lg hover:bg-[#172033] cursor-pointer select-none text-text-primary transition-colors"
+                                >
+                                  <div className="flex items-center gap-2.5">
+                                    <input
+                                      type="checkbox"
+                                      checked={isChecked}
+                                      onChange={() => {
+                                        const next = new Set(selectedKpiFpsos.size === 0 ? availableKpiFpsos : selectedKpiFpsos);
+                                        if (next.has(trigram)) {
+                                          next.delete(trigram);
+                                        } else {
+                                          next.add(trigram);
+                                        }
+                                        setSelectedKpiFpsos(next);
+                                      }}
+                                      className="accent-accent-blue cursor-pointer rounded"
+                                    />
+                                    <span className="text-xs font-medium">{trigram}</span>
+                                  </div>
+                                </label>
+                              );
+                            })}
+                        </div>
                       </div>
-                    </div>
-                  )}
+                    )}
+                  </div>
+                </div>
+
+                {/* 2. Month Filter */}
+                <div className="flex items-center gap-2">
+                  <span className="text-xs text-text-muted font-medium">Month:</span>
+                  <div className="relative" ref={kpiMonthPopoverRef}>
+                    <button
+                      type="button"
+                      onClick={() => setKpiMonthPopoverOpen(prev => !prev)}
+                      className="flex items-center gap-2 bg-[#0c101d] hover:bg-[#121829] border border-[#202742] hover:border-accent-blue/80 rounded-full px-3.5 py-1.5 cursor-pointer transition-all shadow-sm text-xs"
+                      title="Select Reference Month"
+                    >
+                      <Calendar size={12} className="text-accent-blue shrink-0" />
+                      <span className="font-semibold text-text-primary tracking-wide">
+                        {currentMonthConfig.label}
+                      </span>
+                      <ChevronDown size={12} className={`text-text-muted transition-transform shrink-0 ${kpiMonthPopoverOpen ? 'rotate-180 text-accent-blue' : ''}`} />
+                    </button>
+
+                    {kpiMonthPopoverOpen && (
+                      <div className="absolute top-full left-0 mt-2 w-48 bg-[#0c101d] border border-[#202742] rounded-2xl shadow-2xl p-2 z-50 animate-fadeIn text-left text-xs text-text-primary">
+                        <div className="flex flex-col gap-1">
+                          {availableKpiMonths.map(m => (
+                            <button
+                              key={m.key}
+                              type="button"
+                              onClick={() => {
+                                setSelectedKpiMonth(m.key);
+                                setKpiMonthPopoverOpen(false);
+                              }}
+                              className={`flex items-center justify-between px-3 py-1.5 rounded-lg text-xs font-medium transition-colors text-left ${
+                                selectedKpiMonth === m.key
+                                  ? 'bg-accent-blue text-white font-semibold'
+                                  : 'hover:bg-[#172033] text-text-primary'
+                              }`}
+                            >
+                              <span>{m.label}</span>
+                              {selectedKpiMonth === m.key && <span className="text-[10px]">●</span>}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                {/* 3. Technology Segmented Filter (Vibration | Lub Oil) */}
+                <div className="flex items-center gap-2">
+                  <span className="text-xs text-text-muted font-medium">Technology:</span>
+                  <div className="flex items-center bg-[#0c101d] p-0.5 rounded-full border border-[#202742]">
+                    <button
+                      type="button"
+                      onClick={() => setSelectedKpiTechnology('Vibration')}
+                      className={`px-3 py-1 rounded-full text-xs font-semibold transition-all ${
+                        selectedKpiTechnology === 'Vibration'
+                          ? 'bg-accent-blue text-white shadow-sm'
+                          : 'text-text-muted hover:text-text-primary'
+                      }`}
+                    >
+                      Vibration
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setSelectedKpiTechnology('Lub Oil')}
+                      className={`px-3 py-1 rounded-full text-xs font-semibold transition-all ${
+                        selectedKpiTechnology === 'Lub Oil'
+                          ? 'bg-accent-blue text-white shadow-sm'
+                          : 'text-text-muted hover:text-text-primary'
+                      }`}
+                    >
+                      Lub Oil
+                    </button>
+                  </div>
                 </div>
               </div>
 
-              <div className="text-xs text-text-muted font-medium hidden sm:flex items-center gap-1.5">
-                <span>Total Evaluated Machines:</span>
+              <div className="text-xs text-text-muted font-medium hidden md:flex items-center gap-1.5">
+                <span>Evaluated ({selectedKpiTechnology}):</span>
                 <strong className="text-text-primary font-bold">{overallHealthData.totalMachines}</strong>
               </div>
             </div>
@@ -2098,10 +2255,56 @@ export default function MainPage() {
               </DashboardCard>
             </div>
 
-            {/* Row 2: Full-Width Overall Health Trend */}
+            {/* Row 2: Full-Width Trends with Tab Selector (Overall Health | Compliance Risk | CBM Total Risk) */}
             <div className="w-full">
               <DashboardCard
-                title="Overall Health Trend"
+                title={
+                  <div className="flex flex-wrap items-center gap-3">
+                    <span className="text-sm font-semibold text-text-primary">
+                      {selectedTrendTab === 'health'
+                        ? 'Overall Health Trend'
+                        : selectedTrendTab === 'compliance'
+                        ? 'Compliance Risk Trend'
+                        : 'CBM Total Risk Trend'}
+                    </span>
+                    {/* Discrete SLB Standard Blue Segmented Tabs */}
+                    <div className="flex items-center bg-[#070b14] p-0.5 rounded-lg border border-[#1e293b]">
+                      <button
+                        type="button"
+                        onClick={() => setSelectedTrendTab('health')}
+                        className={`px-2.5 py-1 rounded-md text-[11px] font-semibold transition-all cursor-pointer ${
+                          selectedTrendTab === 'health'
+                            ? 'bg-accent-blue text-white shadow-sm'
+                            : 'text-text-muted hover:text-text-primary'
+                        }`}
+                      >
+                        Overall Health
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setSelectedTrendTab('compliance')}
+                        className={`px-2.5 py-1 rounded-md text-[11px] font-semibold transition-all cursor-pointer ${
+                          selectedTrendTab === 'compliance'
+                            ? 'bg-accent-blue text-white shadow-sm'
+                            : 'text-text-muted hover:text-text-primary'
+                        }`}
+                      >
+                        Compliance Risk
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setSelectedTrendTab('risk')}
+                        className={`px-2.5 py-1 rounded-md text-[11px] font-semibold transition-all cursor-pointer ${
+                          selectedTrendTab === 'risk'
+                            ? 'bg-accent-blue text-white shadow-sm'
+                            : 'text-text-muted hover:text-text-primary'
+                        }`}
+                      >
+                        CBM Total Risk
+                      </button>
+                    </div>
+                  </div>
+                }
                 timeRange={kpiTrendTimeRange}
                 onTimeRangeChange={setKpiTrendTimeRange}
                 onMaximize={() => setMaximizedChart('kpi-trend')}
@@ -2129,10 +2332,34 @@ export default function MainPage() {
                         content={({ active, payload, label }) => {
                           if (active && payload && payload.length) {
                             const item = payload[0].payload;
+                            if (selectedTrendTab === 'compliance') {
+                              return (
+                                <div className="bg-[#0b0f19] border border-[#1e2a3a] px-2.5 py-1.5 rounded shadow-xl text-[10px]">
+                                  <p className="font-semibold text-text-primary border-b border-border-panel/40 pb-0.5">{label}</p>
+                                  <p className="text-accent-blue font-bold mt-1">Compliance Rate: {item.compliancePercentage}%</p>
+                                  <p className="text-text-muted mt-0.5">Technology: {selectedKpiTechnology}</p>
+                                  <p className={item.overdueCount > 0 ? 'text-orange-400 mt-0.5' : 'text-status-ok mt-0.5'}>
+                                    Overdue: {item.overdueCount || 0} machines
+                                  </p>
+                                </div>
+                              );
+                            }
+                            if (selectedTrendTab === 'risk') {
+                              return (
+                                <div className="bg-[#0b0f19] border border-[#1e2a3a] px-2.5 py-1.5 rounded shadow-xl text-[10px]">
+                                  <p className="font-semibold text-text-primary border-b border-border-panel/40 pb-0.5">{label}</p>
+                                  <p className="text-accent-blue font-bold mt-1">Total Health Index: {item.totalHealthPercentage}%</p>
+                                  <p className="text-text-muted mt-0.5">Technology: {selectedKpiTechnology}</p>
+                                  <p className={item.atRisk > 0 ? 'text-orange-400 mt-0.5' : 'text-status-ok mt-0.5'}>
+                                    At Risk: {item.atRisk} machines
+                                  </p>
+                                </div>
+                              );
+                            }
                             return (
                               <div className="bg-[#0b0f19] border border-[#1e2a3a] px-2.5 py-1.5 rounded shadow-xl text-[10px]">
                                 <p className="font-semibold text-text-primary border-b border-border-panel/40 pb-0.5">{label}</p>
-                                <p className="text-[#38bdf8] font-bold mt-1">Overall Health: {item.healthPercentage}%</p>
+                                <p className="text-accent-blue font-bold mt-1">Overall Health: {item.healthPercentage}%</p>
                                 <p className="text-text-muted mt-0.5">Points: {item.points.toLocaleString()} / {item.maxPoints.toLocaleString()}</p>
                                 <p className={item.atRisk > 0 ? 'text-orange-400 mt-0.5' : 'text-status-ok mt-0.5'}>At Risk: {item.atRisk} machines</p>
                               </div>
@@ -2143,16 +2370,42 @@ export default function MainPage() {
                       />
                       <Line 
                         type="linear" 
-                        dataKey="healthPercentage" 
+                        dataKey={
+                          selectedTrendTab === 'health'
+                            ? 'healthPercentage'
+                            : selectedTrendTab === 'compliance'
+                            ? 'compliancePercentage'
+                            : 'totalHealthPercentage'
+                        } 
                         stroke="#5b9bf3" 
                         strokeWidth={2}
-                        dot={{ r: 4.5, fill: '#60a5fa', stroke: '#0e1726', strokeWidth: 2 }}
-                        activeDot={{ r: 6.5, fill: '#93c5fd', stroke: '#ffffff', strokeWidth: 2 }}
+                        dot={{
+                          r: 4.5,
+                          fill: '#60a5fa',
+                          stroke: '#0e1726',
+                          strokeWidth: 2
+                        }}
+                        activeDot={{ r: 6.5, fill: '#ffffff', stroke: '#38bdf8', strokeWidth: 2 }}
                       />
                     </LineChart>
                   </ResponsiveContainer>
                 </div>
               </DashboardCard>
+            </div>
+
+            {/* Row 3: Full-Width Monthly CBM Routine Report Table */}
+            <div className="w-full">
+              <MonthlyCbmReportTable
+                equipments={currentKpiEquipments}
+                reports={reports}
+                workOrders={workOrders}
+                selectedTechnology={selectedKpiTechnology}
+                selectedMonth={selectedKpiMonth}
+                prevMonth={currentMonthConfig?.prevKey || '2026-09'}
+                selectedMonthLabel={currentMonthConfig?.shortLabel || '26/oct'}
+                prevMonthLabel={currentMonthConfig?.prevShortLabel || '26/sep'}
+                onEquipmentClick={(eq) => handleRowClick({ tag: eq.tag })}
+              />
             </div>
           </div>
         )}
@@ -3139,7 +3392,13 @@ export default function MainPage() {
               {maximizedChart === 'kpi-health' && (kpiFpsoLabel === 'All FPSOs' ? 'Overall Fleet Health (Maximized View)' : `${kpiFpsoLabel} Health (Maximized View)`)}
               {maximizedChart === 'kpi-compliance' && 'Compliance Risk - FAR Overdue PM (Maximized View)'}
               {maximizedChart === 'kpi-total-risk' && 'CBMnet Total Risk (Maximized View)'}
-              {maximizedChart === 'kpi-trend' && 'Overall Health Trend (Maximized View)'}
+              {maximizedChart === 'kpi-trend' && (
+                selectedTrendTab === 'health'
+                  ? 'Overall Health Trend (Maximized View)'
+                  : selectedTrendTab === 'compliance'
+                  ? 'Compliance Risk Trend (Maximized View)'
+                  : 'CBM Total Risk Trend (Maximized View)'
+              )}
             </h2>
             <div className="h-[360px] flex items-center justify-center">
               {maximizedChart === 'wo-status' && <WorkOrderStatusPie workOrders={workOrders} />}
@@ -3391,10 +3650,34 @@ export default function MainPage() {
                         content={({ active, payload, label }) => {
                           if (active && payload && payload.length) {
                             const item = payload[0].payload;
+                            if (selectedTrendTab === 'compliance') {
+                              return (
+                                <div className="bg-[#0b0f19] border border-[#1e2a3a] px-3 py-2 rounded shadow-xl text-xs">
+                                  <p className="font-semibold text-text-primary border-b border-border-panel/40 pb-1">{label}</p>
+                                  <p className="text-accent-blue font-bold mt-1">Compliance Rate: {item.compliancePercentage}%</p>
+                                  <p className="text-text-muted mt-0.5">Technology: {selectedKpiTechnology}</p>
+                                  <p className={item.overdueCount > 0 ? 'text-orange-400 mt-0.5' : 'text-status-ok mt-0.5'}>
+                                    Overdue: {item.overdueCount || 0} machines
+                                  </p>
+                                </div>
+                              );
+                            }
+                            if (selectedTrendTab === 'risk') {
+                              return (
+                                <div className="bg-[#0b0f19] border border-[#1e2a3a] px-3 py-2 rounded shadow-xl text-xs">
+                                  <p className="font-semibold text-text-primary border-b border-border-panel/40 pb-1">{label}</p>
+                                  <p className="text-accent-blue font-bold mt-1">Total Health Index: {item.totalHealthPercentage}%</p>
+                                  <p className="text-text-muted mt-0.5">Technology: {selectedKpiTechnology}</p>
+                                  <p className={item.atRisk > 0 ? 'text-orange-400 mt-0.5' : 'text-status-ok mt-0.5'}>
+                                    At Risk: {item.atRisk} machines
+                                  </p>
+                                </div>
+                              );
+                            }
                             return (
                               <div className="bg-[#0b0f19] border border-[#1e2a3a] px-3 py-2 rounded shadow-xl text-xs">
                                 <p className="font-semibold text-text-primary border-b border-border-panel/40 pb-1">{label}</p>
-                                <p className="text-[#38bdf8] font-bold mt-1">Overall Health: {item.healthPercentage}%</p>
+                                <p className="text-accent-blue font-bold mt-1">Overall Health: {item.healthPercentage}%</p>
                                 <p className="text-text-muted mt-0.5">Points: {item.points.toLocaleString()} / {item.maxPoints.toLocaleString()}</p>
                                 <p className={item.atRisk > 0 ? 'text-orange-400 mt-0.5' : 'text-status-ok mt-0.5'}>At Risk: {item.atRisk} machines</p>
                               </div>
@@ -3405,7 +3688,13 @@ export default function MainPage() {
                       />
                       <Line 
                         type="linear" 
-                        dataKey="healthPercentage" 
+                        dataKey={
+                          selectedTrendTab === 'health'
+                            ? 'healthPercentage'
+                            : selectedTrendTab === 'compliance'
+                            ? 'compliancePercentage'
+                            : 'totalHealthPercentage'
+                        } 
                         stroke="#5b9bf3" 
                         strokeWidth={2.5} 
                         dot={{ r: 6, fill: '#60a5fa', stroke: '#0e1726', strokeWidth: 2 }} 

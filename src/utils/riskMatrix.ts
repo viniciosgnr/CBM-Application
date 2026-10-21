@@ -91,7 +91,8 @@ export function calculateOverallHealth(
     vibrationStatus?: string | null;
     lubeOilStatus?: string | null;
     criticality?: string | null;
-  }>
+  }>,
+  technology: 'Vibration' | 'Lub Oil' | 'Both' = 'Both'
 ): OverallHealthResult {
   const totalMachines = equipments.length;
   const maxPoints = totalMachines * 12;
@@ -101,11 +102,15 @@ export function calculateOverallHealth(
   let goodCount = 0;
 
   for (const eq of equipments) {
-    const resolvedCondition = getWorstTechniqueStatus(
-      eq.vibrationStatus,
-      eq.lubeOilStatus,
-      eq.condition || 'Good - Tier 4'
-    );
+    const resolvedCondition = technology === 'Vibration'
+      ? formatSurveillanceTier(eq.vibrationStatus || eq.condition || 'Good - Tier 4')
+      : technology === 'Lub Oil'
+      ? formatSurveillanceTier(eq.lubeOilStatus || eq.condition || 'Good - Tier 4')
+      : getWorstTechniqueStatus(
+          eq.vibrationStatus,
+          eq.lubeOilStatus,
+          eq.condition || 'Good - Tier 4'
+        );
 
     if (resolvedCondition.includes('Tier 1') || resolvedCondition.includes('Critical')) {
       const riskScore = calculateRiskScore(resolvedCondition, eq.criticality || 'Medium');
@@ -509,12 +514,19 @@ export type EquipmentRiskInput = {
   lubeOilFrequency?: string | null;
 };
 
-export function calculateEquipmentCbmRisk(eq: EquipmentRiskInput): EquipmentCbmRiskResult {
-  const worstCondition = getWorstTechniqueStatus(
-    eq.vibrationStatus,
-    eq.lubeOilStatus,
-    eq.condition || 'Good - Tier 4'
-  );
+export function calculateEquipmentCbmRisk(
+  eq: EquipmentRiskInput,
+  technology: 'Vibration' | 'Lub Oil' | 'Both' = 'Both'
+): EquipmentCbmRiskResult {
+  const worstCondition = technology === 'Vibration'
+    ? formatSurveillanceTier(eq.vibrationStatus || eq.condition || 'Good - Tier 4')
+    : technology === 'Lub Oil'
+    ? formatSurveillanceTier(eq.lubeOilStatus || eq.condition || 'Good - Tier 4')
+    : getWorstTechniqueStatus(
+        eq.vibrationStatus,
+        eq.lubeOilStatus,
+        eq.condition || 'Good - Tier 4'
+      );
   const faultRisk = calculateRiskScore(worstCondition, eq.criticality || 'Medium');
   const faultCatInfo = getRiskCategory(faultRisk);
 
@@ -532,8 +544,13 @@ export function calculateEquipmentCbmRisk(eq: EquipmentRiskInput): EquipmentCbmR
   const vibRisk = critWeight * vibIndexInfo.index;
   const oilRisk = critWeight * oilIndexInfo.index;
 
-  // Worst case consolidation: higher score represents greater overdue risk (0 to 15)
-  const complianceRisk = Math.max(vibRisk, oilRisk);
+  // Selected technology compliance risk (0 to 15)
+  const complianceRisk = technology === 'Vibration'
+    ? vibRisk
+    : technology === 'Lub Oil'
+    ? oilRisk
+    : Math.max(vibRisk, oilRisk);
+
   const complianceResult = getComplianceRiskInfo(complianceRisk);
 
   // CBM Total Risk = Fault Risk + 20% * Compliance Risk (Ranges from 1.0 to 15.0)
@@ -596,7 +613,10 @@ export interface FleetCbmRiskSummary {
   };
 }
 
-export function calculateFleetCbmRiskSummary(equipments: Array<EquipmentRiskInput>): FleetCbmRiskSummary {
+export function calculateFleetCbmRiskSummary(
+  equipments: Array<EquipmentRiskInput>,
+  technology: 'Vibration' | 'Lub Oil' | 'Both' = 'Both'
+): FleetCbmRiskSummary {
   const total = equipments.length;
   if (total === 0) {
     return {
@@ -630,17 +650,21 @@ export function calculateFleetCbmRiskSummary(equipments: Array<EquipmentRiskInpu
   const riskCount = { low: 0, medium: 0, high: 0, critical: 0 };
 
   for (const eq of equipments) {
-    const res = calculateEquipmentCbmRisk(eq);
+    const res = calculateEquipmentCbmRisk(eq, technology);
     sumFault += res.faultRisk;
     sumComp += res.complianceRisk;
     sumTotal += res.totalRisk;
 
     // Fault deduction: applies when machine has an active anomaly (Tier 1 or Tier 2)
-    const resolvedCondition = getWorstTechniqueStatus(
-      eq.vibrationStatus,
-      eq.lubeOilStatus,
-      eq.condition || 'Good - Tier 4'
-    );
+    const resolvedCondition = technology === 'Vibration'
+      ? formatSurveillanceTier(eq.vibrationStatus || eq.condition || 'Good - Tier 4')
+      : technology === 'Lub Oil'
+      ? formatSurveillanceTier(eq.lubeOilStatus || eq.condition || 'Good - Tier 4')
+      : getWorstTechniqueStatus(
+          eq.vibrationStatus,
+          eq.lubeOilStatus,
+          eq.condition || 'Good - Tier 4'
+        );
     const isAnomaly = resolvedCondition.includes('Tier 1') || 
                       resolvedCondition.includes('Critical') || 
                       resolvedCondition.includes('Tier 2') || 

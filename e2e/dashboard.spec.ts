@@ -186,5 +186,84 @@ test.describe('CBM Dashboard E2E Smoke Tests', () => {
 
     // O modal deve fechar e o botão de bulk sumir (pois seleções foram processadas)
     await expect(bulkButton).not.toBeVisible();
+
+    // Re-garante os equipamentos de amostragem em Overdue Good - Tier 4 para visualização do usuário
+    await page.request.put('/api/equipments/UNY_111-PKPD-5200', {
+      data: {
+        condition: 'Good - Tier 4',
+        vibrationStatus: 'Good - Tier 4',
+        lubeOilStatus: 'Good - Tier 4',
+        lastVibrationUpdate: '18/06/2026, 10:30:00',
+        lastLubeOilUpdate: '18/04/2026, 10:00:00',
+        nonCollectionReason: null,
+      },
+    });
+    await page.request.put('/api/equipments/PTY_111-PKPD-5100', {
+      data: {
+        condition: 'Good - Tier 4',
+        vibrationStatus: 'Good - Tier 4',
+        lubeOilStatus: 'Good - Tier 4',
+        lastVibrationUpdate: '05/07/2026, 10:30:00',
+        lastLubeOilUpdate: '05/05/2026, 10:00:00',
+        nonCollectionReason: null,
+      },
+    });
+  });
+
+  test('deve navegar para a aba de KPIs, filtrar por tecnologia/mês, alternar as 3 trends e exibir a tabela de relatório mensal com banner e colunas em inglês', async ({ page }) => {
+    await page.goto('/');
+
+    // Navega para a aba de KPIs
+    const kpiTab = page.getByRole('button', { name: /^KPIs$/i });
+    await expect(kpiTab).toBeVisible();
+    await kpiTab.click();
+
+    // Valida os 3 cards de snapshot
+    await expect(page.getByRole('heading', { name: /Fault Risk & Overall Health/i })).toBeVisible();
+    await expect(page.getByRole('heading', { name: /Compliance Risk/i })).toBeVisible();
+    await expect(page.getByRole('heading', { name: /CBM Total Risk/i })).toBeVisible();
+
+    // Valida a barra de filtros: Vessel Scope, Month e Technology
+    await expect(page.getByText('Vessel Scope:')).toBeVisible();
+    await expect(page.getByText('Month:')).toBeVisible();
+    await expect(page.getByText('Technology:')).toBeVisible();
+
+    // Valida os botões exclusivos de tecnologia
+    const vibBtn = page.getByRole('button', { name: 'Vibration' });
+    const oilBtn = page.getByRole('button', { name: 'Lub Oil' });
+    await expect(vibBtn).toBeVisible();
+    await expect(oilBtn).toBeVisible();
+
+    // Valida as tabs de tendências no card de trends (todas com azul padrão SLB quando ativas)
+    const healthTrendBtn = page.getByRole('button', { name: 'Overall Health' });
+    await expect(healthTrendBtn).toBeVisible();
+    await expect(healthTrendBtn).toHaveClass(/bg-accent-blue/);
+
+    const compTrendBtn = page.getByRole('button', { name: 'Compliance Risk' });
+    await expect(compTrendBtn).toBeVisible();
+    await compTrendBtn.click();
+    await expect(page.getByText(/Compliance Risk Trend/i)).toBeVisible();
+    await expect(compTrendBtn).toHaveClass(/bg-accent-blue/);
+
+    const riskTrendBtn = page.getByRole('button', { name: 'CBM Total Risk' });
+    await expect(riskTrendBtn).toBeVisible();
+    await riskTrendBtn.click();
+    await expect(page.getByText(/CBM Total Risk Trend/i)).toBeVisible();
+    await expect(riskTrendBtn).toHaveClass(/bg-accent-blue/);
+
+    // Valida a nova tabela de relatório mensal (Monthly CBM Routine Report)
+    await expect(page.getByText('Monthly CBM Routine Report')).toBeVisible();
+    await expect(page.getByText(/Vibration Routine/i)).toBeVisible();
+
+    // Valida os cabeçalhos das 6 colunas discretas em inglês (sem banner roxo)
+    const reportTable = page.locator('table').last();
+    await expect(reportTable.locator('th', { hasText: 'Frequency' })).toBeVisible();
+    await expect(reportTable.locator('th', { hasText: 'FPSO' })).toBeVisible();
+    await expect(reportTable.locator('th', { hasText: 'Equipment' })).toBeVisible();
+    await expect(reportTable.locator('th', { hasText: 'WO' })).toBeVisible();
+
+    // Testa a alternância para tecnologia Lub Oil
+    await oilBtn.click();
+    await expect(page.getByText(/Lub Oil Routine/i)).toBeVisible();
   });
 });

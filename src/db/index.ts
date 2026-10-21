@@ -6,6 +6,7 @@ const globalForDb = global as unknown as { sqlite: Database.Database | undefined
 
 if (!globalForDb.sqlite) {
   globalForDb.sqlite = new Database('sqlite.db');
+  globalForDb.sqlite.pragma('journal_mode = WAL');
 }
 
 export const db = drizzle(globalForDb.sqlite, { schema });
