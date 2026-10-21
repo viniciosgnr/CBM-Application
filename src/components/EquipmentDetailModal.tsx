@@ -17,6 +17,22 @@ import {
   formatEquipmentClass,
 } from '@/utils/riskMatrix';
 
+export const NON_COLLECTION_REASONS = [
+  'Not collected',
+  'Awaiting Maintenance',
+  'No Safe Access',
+  'No Data Collector',
+  'Incomplete Data',
+  'Poor Quality Data',
+  'Not Configured',
+  'Operational Constraints',
+  'On Standby',
+  'Process Not Running',
+  'No Reason',
+] as const;
+
+export type NonCollectionReason = (typeof NON_COLLECTION_REASONS)[number];
+
 export interface Equipment {
   id: number;
   tag: string;
@@ -37,6 +53,9 @@ export interface Equipment {
   lastVibrationUpdate?: string | null;
   lastLubeOilUpdate?: string | null;
   collectionMethod?: string | null;
+  vibrationNonCollectionReason?: string | null;
+  lubeOilNonCollectionReason?: string | null;
+  nonCollectionReason?: string | null;
 }
 
 export interface HistoryEntry {
@@ -54,6 +73,7 @@ interface EquipmentDetailModalProps {
   equipment: Equipment | null;
   history?: HistoryEntry[];
   onLogNewAnalysis?: () => void;
+  onUpdateNonCollectionReason?: (reason: string) => Promise<void> | void;
 }
 
 const CHART_VALUE_MAP: Record<string, number> = {
@@ -219,13 +239,31 @@ export default function EquipmentDetailModal({
   equipment,
   history = [],
   onLogNewAnalysis,
+  onUpdateNonCollectionReason,
 }: EquipmentDetailModalProps) {
   const [mounted, setMounted] = useState(false);
   const [isExpanded, setIsExpanded] = useState(false);
+  const [isSavingReason, setIsSavingReason] = useState(false);
+  const [isReasonSaved, setIsReasonSaved] = useState(false);
 
   useEffect(() => {
     setMounted(true);
   }, []);
+
+  const handleReasonChange = async (reason: string) => {
+    if (!onUpdateNonCollectionReason) return;
+    setIsSavingReason(true);
+    setIsReasonSaved(false);
+    try {
+      await onUpdateNonCollectionReason(reason);
+      setIsReasonSaved(true);
+      setTimeout(() => {
+        setIsReasonSaved(false);
+      }, 2500);
+    } finally {
+      setIsSavingReason(false);
+    }
+  };
 
   if (!isOpen || !equipment) return null;
 
@@ -296,6 +334,7 @@ export default function EquipmentDetailModal({
 
       {/* SLB Side Drawer Panel */}
       <aside
+        data-testid="equipment-detail-drawer"
         className={`bg-[#0c1220] border-l border-[#1a233a] h-full h-screen shadow-2xl relative flex flex-col justify-between transition-all duration-300 ease-in-out z-10 ${
           isExpanded ? 'w-full max-w-[760px]' : 'w-full max-w-[490px]'
         }`}
@@ -467,6 +506,36 @@ export default function EquipmentDetailModal({
               </div>
             </div>
           </div>
+
+          {/* General Non-collection Reason (Enabled if Vibration, Lube Oil or both are Overdue) */}
+          {(vibNext.isOverdue || oilNext.isOverdue) && (
+            <div className="bg-[#101726]/80 border border-[#1c253b] rounded-lg p-3 my-3 animate-fadeIn">
+              <div className="flex items-center justify-between mb-1.5">
+                <span className="text-[10px] font-semibold text-[#ff5a5f] uppercase tracking-wider flex items-center gap-1.5">
+                  <span className="w-1.5 h-1.5 rounded-full bg-[#ff5a5f]" />
+                  Non-collection Reason (Overdue)
+                </span>
+                {isSavingReason && (
+                  <span className="text-[10px] text-[#94a3b8] animate-pulse">Saving...</span>
+                )}
+                {isReasonSaved && (
+                  <span className="text-[10px] text-[#10b981] font-semibold">Saved ✓</span>
+                )}
+              </div>
+              <select
+                aria-label="Non-collection Reason"
+                value={equipment.nonCollectionReason || 'Not collected'}
+                onChange={(e) => handleReasonChange(e.target.value)}
+                className="bg-[#0b101d] border border-[#2d3a58] hover:border-[#3b82f6] focus:border-[#38bdf8] text-[#f8fafc] text-xs rounded px-2.5 py-1.5 outline-none transition-colors cursor-pointer w-full"
+              >
+                {NON_COLLECTION_REASONS.map((r) => (
+                  <option key={r} value={r} className="bg-[#0b101d] text-[#f8fafc]">
+                    {r}
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
 
           {/* Historical Condition Trend */}
           <div className="my-5">

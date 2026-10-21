@@ -31,7 +31,7 @@ test.describe('CBM Dashboard E2E Smoke Tests', () => {
     await firstEquipmentRow.click();
 
     // Valida os componentes do Design System SLB no Drawer lateral
-    const drawer = page.locator('aside');
+    const drawer = page.getByTestId('equipment-detail-drawer');
     await expect(drawer.getByText('Overall Status')).toBeVisible();
     await expect(drawer.getByText('Equipment Class')).toBeVisible();
     await expect(drawer.getByText('Latest Observation')).toBeVisible();
@@ -54,5 +54,56 @@ test.describe('CBM Dashboard E2E Smoke Tests', () => {
 
     // Verifica que o Drawer fechou
     await expect(page.getByText('Overall Status')).not.toBeVisible();
+  });
+
+  test('deve exibir e persistir a razão de não coleta (Non-collection Reason) geral quando qualquer técnica estiver overdue', async ({ page }) => {
+    await page.goto('/');
+
+    // Navega para a aba de Equipamentos
+    const equipmentTab = page.getByRole('button', { name: /^Equipment$/i });
+    await expect(equipmentTab).toBeVisible();
+    await equipmentTab.click();
+
+    // Valida que existem amostras de equipamentos em atraso (Overdue) visíveis na tabela
+    const overdueBadges = page.locator('table tbody tr').getByText('Overdue');
+    await expect(overdueBadges.first()).toBeVisible();
+    const count = await overdueBadges.count();
+    expect(count).toBeGreaterThanOrEqual(1);
+
+    // Localiza e clica no equipamento DNY_111-PKPD-0300 (sem razão prévia, deve iniciar com "Not collected")
+    const overdueRow = page.locator('table tbody tr', { hasText: 'DNY_111-PKPD-0300' });
+    await expect(overdueRow).toBeVisible();
+    await overdueRow.click();
+
+    // Valida o Drawer
+    const drawer = page.getByTestId('equipment-detail-drawer');
+    await expect(drawer).toBeVisible();
+
+    // Verifica que o seletor único geral de Non-collection Reason está visível
+    const reasonSelect = drawer.locator('select[aria-label="Non-collection Reason"]');
+    await expect(reasonSelect).toBeVisible();
+
+    // Verifica que o valor padrão inicial é "Not collected"
+    await expect(reasonSelect).toHaveValue('Not collected');
+
+    // Verifica as opções sanitizadas sem prefixo "No Data"
+    await expect(reasonSelect.locator('option', { hasText: 'Not collected' })).toBeAttached();
+    await expect(reasonSelect.locator('option', { hasText: 'Awaiting Maintenance' })).toBeAttached();
+    await expect(reasonSelect.locator('option', { hasText: 'No Safe Access' })).toBeAttached();
+    await expect(reasonSelect.locator('option', { hasText: 'Process Not Running' })).toBeAttached();
+
+    // Seleciona uma nova justificativa e valida o auto-save
+    await reasonSelect.selectOption('Awaiting Maintenance');
+    await expect(drawer.getByText('Saved ✓')).toBeVisible();
+
+    // Fecha o Drawer
+    const closeBtn = page.getByTitle('Close drawer');
+    await closeBtn.click();
+    await expect(drawer).not.toBeVisible();
+
+    // Reabre o mesmo equipamento e confirma persistência
+    await overdueRow.click();
+    await expect(drawer).toBeVisible();
+    await expect(reasonSelect).toHaveValue('Awaiting Maintenance');
   });
 });

@@ -77,6 +77,9 @@ interface Equipment {
   lastVibrationUpdate?: string | null;
   lastLubeOilUpdate?: string | null;
   collectionMethod?: string | null;
+  vibrationNonCollectionReason?: string | null;
+  lubeOilNonCollectionReason?: string | null;
+  nonCollectionReason?: string | null;
 }
 
 interface HistoryEntry {
@@ -790,6 +793,23 @@ export default function MainPage() {
     }
   };
 
+  const handleUpdateNonCollectionReason = async (reason: string) => {
+    if (!selectedEquipment) return;
+    try {
+      const res = await fetch(`/api/equipments/${encodeURIComponent(selectedEquipment.tag)}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ nonCollectionReason: reason }),
+      });
+      if (res.ok) {
+        setSelectedEquipment(prev => prev ? { ...prev, nonCollectionReason: reason } : null);
+        setEquipments(prev => prev.map(eq => eq.tag === selectedEquipment.tag ? { ...eq, nonCollectionReason: reason } : eq));
+      }
+    } catch (err) {
+      console.error('Failed to update non-collection reason:', err);
+    }
+  };
+
   // Handle uploading/updating image directly for a report
   const handleReportImageUpload = async (reportId: number, file: File) => {
     const reader = new FileReader();
@@ -1146,6 +1166,9 @@ export default function MainPage() {
         collectionStatus,
         plannedNextVibrationDate: nextVib.plannedDateStr,
         plannedNextOilDate: nextOil.plannedDateStr,
+        vibrationNonCollectionReason: e.vibrationNonCollectionReason || '',
+        lubeOilNonCollectionReason: e.lubeOilNonCollectionReason || '',
+        nonCollectionReason: e.nonCollectionReason || '',
         observation: e.observation || '',
       };
     });
@@ -2069,6 +2092,7 @@ export default function MainPage() {
         equipment={selectedEquipment}
         history={history}
         onLogNewAnalysis={openReportForm}
+        onUpdateNonCollectionReason={handleUpdateNonCollectionReason}
       />
 
 

@@ -50,7 +50,10 @@ export async function PUT(request: Request, { params }: { params: { tag: string 
       lubeOilFrequency,
       lastVibrationUpdate,
       lastLubeOilUpdate,
-      collectionMethod 
+      collectionMethod,
+      vibrationNonCollectionReason,
+      lubeOilNonCollectionReason,
+      nonCollectionReason
     } = body;
     
     const nowStr = new Date().toLocaleString('en-GB'); // dd/mm/yyyy, hh:mm:ss
@@ -63,6 +66,9 @@ export async function PUT(request: Request, { params }: { params: { tag: string 
     if (lastVibrationUpdate !== undefined) updateData.lastVibrationUpdate = lastVibrationUpdate;
     if (lastLubeOilUpdate !== undefined) updateData.lastLubeOilUpdate = lastLubeOilUpdate;
     if (collectionMethod !== undefined) updateData.collectionMethod = collectionMethod;
+    if (vibrationNonCollectionReason !== undefined) updateData.vibrationNonCollectionReason = vibrationNonCollectionReason;
+    if (lubeOilNonCollectionReason !== undefined) updateData.lubeOilNonCollectionReason = lubeOilNonCollectionReason;
+    if (nonCollectionReason !== undefined) updateData.nonCollectionReason = nonCollectionReason;
     
     if (condition !== undefined) {
       // Direct override of condition and observation (supporting tiers)
@@ -99,7 +105,10 @@ export async function PUT(request: Request, { params }: { params: { tag: string 
       lubeOilFrequency !== undefined ||
       lastVibrationUpdate !== undefined ||
       lastLubeOilUpdate !== undefined ||
-      collectionMethod !== undefined
+      collectionMethod !== undefined ||
+      vibrationNonCollectionReason !== undefined ||
+      lubeOilNonCollectionReason !== undefined ||
+      nonCollectionReason !== undefined
     ) {
       const updated = await db
         .update(equipments)

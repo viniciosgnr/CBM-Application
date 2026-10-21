@@ -20,6 +20,9 @@ export const equipments = sqliteTable('equipments', {
   lubeOilFrequency: text('lube_oil_frequency').notNull().default('Monthly'),
   lastVibrationUpdate: text('last_vibration_update'),
   lastLubeOilUpdate: text('last_lube_oil_update'),
+  vibrationNonCollectionReason: text('vibration_non_collection_reason'),
+  lubeOilNonCollectionReason: text('lube_oil_non_collection_reason'),
+  nonCollectionReason: text('non_collection_reason'),
   collectionMethod: text('collection_method').notNull().default('Online'),
 });
 
