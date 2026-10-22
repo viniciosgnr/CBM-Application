@@ -73,6 +73,7 @@ export const analysisReports = sqliteTable('analysis_reports', {
   failureModeDescription: text('failure_mode_description'),
   failureMechanismSubdivision: text('failure_mechanism_subdivision'),
   effectiveness: text('effectiveness'),
+  cbmCaseStatus: text('cbm_case_status'),
 
   createdAt: text('created_at').notNull(),
 });

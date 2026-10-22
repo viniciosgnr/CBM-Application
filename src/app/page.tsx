@@ -124,6 +124,7 @@ interface AnalysisReport {
   failureModeDescription?: string | null;
   failureMechanismSubdivision?: string | null;
   effectiveness?: string | null;
+  cbmCaseStatus?: string | null;
   createdAt: string;
 }
 
@@ -132,6 +133,7 @@ const EFFECTIVENESS_DESCRIPTIONS: Record<string, string> = {
   'Partially Effective': 'Partially Effective: the action addressed part of the identified condition, but further action or monitoring remains necessary;',
   'Ineffective': 'Ineffective: the action did not address the identified condition or did not produce the intended technical outcome; or',
   'Not Yet Assessable': 'Not Yet Assessable: available feedback or post-action evidence is insufficient to determine effectiveness.',
+  'Pending Assessment': 'Pending Assessment: Work Order action completed. Awaiting CBM technical assessment to close the case.',
   'N/A': 'N/A: Not applicable (routine baseline surveillance with no corrective action required).',
 };
 
@@ -1000,6 +1002,56 @@ export default function MainPage() {
     }
   };
 
+  // Handle updating linked work order for a report (interactive WO selection in report details)
+  const handleReportWoChange = async (reportId: number, newWo: string) => {
+    if (!selectedReport) return;
+    setIsSavingEffectiveness(true);
+
+    const targetWo = newWo === 'N/A' ? null : newWo;
+    try {
+      const res = await fetch('/api/reports', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id: reportId, woNumber: targetWo }),
+      });
+      if (res.ok) {
+        const saved = await res.json();
+        setSelectedReport(saved);
+        await fetchReports();
+      } else {
+        console.error('Failed to update linked work order');
+      }
+    } catch (err) {
+      console.error('Error updating linked work order:', err);
+    } finally {
+      setIsSavingEffectiveness(false);
+    }
+  };
+
+  // Work orders matching currently selected equipment for report creation
+  const availableWosForEquipment = useMemo(() => {
+    if (!selectedEquipment) return [];
+    const eqTag = (selectedEquipment.tag || '').trim();
+    const eqFpso = (selectedEquipment.fpso || '').replace(/^FPSO\s+/i, '').trim().toUpperCase();
+    return workOrders.filter(w => {
+      const wTag = (w.tagNumber || '').trim();
+      const wFpso = (w.fpso || '').replace(/^FPSO\s+/i, '').trim().toUpperCase();
+      return wTag === eqTag && (!eqFpso || !wFpso || wFpso === eqFpso);
+    });
+  }, [workOrders, selectedEquipment]);
+
+  // Work orders matching currently selected report for linking
+  const availableWosForReport = useMemo(() => {
+    if (!selectedReport) return [];
+    const repTag = (selectedReport.equipmentTag || selectedReport.tagNumber || '').trim();
+    const repFpso = (selectedReport.facility || '').replace(/^FPSO\s+/i, '').trim().toUpperCase();
+    return workOrders.filter(w => {
+      const wTag = (w.tagNumber || '').trim();
+      const wFpso = (w.fpso || '').replace(/^FPSO\s+/i, '').trim().toUpperCase();
+      return wTag === repTag && (!repFpso || !wFpso || wFpso === repFpso);
+    });
+  }, [workOrders, selectedReport]);
+
   function parseDate(dateStr?: string | null): Date | null {
     if (!dateStr) return null;
     if (dateStr.includes('/')) {
@@ -1107,6 +1159,47 @@ export default function MainPage() {
         <span className="text-text-muted">{status}</span>
       </span>
     );
+  };
+
+  // Badges coloridos do CBM Case Status
+  const getCaseStatusBadge = (status?: string | null) => {
+    switch (status) {
+      case 'Awaiting Action':
+        return (
+          <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-[#f59e0b]/15 text-[#f59e0b] border border-[#f59e0b]/30">
+            <span className="w-1.5 h-1.5 rounded-full bg-[#f59e0b]" />
+            Awaiting Action
+          </span>
+        );
+      case 'Awaiting Feedback':
+        return (
+          <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-[#0284c7]/15 text-[#38bdf8] border border-[#0284c7]/30">
+            <span className="w-1.5 h-1.5 rounded-full bg-[#38bdf8] animate-pulse" />
+            Awaiting Feedback
+          </span>
+        );
+      case 'Closed':
+        return (
+          <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-[#10b981]/15 text-[#10b981] border border-[#10b981]/30">
+            <span className="w-1.5 h-1.5 rounded-full bg-[#10b981]" />
+            Closed
+          </span>
+        );
+      case 'Cancelled':
+        return (
+          <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-[#64748b]/15 text-[#94a3b8] border border-[#64748b]/30">
+            <span className="w-1.5 h-1.5 rounded-full bg-[#94a3b8]" />
+            Cancelled
+          </span>
+        );
+      default:
+        return (
+          <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-[#f59e0b]/15 text-[#f59e0b] border border-[#f59e0b]/30">
+            <span className="w-1.5 h-1.5 rounded-full bg-[#f59e0b]" />
+            {status || 'Awaiting Action'}
+          </span>
+        );
+    }
   };
 
   // Format history array chronologically for the trend chart
@@ -1254,6 +1347,11 @@ export default function MainPage() {
     { key: 'analysisType', header: 'Analysis Type' },
     { key: 'shortDescription', header: 'Short Description' },
     { key: 'cbmStatus', header: 'CBM Status', render: (val: string) => getStatusDot(val) },
+    { 
+      key: 'cbmCaseStatus', 
+      header: 'CBM Case Status', 
+      render: (val: string) => getCaseStatusBadge(val) 
+    },
     { key: 'failureModeDescription', header: 'Failure Mode Description' },
     { key: 'raisedDate', header: 'Raised Date' },
     { key: 'raisedBy', header: 'Raised By' },
@@ -1355,6 +1453,9 @@ export default function MainPage() {
       ? r.thermographyStatus
       : r.vibrationStatus || r.overallCondition;
 
+    const isGood = r.overallCondition?.includes('Good') || r.overallCondition?.includes('Tier 3') || r.overallCondition?.includes('Tier 4');
+    const caseStatus = r.cbmCaseStatus || (isGood ? 'Closed' : 'Awaiting Action');
+
     return {
       id: String(r.id),
       fpso: (r.facility || 'UNY').replace(/^FPSO\s+/i, ''),
@@ -1362,9 +1463,10 @@ export default function MainPage() {
       name: r.machineName || r.component || 'Compressor Performance',
       equipmentClass: r.equipmentClass || 'Centrifugal Compressor',
       analysisType: r.technology || 'Vibration Analysis',
-      effectiveness: r.effectiveness || 'N/A',
+      effectiveness: r.effectiveness || (isGood ? 'N/A' : 'Pending Assessment'),
       shortDescription: r.shortDescription || '-',
       cbmStatus: formatSurveillanceTier(techniqueStatus),
+      cbmCaseStatus: caseStatus,
       failureModeDescription: r.failureModeDescription || '-',
       raisedDate: r.raisedDate,
       raisedBy: r.raisedBy,
@@ -2680,14 +2782,24 @@ export default function MainPage() {
                   </div>
 
                   <div className="flex flex-col gap-1.5">
-                    <label className="text-[#94a3b8] font-medium text-xs">Work Order Number (Optional)</label>
-                    <input
-                      type="text"
-                      placeholder="e.g. 1089487"
-                      value={formFields.woNumber}
-                      onChange={e => setFormFields({ ...formFields, woNumber: e.target.value })}
-                      className="bg-[#0c101d] border border-[#232a42] rounded-md px-3 py-2 text-[#f1f5f9] focus:border-[#3b82f6] outline-none transition-colors text-xs placeholder:text-[#475569]"
-                    />
+                    <label className="text-[#94a3b8] font-medium text-xs">Work Order Number</label>
+                    <div className="relative">
+                      <select
+                        value={formFields.woNumber || 'N/A'}
+                        onChange={e => setFormFields({ ...formFields, woNumber: e.target.value === 'N/A' ? '' : e.target.value })}
+                        className="w-full bg-[#0c101d] border border-[#232a42] rounded-md px-3 py-2 text-[#f1f5f9] focus:border-[#3b82f6] outline-none cursor-pointer text-xs appearance-none pr-8 transition-colors font-medium"
+                      >
+                        <option value="N/A" className="bg-[#0c101d] text-[#94a3b8]">N/A (No Work Order)</option>
+                        {availableWosForEquipment.map(wo => (
+                          <option key={wo.id} value={wo.reference} className="bg-[#0c101d] text-[#f1f5f9]">
+                            {wo.reference} - {wo.description.substring(0, 35)}... ({wo.status})
+                          </option>
+                        ))}
+                      </select>
+                      <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2.5 text-[#8a94a6]">
+                        <ChevronDown size={14} />
+                      </div>
+                    </div>
                   </div>
                 </div>
               </div>
@@ -2882,13 +2994,19 @@ export default function MainPage() {
               {/* simulated Excel Border wrapper */}
               <div className="border border-[#202742] rounded-xl overflow-hidden bg-[#101422]/60 shadow-xl max-w-[620px] mx-auto">
                 
-                {/* Excel Row 1: Solid severity header banner SLB Category Colors */}
-                <div className={`p-3.5 text-center font-bold text-xs tracking-widest uppercase border-b border-[#202742] ${
-                  selectedReport.overallCondition?.includes('Critical') ? 'bg-[#ef4444]/20 text-[#ef4444] border-[#ef4444]/40' :
-                  selectedReport.overallCondition?.includes('Degraded') ? 'bg-[#f59e0b]/20 text-[#f59e0b] border-[#f59e0b]/40' :
-                  'bg-[#4ade80]/20 text-[#4ade80] border-[#4ade80]/40'
-                }`}>
-                  {selectedReport.overallCondition}
+                {/* Excel Row 1: Solid severity header banner SLB Category Colors + CBM Case Status */}
+                <div className="flex items-center justify-between p-3.5 border-b border-[#202742] bg-[#121626]">
+                  <div className={`font-bold text-xs tracking-widest uppercase px-2.5 py-1 rounded ${
+                    selectedReport.overallCondition?.includes('Critical') ? 'bg-[#ef4444]/20 text-[#ef4444] border border-[#ef4444]/40' :
+                    selectedReport.overallCondition?.includes('Degraded') ? 'bg-[#f59e0b]/20 text-[#f59e0b] border border-[#f59e0b]/40' :
+                    'bg-[#4ade80]/20 text-[#4ade80] border border-[#4ade80]/40'
+                  }`}>
+                    {selectedReport.overallCondition}
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span className="text-[10px] uppercase font-bold text-text-muted">CBM Case Status:</span>
+                    {getCaseStatusBadge(selectedReport.cbmCaseStatus || (selectedReport.overallCondition?.includes('Good') ? 'Closed' : 'Awaiting Action'))}
+                  </div>
                 </div>
 
                 {/* Row 1: FPSO & System */}
@@ -3048,21 +3166,37 @@ export default function MainPage() {
                     <span className="bg-[#121626] text-text-muted p-2.5 w-[100px] flex-shrink-0 border-r border-[#202742] flex items-center">Description</span>
                     <span className="p-2.5 text-text-primary flex-1 flex items-center">{selectedReport.shortDescription}</span>
                   </div>
-                  <div className="flex">
+                  <div className="flex items-center">
                     <span className="bg-[#121626] text-[#f87171] p-2.5 w-[100px] flex-shrink-0 border-r border-[#202742] flex items-center">WO Number</span>
-                    <span className="p-2.5 text-text-primary flex-1 flex items-center flex-row gap-1 font-bold">
-                      <Hash size={10} />
-                      {selectedReport.woNumber ? (
-                        <button
-                          onClick={() => navigateToWorkOrder(selectedReport.woNumber!)}
-                          className="text-accent-blue hover:underline font-bold text-left cursor-pointer"
+                    <div className="p-2 flex-1 flex items-center gap-2">
+                      <div className="relative flex-1">
+                        <select
+                          value={selectedReport.woNumber || 'N/A'}
+                          onChange={e => handleReportWoChange(selectedReport.id, e.target.value)}
+                          className="w-full bg-[#0c101d] border border-[#232a42] rounded px-2.5 py-1 text-xs text-[#f1f5f9] focus:border-[#3b82f6] outline-none cursor-pointer appearance-none pr-7 font-semibold"
                         >
-                          {selectedReport.woNumber}
+                          <option value="N/A" className="bg-[#0c101d] text-[#94a3b8]">N/A (No Work Order)</option>
+                          {availableWosForReport.map(wo => (
+                            <option key={wo.id} value={wo.reference} className="bg-[#0c101d] text-[#f1f5f9]">
+                              {wo.reference} - {wo.description.substring(0, 30)}... ({wo.status})
+                            </option>
+                          ))}
+                        </select>
+                        <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-[#8a94a6]">
+                          <ChevronDown size={12} />
+                        </div>
+                      </div>
+                      {selectedReport.woNumber && selectedReport.woNumber !== 'N/A' && (
+                        <button
+                          type="button"
+                          onClick={() => navigateToWorkOrder(selectedReport.woNumber!)}
+                          className="text-[10px] text-accent-blue hover:underline font-semibold flex items-center gap-0.5 shrink-0 cursor-pointer"
+                          title="Open Work Order in Work Orders tab"
+                        >
+                          View WO
                         </button>
-                      ) : (
-                        <span className="text-text-muted italic">PENDING</span>
                       )}
-                    </span>
+                    </div>
                   </div>
                 </div>
 
@@ -3096,47 +3230,100 @@ export default function MainPage() {
                 </div>
 
                 {/* Recommendation Effectiveness Classification (ISO 6.4.6.1) */}
-                <div className="border-t border-[#202742] text-[10px]">
-                  <div className="bg-[#121626] text-text-muted p-2.5 font-bold uppercase tracking-wider border-b border-[#202742] flex items-center justify-between">
-                    <div className="flex items-center gap-1.5">
-                      <CheckCircle2 size={12} className="text-[#10b981]" />
-                      Recommendation Effectiveness Classification (ISO 6.4.6.1)
-                    </div>
-                    {isSavingEffectiveness && (
-                      <span className="text-[9px] text-[#60a5fa] font-semibold animate-pulse lowercase">
-                        saving...
-                      </span>
-                    )}
-                  </div>
-                  <div className="p-3.5 bg-[#101422]/60 flex flex-col gap-2.5">
-                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-                      <label className="text-[#8a94a6] font-bold text-[10px] uppercase tracking-wider">
-                        Effectiveness Status:
-                      </label>
-                      <div className="relative min-w-[210px]">
-                        <select
-                          value={selectedReport.effectiveness || 'Not Yet Assessable'}
-                          onChange={(e) => handleEffectivenessChange(e.target.value)}
-                          className="w-full bg-[#0c101d] border border-[#232a42] rounded-md px-3 py-1.5 text-[#f1f5f9] focus:border-[#3b82f6] outline-none cursor-pointer text-xs appearance-none pr-8 transition-colors font-semibold"
-                        >
-                          <option value="N/A" className="bg-[#0c101d] text-[#f1f5f9]">N/A</option>
-                          <option value="Not Yet Assessable" className="bg-[#0c101d] text-[#f1f5f9]">Not Yet Assessable</option>
-                          <option value="Effective" className="bg-[#0c101d] text-[#f1f5f9]">Effective</option>
-                          <option value="Partially Effective" className="bg-[#0c101d] text-[#f1f5f9]">Partially Effective</option>
-                          <option value="Ineffective" className="bg-[#0c101d] text-[#f1f5f9]">Ineffective</option>
-                        </select>
-                        <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2.5 text-[#8a94a6]">
-                          <svg className="w-3.5 h-3.5 fill-current" viewBox="0 0 20 20"><path d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z"/></svg>
+                {(() => {
+                  const isGood = selectedReport.overallCondition?.includes('Good') || selectedReport.overallCondition?.includes('Tier 3') || selectedReport.overallCondition?.includes('Tier 4');
+                  const currentCaseStatus = selectedReport.cbmCaseStatus || (isGood ? 'Closed' : 'Awaiting Action');
+                  const isAwaitingFeedback = currentCaseStatus === 'Awaiting Feedback';
+                  const isClosed = currentCaseStatus === 'Closed';
+                  const isCancelled = currentCaseStatus === 'Cancelled';
+                  const isAwaitingAction = currentCaseStatus === 'Awaiting Action';
+
+                  // Only enabled when Awaiting Feedback or Closed (and not Good Tier 3/4 or Cancelled)
+                  const isSelectEnabled = !isGood && !isCancelled && (isAwaitingFeedback || isClosed);
+
+                  let helperMsg = '';
+                  if (isGood) {
+                    helperMsg = 'N/A: Not applicable (routine baseline surveillance with no corrective action required).';
+                  } else if (isCancelled) {
+                    helperMsg = 'Case Cancelled: Work Order was cancelled, no effectiveness evaluation required.';
+                  } else if (isAwaitingAction) {
+                    helperMsg = 'Awaiting Action: Work Order action is currently pending or in progress. Effectiveness selection will be enabled once the Work Order is Completed.';
+                  } else if (isAwaitingFeedback) {
+                    helperMsg = 'Awaiting Feedback: Work Order has been Completed! Please assign the Recommendation Effectiveness below to finalize and Close this CBM case.';
+                  } else {
+                    helperMsg = EFFECTIVENESS_DESCRIPTIONS[selectedReport.effectiveness || 'Not Yet Assessable'] || EFFECTIVENESS_DESCRIPTIONS['Not Yet Assessable'];
+                  }
+
+                  const currentVal = isGood 
+                    ? 'N/A' 
+                    : (selectedReport.effectiveness || 'Pending Assessment');
+
+                  return (
+                    <div className="border-t border-[#202742] text-[10px]">
+                      <div className="bg-[#121626] text-text-muted p-2.5 font-bold uppercase tracking-wider border-b border-[#202742] flex items-center justify-between">
+                        <div className="flex items-center gap-1.5">
+                          <CheckCircle2 size={12} className="text-[#10b981]" />
+                          Recommendation Effectiveness Classification (ISO 6.4.6.1)
+                        </div>
+                        {isSavingEffectiveness && (
+                          <span className="text-[9px] text-[#60a5fa] font-semibold animate-pulse lowercase">
+                            saving...
+                          </span>
+                        )}
+                      </div>
+                      <div className="p-3.5 bg-[#101422]/60 flex flex-col gap-2.5">
+                        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                          <label className="text-[#8a94a6] font-bold text-[10px] uppercase tracking-wider flex items-center gap-1.5">
+                            Effectiveness Status:
+                            {!isSelectEnabled && (
+                              <span className="text-[9px] font-normal text-text-muted lowercase">
+                                (locked)
+                              </span>
+                            )}
+                          </label>
+                          <div className="relative min-w-[230px]">
+                            <select
+                              disabled={!isSelectEnabled}
+                              value={currentVal}
+                              onChange={(e) => handleEffectivenessChange(e.target.value)}
+                              className={`w-full bg-[#0c101d] border rounded-md px-3 py-1.5 text-xs appearance-none pr-8 transition-colors font-semibold ${
+                                isSelectEnabled
+                                  ? 'border-[#3b82f6] text-[#f1f5f9] cursor-pointer hover:border-[#60a5fa]'
+                                  : 'border-[#232a42] text-[#64748b] cursor-not-allowed opacity-80'
+                              }`}
+                            >
+                              {isGood ? (
+                                <option value="N/A" className="bg-[#0c101d] text-[#f1f5f9]">N/A</option>
+                              ) : (
+                                <>
+                                  <option value="Pending Assessment" disabled className="bg-[#0c101d] text-[#94a3b8]">
+                                    Pending Assessment (Select to Close)
+                                  </option>
+                                  <option value="Effective" className="bg-[#0c101d] text-[#f1f5f9]">Effective</option>
+                                  <option value="Partially Effective" className="bg-[#0c101d] text-[#f1f5f9]">Partially Effective</option>
+                                  <option value="Ineffective" className="bg-[#0c101d] text-[#f1f5f9]">Ineffective</option>
+                                  <option value="Not Yet Assessable" className="bg-[#0c101d] text-[#f1f5f9]">Not Yet Assessable</option>
+                                </>
+                              )}
+                            </select>
+                            <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2.5 text-[#8a94a6]">
+                              <ChevronDown size={14} />
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* Explanatory description from standard / status guidance */}
+                        <div className={`text-[11px] italic border rounded p-2.5 leading-relaxed ${
+                          isAwaitingFeedback
+                            ? 'bg-[#0284c7]/10 border-[#0284c7]/30 text-[#38bdf8]'
+                            : 'bg-[#0c101d]/80 border-[#1e2538] text-[#94a3b8]'
+                        }`}>
+                          {helperMsg}
                         </div>
                       </div>
                     </div>
-
-                    {/* Explanatory description from standard */}
-                    <div className="text-[11px] text-[#94a3b8] italic bg-[#0c101d]/80 border border-[#1e2538] rounded p-2.5 leading-relaxed">
-                      {EFFECTIVENESS_DESCRIPTIONS[selectedReport.effectiveness || 'Not Yet Assessable'] || EFFECTIVENESS_DESCRIPTIONS['Not Yet Assessable']}
-                    </div>
-                  </div>
-                </div>
+                  );
+                })()}
               </div>
 
               {/* Action Buttons SLB Style */}

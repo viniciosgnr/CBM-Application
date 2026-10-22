@@ -1,8 +1,8 @@
 import { NextResponse } from 'next/server';
 import { db } from '@/db';
-import { equipments, equipmentHistory, analysisReports } from '@/db/schema';
+import { equipments, equipmentHistory, analysisReports, workOrders } from '@/db/schema';
 import { desc, eq } from 'drizzle-orm';
-
+import { resolveCbmCaseStatus } from '@/utils/cbmCaseStatus';
 
 function getOverallCondition(vibration: string, lube: string, thermography: string = 'Good'): string {
   const statuses = [vibration, lube, thermography];
@@ -151,6 +151,20 @@ export async function POST(request: Request) {
         changedAt: nowIso,
       }).run();
 
+      let linkedWoStatus: string | null = null;
+      if (woNumber && woNumber !== 'N/A') {
+        const foundWo = tx.select().from(workOrders).where(eq(workOrders.reference, woNumber)).all();
+        if (foundWo.length > 0) {
+          linkedWoStatus = foundWo[0].status;
+        }
+      }
+
+      const caseStatusInfo = resolveCbmCaseStatus(
+        overallCondition,
+        linkedWoStatus,
+        effectiveness
+      );
+
       // 3. Insert into analysis reports
       const inserted = tx
         .insert(analysisReports)
@@ -175,7 +189,7 @@ export async function POST(request: Request) {
           raisedDate,
           targetDate: targetDate || null,
           shortDescription,
-          woNumber: woNumber || null,
+          woNumber: woNumber && woNumber !== 'N/A' ? woNumber : null,
           conditionAssessment,
           longDescription,
           imageUrl: imageUrl || null,
@@ -184,7 +198,8 @@ export async function POST(request: Request) {
           maintainableItem: maintainableItem || null,
           failureModeDescription: failureModeDescription || null,
           failureMechanismSubdivision: failureMechanismSubdivision || null,
-          effectiveness: resolvedEffectiveness,
+          effectiveness: caseStatusInfo.effectiveness,
+          cbmCaseStatus: caseStatusInfo.cbmCaseStatus,
           createdAt: nowIso,
         })
         .returning()
@@ -203,17 +218,64 @@ export async function POST(request: Request) {
 export async function PUT(request: Request) {
   try {
     const body = await request.json();
-    const { id, imageUrl, effectiveness } = body;
+    const { id, imageUrl, effectiveness, woNumber, cbmCaseStatus } = body;
     if (!id) {
       return NextResponse.json({ error: 'Missing report id' }, { status: 400 });
     }
 
+    const currentReports = await db
+      .select()
+      .from(analysisReports)
+      .where(eq(analysisReports.id, Number(id)))
+      .all();
+
+    if (currentReports.length === 0) {
+      return NextResponse.json({ error: 'Report not found' }, { status: 404 });
+    }
+    const currentReport = currentReports[0];
+
     const updateData: Record<string, string | null> = {};
+
     if ('imageUrl' in body) {
       updateData.imageUrl = imageUrl || null;
     }
-    if ('effectiveness' in body) {
-      updateData.effectiveness = effectiveness || null;
+
+    const hasWoUpdate = 'woNumber' in body;
+    const hasEffectivenessUpdate = 'effectiveness' in body;
+    const hasCaseStatusUpdate = 'cbmCaseStatus' in body;
+
+    if (hasWoUpdate || hasEffectivenessUpdate || hasCaseStatusUpdate) {
+      const targetWoNumber = hasWoUpdate 
+        ? (woNumber && woNumber !== 'N/A' ? woNumber : null) 
+        : currentReport.woNumber;
+      
+      const targetEffectiveness = hasEffectivenessUpdate 
+        ? effectiveness 
+        : currentReport.effectiveness;
+
+      let targetWoStatus: string | null = null;
+      if (targetWoNumber) {
+        const foundWo = await db
+          .select()
+          .from(workOrders)
+          .where(eq(workOrders.reference, targetWoNumber))
+          .all();
+        if (foundWo.length > 0) {
+          targetWoStatus = foundWo[0].status;
+        }
+      }
+
+      const caseStatusInfo = resolveCbmCaseStatus(
+        currentReport.overallCondition,
+        targetWoStatus,
+        targetEffectiveness
+      );
+
+      if (hasWoUpdate) {
+        updateData.woNumber = targetWoNumber;
+      }
+      updateData.effectiveness = caseStatusInfo.effectiveness;
+      updateData.cbmCaseStatus = cbmCaseStatus || caseStatusInfo.cbmCaseStatus;
     }
 
     if (Object.keys(updateData).length === 0) {
@@ -225,10 +287,6 @@ export async function PUT(request: Request) {
       .set(updateData)
       .where(eq(analysisReports.id, Number(id)))
       .returning();
-
-    if (updated.length === 0) {
-      return NextResponse.json({ error: 'Report not found' }, { status: 404 });
-    }
 
     return NextResponse.json(updated[0]);
   } catch (error) {

@@ -127,9 +127,13 @@ export async function POST(request: Request) {
         .returning();
 
       // 5. Update analysis report's woNumber field to point to this new WO Reference
+      const isGood = (report.overallCondition || '').includes('Good');
       await tx
         .update(analysisReports)
-        .set({ woNumber: nextRef })
+        .set({
+          woNumber: nextRef,
+          cbmCaseStatus: isGood ? 'Closed' : 'Awaiting Action',
+        })
         .where(eq(analysisReports.id, Number(reportId)));
 
       return inserted[0];
