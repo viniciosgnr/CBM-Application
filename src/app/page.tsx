@@ -283,8 +283,8 @@ export default function MainPage() {
         if (colKey === 'criticality' && selectedCriticalityChart) return true;
         
         let cellVal = String(equip[colKey as keyof Equipment] || '');
-        if (cellVal.includes(' - Tier ')) {
-          cellVal = cellVal.split(' - Tier ')[0];
+        if (colKey === 'condition') {
+          cellVal = getWorstTechniqueStatus(equip.vibrationStatus, equip.lubeOilStatus, equip.condition);
         }
         return setVals.has(cellVal);
       });
@@ -527,6 +527,10 @@ export default function MainPage() {
   const [selectedBulkTags, setSelectedBulkTags] = useState<Set<string>>(new Set());
   const [bulkConfirmModalOpen, setBulkConfirmModalOpen] = useState(false);
   const [isBulkUpdating, setIsBulkUpdating] = useState(false);
+
+  const selectedBulkEquipments = useMemo(() => {
+    return equipments.filter(e => selectedBulkTags.has(e.tag));
+  }, [equipments, selectedBulkTags]);
 
 
   // Report Creation Form state
@@ -2421,30 +2425,92 @@ export default function MainPage() {
         onUpdateNonCollectionReason={handleUpdateNonCollectionReason}
       />
 
-      {/* Confirmation Modal para Bulk Update */}
+      {/* Detailed Bulk Update Modal (SLB OptiSite Full-Width Table Design) */}
       {bulkConfirmModalOpen && (
-        <div className="fixed inset-0 bg-black/75 backdrop-blur-sm z-[999] flex items-center justify-center p-4">
-          <div className="bg-[#0f172a] border border-[#1e293b] rounded-xl w-full max-w-md p-6 shadow-2xl animate-fadeIn text-left">
-            <div className="flex items-center gap-3 mb-4">
-              <div className="w-10 h-10 rounded-full bg-[#0284c7]/20 border border-[#0284c7]/40 flex items-center justify-center shrink-0">
-                <CheckCircle2 className="text-[#38bdf8]" size={20} />
+        <div className="fixed inset-0 bg-black/85 backdrop-blur-md z-[999] flex items-center justify-center p-4 sm:p-6">
+          <div className="bg-[#0b101c] border border-[#1a263d] rounded-2xl w-full max-w-4xl shadow-[0_20px_50px_rgba(0,0,0,0.85)] p-6 sm:p-7 animate-fadeIn text-left flex flex-col max-h-[92vh]">
+            {/* Header: Title + Pill Badge + Close Button */}
+            <div className="flex items-center justify-between pb-4 border-b border-[#1a263d]/70">
+              <div className="flex items-center gap-3">
+                <h3 className="text-base sm:text-lg font-bold text-white tracking-tight">
+                  Update Status in Bulk
+                </h3>
+                <span className="text-[11px] font-semibold px-2.5 py-0.5 rounded-full bg-[#162136] text-[#7dd3fc] border border-[#38bdf8]/25">
+                  {selectedBulkEquipments.length} {selectedBulkEquipments.length === 1 ? 'equipment' : 'equipments'}
+                </span>
               </div>
-              <div>
-                <h3 className="text-sm font-bold text-[#f8fafc]">Update Status in Bulk</h3>
-                <p className="text-[11px] text-[#94a3b8]">Good - Tier 4 Overdue Surveillance</p>
-              </div>
+              <button
+                type="button"
+                onClick={() => setBulkConfirmModalOpen(false)}
+                className="p-1 rounded-lg text-[#64748b] hover:text-white hover:bg-[#162136] transition-colors cursor-pointer"
+                title="Close"
+              >
+                <X size={19} />
+              </button>
             </div>
 
-            <p className="text-xs text-[#cbd5e1] leading-relaxed mb-6">
-              Confirm update of <strong className="text-[#38bdf8] font-bold">{selectedBulkTags.size}</strong> equipment(s) to the current date maintaining <span className="text-[#10b981] font-semibold">Good - Tier 4</span>?
-            </p>
+            {/* Subtitle / context description */}
+            <div className="py-3 text-xs text-[#94a3b8] flex flex-wrap items-center justify-between gap-2 border-b border-[#1a263d]/40">
+              <span>
+                Confirm update of <strong className="text-white">{selectedBulkEquipments.length}</strong> equipment(s) to the current date maintaining <span className="text-[#10b981] font-semibold">Good - Tier 4</span>.
+              </span>
+              <span className="text-[11px] text-[#64748b]">
+                Good - Tier 4 Overdue Surveillance
+              </span>
+            </div>
 
-            <div className="flex items-center justify-end gap-3">
+            {/* Full-Width Table of Selected Equipments */}
+            <div className="overflow-x-auto max-h-[420px] overflow-y-auto py-2 flex-1">
+              <table className="w-full text-left text-xs border-collapse">
+                <thead className="sticky top-0 z-10 bg-[#0b101c] text-[#6b82a3] text-[10px] uppercase font-bold tracking-wider border-b border-[#1a263d] select-none">
+                  <tr>
+                    <th className="py-2.5 px-3">Asset</th>
+                    <th className="py-2.5 px-3 w-20">FPSO</th>
+                    <th className="py-2.5 px-3">Equipment Name</th>
+                    <th className="py-2.5 px-3 w-48">Class</th>
+                    <th className="py-2.5 px-3 w-40">System</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-[#162032]/70">
+                  {selectedBulkEquipments.map((eq) => {
+                    const fpsoClean = eq.fpso ? eq.fpso.replace(/^FPSO\s+/i, '').trim() : '-';
+                    const classFormatted = formatEquipmentClass(eq.class);
+                    return (
+                      <tr key={eq.tag} className="hover:bg-[#11192e] transition-colors">
+                        {/* Asset Tag */}
+                        <td className="py-3 px-3 whitespace-nowrap font-bold text-white text-xs tracking-tight">
+                          {eq.tag}
+                        </td>
+                        {/* FPSO */}
+                        <td className="py-3 px-3 whitespace-nowrap text-[11px] text-[#94a3b8]">
+                          {fpsoClean}
+                        </td>
+                        {/* Name */}
+                        <td className="py-3 px-3 text-[#cbd5e1] text-[11px] font-normal">
+                          {eq.name}
+                        </td>
+                        {/* Class */}
+                        <td className="py-3 px-3 text-[#94a3b8] text-[11px]">
+                          {classFormatted}
+                        </td>
+                        {/* System */}
+                        <td className="py-3 px-3 text-[#94a3b8] text-[11px]">
+                          {eq.system}
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+
+            {/* Footer Buttons */}
+            <div className="flex items-center justify-end gap-3 pt-5 border-t border-[#1a263d]/70">
               <button
                 type="button"
                 onClick={() => setBulkConfirmModalOpen(false)}
                 disabled={isBulkUpdating}
-                className="px-4 py-2 text-xs font-semibold rounded-lg border border-[#334155] text-[#94a3b8] hover:text-[#f8fafc] hover:bg-[#1e293b] transition-colors cursor-pointer"
+                className="px-5 py-2 text-xs font-semibold rounded-lg text-[#94a3b8] hover:text-white hover:bg-[#162136] transition-colors cursor-pointer"
               >
                 Cancel
               </button>
@@ -2452,7 +2518,7 @@ export default function MainPage() {
                 type="button"
                 onClick={handleExecuteBulkUpdate}
                 disabled={isBulkUpdating}
-                className="px-4 py-2 text-xs font-semibold rounded-lg bg-[#0284c7] hover:bg-[#0369a1] text-white transition-colors flex items-center gap-2 shadow-md cursor-pointer"
+                className="px-6 py-2.5 text-xs font-bold rounded-lg bg-[#38bdf8] hover:bg-[#0ea5e9] text-[#070e1b] hover:text-white transition-all flex items-center gap-2 shadow-lg cursor-pointer"
               >
                 {isBulkUpdating && <RefreshCw className="animate-spin" size={13} />}
                 Confirm

@@ -107,10 +107,7 @@ export default function CustomTable({
   const getUniqueValues = (key: string): string[] => {
     const valuesSet = new Set<string>();
     data.forEach(row => {
-      let val = row[key] !== undefined && row[key] !== null ? String(row[key]) : '';
-      if (val.includes(' - Tier ')) {
-        val = val.split(' - Tier ')[0];
-      }
+      const val = row[key] !== undefined && row[key] !== null ? String(row[key]) : '';
       if (val) valuesSet.add(val);
     });
     return Array.from(valuesSet).sort();
@@ -271,7 +268,7 @@ export default function CustomTable({
       <div className="mb-4 flex items-center justify-between">
         <div className="flex items-center gap-3">
           <h3 className="text-sm font-semibold text-text-primary">{title}</h3>
-          {(isAnyFilterActive || onClearFilters) && (
+          {isAnyFilterActive && (
             <button
               onClick={() => {
                 if (onClearFilters) onClearFilters();

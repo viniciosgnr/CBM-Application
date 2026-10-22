@@ -266,4 +266,50 @@ test.describe('CBM Dashboard E2E Smoke Tests', () => {
     await oilBtn.click();
     await expect(page.getByText(/Lub Oil Routine/i)).toBeVisible();
   });
+
+  test('deve filtrar corretamente pelas colunas da tabela Equipment List sem bolinhas coloridas nas opções de condição', async ({ page }) => {
+    await page.goto('/');
+
+    // Navega para a aba de Equipamentos
+    const equipmentTab = page.getByRole('button', { name: /^Equipment$/i });
+    await expect(equipmentTab).toBeVisible();
+    await equipmentTab.click();
+
+    // 1. Testa filtro da coluna Equip. CBM Condition
+    const conditionHeader = page.locator('th', { hasText: 'Equip. CBM Condition' });
+    await expect(conditionHeader).toBeVisible();
+
+    // Clica no ícone de filtro da coluna condition
+    const conditionFilterTrigger = conditionHeader.locator('svg').last();
+    await conditionFilterTrigger.click();
+
+    // Valida opções de Tiers no popover
+    const popover = page.locator('div.absolute.top-full');
+    await expect(popover.getByText('(Select All)')).toBeVisible();
+    await expect(popover.getByText('Critical - Tier 1')).toBeVisible();
+    await expect(popover.getByText('Degraded - Tier 2')).toBeVisible();
+    await expect(popover.getByText('Good - Tier 3')).toBeVisible();
+    await expect(popover.getByText('Good - Tier 4')).toBeVisible();
+
+    // Confirma que não há bolinhas coloridas dentro dos labels do popover
+    const coloredDotsInPopover = popover.locator('label span.rounded-full');
+    await expect(coloredDotsInPopover).toHaveCount(0);
+
+    // Clica em (Select All) para desmarcar tudo
+    await popover.getByText('(Select All)').click();
+
+    // Marca apenas Good - Tier 4
+    await popover.getByText('Good - Tier 4').click();
+
+    // Fecha o popover clicando fora ou no cabeçalho
+    await conditionHeader.click();
+
+    // Valida que o botão Reset Filters aparece
+    const resetFiltersBtn = page.getByRole('button', { name: /Reset Filters/i });
+    await expect(resetFiltersBtn).toBeVisible();
+
+    // Clica em Reset Filters
+    await resetFiltersBtn.click();
+    await expect(resetFiltersBtn).not.toBeVisible();
+  });
 });
