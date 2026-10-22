@@ -134,8 +134,10 @@ function calculateNextPlannedDate(
   const year = plannedDate.getFullYear();
   const plannedDateStr = `${day}/${month}/${year}`;
 
-  const today = new Date('2026-08-31T23:59:59Z');
-  const isOverdue = today > plannedDate;
+  const today = new Date();
+  const planned = new Date(plannedDate.getFullYear(), plannedDate.getMonth(), plannedDate.getDate());
+  const ref = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+  const isOverdue = planned.getTime() < ref.getTime();
 
   return { plannedDateStr, isOverdue };
 }

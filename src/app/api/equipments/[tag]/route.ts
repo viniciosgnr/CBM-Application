@@ -53,13 +53,15 @@ export async function PUT(request: Request, { params }: { params: { tag: string 
       collectionMethod,
       vibrationNonCollectionReason,
       lubeOilNonCollectionReason,
-      nonCollectionReason
+      nonCollectionReason,
+      criticality
     } = body;
     
     const nowStr = new Date().toLocaleString('en-GB'); // dd/mm/yyyy, hh:mm:ss
     const nowIso = new Date().toISOString();
     
     const updateData: Record<string, string | null> = {};
+    if (criticality !== undefined) updateData.criticality = criticality;
     if (frequency !== undefined) updateData.frequency = frequency;
     if (vibrationFrequency !== undefined) updateData.vibrationFrequency = vibrationFrequency;
     if (lubeOilFrequency !== undefined) updateData.lubeOilFrequency = lubeOilFrequency;

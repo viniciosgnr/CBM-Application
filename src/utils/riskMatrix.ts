@@ -330,7 +330,7 @@ export function calculatePMOverdue(
   lastUpdateStr?: string | null,
   frequencyStr?: string | null,
   defaultDays = 24,
-  anchorDate: Date = new Date('2026-08-31T23:59:59Z')
+  anchorDate: Date = new Date()
 ): PMOverdueResult {
   const lastDate = parseDateUtil(lastUpdateStr) || new Date(2026, 6, 23);
   const intervalDays = parseFrequencyDays(frequencyStr, defaultDays);
@@ -343,7 +343,9 @@ export function calculatePMOverdue(
   const year = plannedDate.getFullYear();
   const plannedDateStr = `${day}/${month}/${year}`;
 
-  const diffMs = anchorDate.getTime() - plannedDate.getTime();
+  const planned = new Date(plannedDate.getFullYear(), plannedDate.getMonth(), plannedDate.getDate());
+  const ref = new Date(anchorDate.getFullYear(), anchorDate.getMonth(), anchorDate.getDate());
+  const diffMs = ref.getTime() - planned.getTime();
   const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
 
   if (diffDays <= 0) {
