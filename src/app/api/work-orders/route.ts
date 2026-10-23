@@ -103,7 +103,7 @@ export async function POST(request: Request) {
           fpso: equipment ? equipment.fpso : 'UNY',
           description: summaryDescription,
           priority: 'Accepted', // Default priority
-          status: 'Observed', // Starts as 'Observed' once created by supervisor review
+          status: 'Open', // Starts as 'Open' once created by supervisor review
           tagNumber: report.equipmentTag,
           tagDescription: tagDesc,
           monitoringTechnique: monitoringTech,

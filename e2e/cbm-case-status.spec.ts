@@ -100,6 +100,11 @@ test.describe('CBM Case Status & Work Order Link Specification Tests', () => {
     // Procura o select correspondente
     const woSelect = page.locator('select').filter({ hasText: /N\/A \(No Work Order\)/i });
     await expect(woSelect).toBeVisible();
+
+    // Valida que o dropdown foi populado com Work Orders reais para o equipamento além da opção N/A
+    const options = await woSelect.locator('option').allInnerTexts();
+    expect(options.length).toBeGreaterThan(1);
+    expect(options.some(opt => opt.includes('WO-') || opt.includes('Open') || opt.includes('In Progress'))).toBeTruthy();
   });
 
   test('E2E: Detalhes da recomendação devem exibir WO dropdown, status dinâmico e bloqueio de efetividade', async ({ page }) => {
@@ -109,6 +114,10 @@ test.describe('CBM Case Status & Work Order Link Specification Tests', () => {
     const recomTab = page.getByRole('button', { name: /^Recommendations$/i });
     await recomTab.click();
 
+    // Valida que a tabela de recomendações exibe o design sóbrio (bolinha colorida + texto)
+    const soberDot = page.locator('table tbody tr span.rounded-full').first();
+    await expect(soberDot).toBeVisible();
+
     // Clica no primeiro relatório da tabela para abrir os detalhes
     const firstReportRow = page.locator('table tbody tr').first();
     await firstReportRow.click();
@@ -116,12 +125,16 @@ test.describe('CBM Case Status & Work Order Link Specification Tests', () => {
     // Modal de detalhes deve abrir
     await expect(page.getByText('CBM Analysis Report Details')).toBeVisible();
 
-    // Banner de CBM Case Status deve estar visível
+    // Banner de CBM Case Status deve estar visível com o design sóbrio
     await expect(page.getByText(/CBM Case Status:/i)).toBeVisible();
+    const modalDot = page.locator('.rounded-full.bg-emerald-500, .rounded-full.bg-amber-500, .rounded-full.bg-sky-400').first();
+    await expect(modalDot).toBeVisible();
 
-    // Campo WO Number deve ser um select interativo
+    // Campo WO Number deve ser um select interativo com opções populadas
     const woSelectInDetails = page.locator('select').filter({ hasText: /N\/A/i }).first();
     await expect(woSelectInDetails).toBeVisible();
+    const detailOptions = await woSelectInDetails.locator('option').allInnerTexts();
+    expect(detailOptions.length).toBeGreaterThan(1);
 
     // Seção de Recommendation Effectiveness Classification deve estar presente
     await expect(page.getByText(/Recommendation Effectiveness Classification/i)).toBeVisible();

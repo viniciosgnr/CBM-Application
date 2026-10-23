@@ -1161,42 +1161,42 @@ export default function MainPage() {
     );
   };
 
-  // Badges coloridos do CBM Case Status
+  // Design sóbrio do CBM Case Status (somente bola colorida + texto, sem pílula/borda)
   const getCaseStatusBadge = (status?: string | null) => {
     switch (status) {
       case 'Awaiting Action':
         return (
-          <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-[#f59e0b]/15 text-[#f59e0b] border border-[#f59e0b]/30">
-            <span className="w-1.5 h-1.5 rounded-full bg-[#f59e0b]" />
-            Awaiting Action
+          <span className="inline-flex items-center gap-1.5 font-medium text-[11px]">
+            <span className="w-1.5 h-1.5 rounded-full bg-amber-500 shrink-0" />
+            <span className="text-text-primary font-medium">Awaiting Action</span>
           </span>
         );
       case 'Awaiting Feedback':
         return (
-          <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-[#0284c7]/15 text-[#38bdf8] border border-[#0284c7]/30">
-            <span className="w-1.5 h-1.5 rounded-full bg-[#38bdf8] animate-pulse" />
-            Awaiting Feedback
+          <span className="inline-flex items-center gap-1.5 font-medium text-[11px]">
+            <span className="w-1.5 h-1.5 rounded-full bg-sky-400 shrink-0" />
+            <span className="text-text-primary font-medium">Awaiting Feedback</span>
           </span>
         );
       case 'Closed':
         return (
-          <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-[#10b981]/15 text-[#10b981] border border-[#10b981]/30">
-            <span className="w-1.5 h-1.5 rounded-full bg-[#10b981]" />
-            Closed
+          <span className="inline-flex items-center gap-1.5 font-medium text-[11px]">
+            <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 shrink-0" />
+            <span className="text-text-primary font-medium">Closed</span>
           </span>
         );
       case 'Cancelled':
         return (
-          <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-[#64748b]/15 text-[#94a3b8] border border-[#64748b]/30">
-            <span className="w-1.5 h-1.5 rounded-full bg-[#94a3b8]" />
-            Cancelled
+          <span className="inline-flex items-center gap-1.5 font-medium text-[11px]">
+            <span className="w-1.5 h-1.5 rounded-full bg-slate-400 shrink-0" />
+            <span className="text-text-primary font-medium">Cancelled</span>
           </span>
         );
       default:
         return (
-          <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-[#f59e0b]/15 text-[#f59e0b] border border-[#f59e0b]/30">
-            <span className="w-1.5 h-1.5 rounded-full bg-[#f59e0b]" />
-            {status || 'Awaiting Action'}
+          <span className="inline-flex items-center gap-1.5 font-medium text-[11px]">
+            <span className="w-1.5 h-1.5 rounded-full bg-amber-500 shrink-0" />
+            <span className="text-text-primary font-medium">{status || 'Awaiting Action'}</span>
           </span>
         );
     }
