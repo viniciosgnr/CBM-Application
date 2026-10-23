@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { X, Maximize2, Minimize2, PlusCircle } from 'lucide-react';
+import { X, Maximize2, Minimize2 } from 'lucide-react';
 import {
   ResponsiveContainer,
   LineChart,
@@ -158,12 +158,20 @@ function formatTierBadge(status?: string | null): { text: string; bgClass: strin
   return { text: 'T4 - Good', bgClass: 'bg-[#10b981]', textClass: 'text-black font-semibold' };
 }
 
+interface CustomYAxisTickProps {
+  x?: number;
+  y?: number;
+  payload?: {
+    value?: number;
+  };
+}
+
 // Custom Y-Axis Tick matching SLB image labels
-const CustomYAxisTick = ({ x, y, payload }: any) => {
+const CustomYAxisTick = ({ x = 0, y = 0, payload }: CustomYAxisTickProps) => {
   let color = '#94a3b8';
   let text = '';
 
-  switch (payload.value) {
+  switch (payload?.value) {
     case 4:
       color = '#94a3b8';
       text = 'Good - T4';

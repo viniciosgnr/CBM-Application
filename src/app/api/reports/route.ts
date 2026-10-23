@@ -79,10 +79,6 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Missing required report fields' }, { status: 400 });
     }
 
-    // Default effectiveness based on condition if not provided
-    const resolvedEffectiveness = effectiveness || (
-      conditionAssessment.toLowerCase().includes('good') ? 'N/A' : 'Not Yet Assessable'
-    );
 
     // Use transaction to update equipment, history and save report
     const result = db.transaction((tx) => {

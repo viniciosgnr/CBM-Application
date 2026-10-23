@@ -14,7 +14,6 @@ import {
   PlusCircle,
   Calendar,
   User,
-  Hash,
   Wrench,
   AlertCircle,
   CheckCircle2,
@@ -42,14 +41,12 @@ import {
   YAxis,
   CartesianGrid,
   Tooltip as RechartsTooltip,
-  Legend,
 } from 'recharts';
 import {
   calculateCombinedRisk,
   calculateRiskScore,
   getWorstTechniqueStatus,
   calculateOverallHealth,
-  calculateEquipmentCbmRisk,
   calculateFleetCbmRiskSummary,
   formatEquipmentClass,
 } from '@/utils/riskMatrix';
@@ -165,24 +162,12 @@ interface WorkOrder {
   attachedFileSize?: number | null;
 }
 
-// Severity mappings for dynamic chart plotting
-const CHART_VALUE_MAP: Record<string, number> = {
-  'Good - Tier 4': 4,
-  'Good - Tier 3': 3,
-  'Degraded - Tier 2': 2,
-  'Critical - Tier 1': 1,
-  'Good': 4,
-  'Degraded': 2,
-  'Critical': 1,
-  'Machine Off': 0,
-};
 
 const ALL_RECOM_FPSOS = ['DNY', 'UNY', 'PTY', 'ONE'];
 
 export default function MainPage() {
   const [activeTab, setActiveTab] = useState<'equipment' | 'work-order' | 'recommendations' | 'kpis'>('work-order');
   const [maximizedChart, setMaximizedChart] = useState<string | null>(null);
-  const [mounted, setMounted] = useState(false);
 
   // KPIs tab states (SLB Optisite standard)
   const [selectedKpiFpsos, setSelectedKpiFpsos] = useState<Set<string>>(new Set());
@@ -723,7 +708,6 @@ export default function MainPage() {
   };
 
   useEffect(() => {
-    setMounted(true);
     fetchEquipments();
     fetchReports();
     fetchWorkOrders();
@@ -1202,83 +1186,6 @@ export default function MainPage() {
     }
   };
 
-  // Format history array chronologically for the trend chart
-  const getChartData = () => {
-    return [...history].reverse().map(h => {
-      const date = new Date(h.changedAt);
-      const label = date.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' });
-      
-      const formatStatus = (s?: string) => {
-        if (!s) return 'Good - Tier 4';
-        if (s === 'Good') return 'Good - Tier 4';
-        if (s === 'Degraded') return 'Degraded - Tier 2';
-        if (s === 'Critical') return 'Critical - Tier 1';
-        return s;
-      };
-
-      const overallStr = formatStatus(h.overallCondition);
-      const vibrationStr = formatStatus(h.vibrationStatus);
-      const lubeStr = formatStatus(h.lubeOilStatus);
-      
-      return {
-        name: label,
-        overall: CHART_VALUE_MAP[overallStr] ?? 4,
-        overallLabel: overallStr,
-        vibration: CHART_VALUE_MAP[vibrationStr] ?? 4,
-        vibrationLabel: vibrationStr,
-        lubeOil: CHART_VALUE_MAP[lubeStr] ?? 4,
-        lubeOilLabel: lubeStr,
-      };
-    });
-  };
-
-  interface TooltipPayloadEntry {
-    name: string;
-    payload: {
-      name: string;
-      overallLabel: string;
-      vibrationLabel: string;
-      lubeOilLabel: string;
-    };
-  }
-
-  interface CustomTooltipProps {
-    active?: boolean;
-    payload?: TooltipPayloadEntry[];
-  }
-
-  const CustomTooltip = ({ active, payload }: CustomTooltipProps) => {
-    if (active && payload && payload.length) {
-      const data = payload[0].payload;
-      return (
-        <div className="bg-[#1a2136] border border-[#2b3655] p-3 rounded-lg shadow-2xl text-[11px] text-[#c5d0e6] flex flex-col gap-1.5 select-none z-50 min-w-[200px]">
-          <p className="font-bold text-[#f8fafc] pb-1 border-b border-[#2b3655]/60 text-xs">{data.name}</p>
-          <p className="flex items-center justify-between gap-3 text-xs">
-            <span className="flex items-center gap-1.5 text-[#94a3b8]">
-              <span className="w-2 h-2 rounded-full bg-[#10b981]" />
-              Overall Status:
-            </span>
-            <span className="font-semibold text-[#10b981]">{data.overallLabel}</span>
-          </p>
-          <p className="flex items-center justify-between gap-3 text-xs">
-            <span className="flex items-center gap-1.5 text-[#94a3b8]">
-              <span className="w-2 h-2 rounded-full bg-[#a855f7]" />
-              Vibration Status:
-            </span>
-            <span className="font-semibold text-[#c084fc]">{data.vibrationLabel}</span>
-          </p>
-          <p className="flex items-center justify-between gap-3 text-xs">
-            <span className="flex items-center gap-1.5 text-[#94a3b8]">
-              <span className="w-2 h-2 rounded-full bg-[#f59e0b]" />
-              Lube Oil Status:
-            </span>
-            <span className="font-semibold text-[#fbbf24]">{data.lubeOilLabel}</span>
-          </p>
-        </div>
-      );
-    }
-    return null;
-  };
 
   // Definição de colunas da tabela de Work Orders
   const woColumns = [
