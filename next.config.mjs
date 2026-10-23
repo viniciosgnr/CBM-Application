@@ -5,6 +5,9 @@ const nextConfig = {
     // Safeguard to prevent non-critical lint warnings from failing production Docker builds
     ignoreDuringBuilds: true,
   },
+  images: {
+    unoptimized: true,
+  },
 };
 
 export default nextConfig;

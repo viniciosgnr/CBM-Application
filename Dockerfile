@@ -38,7 +38,10 @@ COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
 COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
 
 # SQLite Database initial copy
-COPY --from=builder --chown=nextjs:nodejs /app/sqlite.db ./sqlite.db
+COPY --from=builder --chown=nextjs:nodejs /app/sqlite.db* ./
+
+# Ensure /app directory is owned and writable by nextjs for SQLite WAL and lock files
+RUN chown -R nextjs:nodejs /app && chmod 775 /app
 
 USER nextjs
 
