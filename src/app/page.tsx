@@ -3,9 +3,11 @@ import { useState, useEffect, useMemo, useRef } from 'react';
 import Header from '@/components/Header';
 import Sidebar from '@/components/Sidebar';
 import DashboardCard from '@/components/DashboardCard';
+import KpiMetricCard from '@/components/KpiMetricCard';
 import CustomTable from '@/components/CustomTable';
 import EquipmentDetailModal from '@/components/EquipmentDetailModal';
 import MonthlyCbmReportTable from '@/components/MonthlyCbmReportTable';
+import { CollectionCompliancePie, FailureMechanismsPie } from '@/components/KpiSecondaryCharts';
 import { 
   ArrowLeft, 
   X, 
@@ -1946,10 +1948,10 @@ export default function MainPage() {
             {/* Row 1: 3 KPI Snapshot Cards Side-by-Side */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
               {/* Card 1: Fault Risk & Overall Health */}
-              <DashboardCard
+              <KpiMetricCard
                 title={kpiFpsoLabel === 'All FPSOs' ? 'Fault Risk & Overall Health' : `${kpiFpsoLabel} Fault Risk & Health`}
-                timeRange="Current Snapshot"
-                onMaximize={() => setMaximizedChart('kpi-health')}
+                subtitle="Fleet Mechanical Integrity"
+                value={`${overallHealthData.healthPercentage}%`}
                 infoTitle="Fault Risk & Fleet Health Methodology"
                 infoContent={
                   <div className="space-y-2">
@@ -1980,81 +1982,13 @@ export default function MainPage() {
                     </div>
                   </div>
                 }
-              >
-                <div className="w-full flex flex-col xl:flex-row items-center justify-around gap-4 p-1">
-                  {/* Circular Donut with percentage in center */}
-                  <div className="relative flex items-center justify-center shrink-0">
-                    <ResponsiveContainer width={145} height={145}>
-                      <PieChart>
-                        <Pie
-                          data={[
-                            { name: 'Health Points', value: overallHealthData.healthPoints },
-                            { name: 'Deducted Points', value: overallHealthData.deductedPoints },
-                          ]}
-                          cx="50%"
-                          cy="50%"
-                          innerRadius={46}
-                          outerRadius={64}
-                          startAngle={90}
-                          endAngle={-270}
-                          dataKey="value"
-                          stroke="none"
-                        >
-                          <Cell 
-                            fill={
-                              overallHealthData.healthPercentage >= 95 ? '#84cc16' : 
-                              overallHealthData.healthPercentage >= 90 ? '#3b82f6' : 
-                              overallHealthData.healthPercentage >= 80 ? '#f97316' : '#f87171'
-                            } 
-                          />
-                          <Cell fill="#1e293b" />
-                        </Pie>
-                      </PieChart>
-                    </ResponsiveContainer>
-                    <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none select-none">
-                      <span className="text-xl font-extrabold text-text-primary tracking-tight">
-                        {overallHealthData.healthPercentage}%
-                      </span>
-                      <span className="text-[8px] uppercase tracking-wider font-semibold text-text-muted">
-                        Health
-                      </span>
-                    </div>
-                  </div>
-
-                  {/* Breakdown list */}
-                  <div className="flex flex-col gap-2 text-[11px] flex-1 w-full max-w-[210px]">
-                    <div className="flex items-center justify-between">
-                      <span className="text-text-muted font-medium">Avg Fault Risk:</span>
-                      <strong className="text-text-primary font-bold">{fleetRiskSummary.avgFaultRisk} / 12</strong>
-                    </div>
-
-                    <div className="flex items-center justify-between border-t border-border-panel/40 pt-1.5">
-                      <span className="text-text-muted font-medium">Evaluated:</span>
-                      <span className="font-semibold text-text-primary">{overallHealthData.totalMachines} machines</span>
-                    </div>
-
-                    <div className="flex items-center justify-between border-t border-border-panel/40 pt-1.5">
-                      <span className="text-text-muted font-medium">At Risk:</span>
-                      <span className={overallHealthData.tier1Count + overallHealthData.tier2Count > 0 ? 'font-bold text-orange-400' : 'font-semibold text-status-ok'}>
-                        {overallHealthData.tier1Count + overallHealthData.tier2Count} ({overallHealthData.tier1Count} Crit, {overallHealthData.tier2Count} Deg)
-                      </span>
-                    </div>
-
-                    <div className="flex items-center justify-between border-t border-border-panel/40 pt-1.5">
-                      <span className="text-text-muted font-medium">Deduction:</span>
-                      <span className={overallHealthData.deductedPoints > 0 ? 'font-bold text-status-warn' : 'font-semibold text-status-ok'}>
-                        {overallHealthData.deductedPoints > 0 ? `-${overallHealthData.deductedPoints} pts` : '0 pts'}
-                      </span>
-                    </div>
-                  </div>
-                </div>
-              </DashboardCard>
+              />
 
               {/* Card 2: Compliance Risk (FAR Overdue PM Matrix) */}
-              <DashboardCard
+              <KpiMetricCard
                 title="Compliance Risk (Overdue PM)"
-                timeRange="Current Snapshot"
-                onMaximize={() => setMaximizedChart('kpi-compliance')}
+                subtitle="PM Schedule Adherence"
+                value={`${fleetRiskSummary.compliancePercentage}%`}
                 infoTitle="Compliance Risk & Overdue PM Methodology"
                 infoContent={
                   <div className="space-y-2">
@@ -2092,81 +2026,13 @@ export default function MainPage() {
                     </div>
                   </div>
                 }
-              >
-                <div className="w-full flex flex-col xl:flex-row items-center justify-around gap-4 p-1">
-                  {/* Circular Donut with Compliance % in center */}
-                  <div className="relative flex items-center justify-center shrink-0">
-                    <ResponsiveContainer width={145} height={145}>
-                      <PieChart>
-                        <Pie
-                          data={[
-                            { name: 'Compliance Points', value: Math.max(0, fleetRiskSummary.maxCompliancePoints - fleetRiskSummary.complianceDeductedPoints) },
-                            { name: 'Deducted Points', value: fleetRiskSummary.complianceDeductedPoints },
-                          ]}
-                          cx="50%"
-                          cy="50%"
-                          innerRadius={46}
-                          outerRadius={64}
-                          startAngle={90}
-                          endAngle={-270}
-                          dataKey="value"
-                          stroke="none"
-                        >
-                          <Cell 
-                            fill={
-                              fleetRiskSummary.compliancePercentage >= 95 ? '#10b981' : 
-                              fleetRiskSummary.compliancePercentage >= 90 ? '#3b82f6' : 
-                              fleetRiskSummary.compliancePercentage >= 80 ? '#f97316' : '#f87171'
-                            } 
-                          />
-                          <Cell fill="#1e293b" />
-                        </Pie>
-                      </PieChart>
-                    </ResponsiveContainer>
-                    <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none select-none">
-                      <span className="text-xl font-extrabold text-text-primary tracking-tight">
-                        {fleetRiskSummary.compliancePercentage}%
-                      </span>
-                      <span className="text-[8px] uppercase tracking-wider font-semibold text-text-muted">
-                        Compliance
-                      </span>
-                    </div>
-                  </div>
-
-                  {/* Breakdown list */}
-                  <div className="flex flex-col gap-2 text-[11px] flex-1 w-full max-w-[210px]">
-                    <div className="flex items-center justify-between">
-                      <span className="text-text-muted font-medium">Avg Compliance:</span>
-                      <strong className="text-text-primary font-bold">{fleetRiskSummary.avgComplianceRisk} / 15</strong>
-                    </div>
-
-                    <div className="flex items-center justify-between border-t border-border-panel/40 pt-1.5">
-                      <span className="text-text-muted font-medium">On Schedule:</span>
-                      <span className="font-semibold text-status-ok">{fleetRiskSummary.complianceCount.onSchedule} machines</span>
-                    </div>
-
-                    <div className="flex items-center justify-between border-t border-border-panel/40 pt-1.5">
-                      <span className="text-text-muted font-medium">Overdue PM:</span>
-                      <span className={(fleetRiskSummary.complianceCount.lowDelay + fleetRiskSummary.complianceCount.moderateDelay + fleetRiskSummary.complianceCount.severeDelay) > 0 ? 'font-bold text-orange-400' : 'font-semibold text-status-ok'}>
-                        {fleetRiskSummary.complianceCount.lowDelay + fleetRiskSummary.complianceCount.moderateDelay + fleetRiskSummary.complianceCount.severeDelay} machines
-                      </span>
-                    </div>
-
-                    <div className="flex items-center justify-between border-t border-border-panel/40 pt-1.5">
-                      <span className="text-text-muted font-medium">Deduction:</span>
-                      <span className={fleetRiskSummary.complianceDeductedPoints > 0 ? 'font-bold text-status-warn' : 'font-semibold text-status-ok'}>
-                        {fleetRiskSummary.complianceDeductedPoints > 0 ? `-${fleetRiskSummary.complianceDeductedPoints} pts` : '0 pts'}
-                      </span>
-                    </div>
-                  </div>
-                </div>
-              </DashboardCard>
+              />
 
               {/* Card 3: CBM Total Risk */}
-              <DashboardCard
+              <KpiMetricCard
                 title="CBM Total Risk"
-                timeRange="Current Snapshot"
-                onMaximize={() => setMaximizedChart('kpi-total-risk')}
+                subtitle="Combined Operational Health"
+                value={`${fleetRiskSummary.totalHealthPercentage}%`}
                 infoTitle="CBM Total Risk Methodology (CBMnet §1.6)"
                 infoContent={
                   <div className="space-y-2">
@@ -2196,80 +2062,60 @@ export default function MainPage() {
                     </div>
                   </div>
                 }
+              />
+            </div>
+
+            {/* Row 2: Secondary Donut Charts (Collection Compliance & Failure Mechanisms) */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              {/* Chart 1: Collection Compliance & Non-Collection Reasons */}
+              <DashboardCard
+                title="Collection Compliance & Non-Collection Reasons"
+                timeRange={currentMonthConfig?.label || 'Current Month'}
+                onMaximize={() => setMaximizedChart('kpi-collection-compliance')}
+                infoTitle="Collection Compliance Methodology"
+                infoContent={
+                  <div className="space-y-2">
+                    <p className="text-[10px] text-[#94a3b8] leading-tight">
+                      Displays the percentage of equipment with routine data collected for the selected month, along with the detailed distribution of non-collection reasons.
+                    </p>
+                    <div className="border-t border-[#1e2538] pt-1.5">
+                      <span className="font-semibold text-accent-blue block text-[11px]">Compliance Formula:</span>
+                      <code className="text-[10px] block mt-0.5 bg-[#141a29] p-1.5 rounded border border-[#232d48]">
+                        Surveyed % = (Surveyed Machines / Total Evaluated) × 100%
+                      </code>
+                    </div>
+                  </div>
+                }
               >
-                <div className="w-full flex flex-col xl:flex-row items-center justify-around gap-4 p-1">
-                  {/* Circular Donut with Total Health % in center */}
-                  <div className="relative flex items-center justify-center shrink-0">
-                    <ResponsiveContainer width={145} height={145}>
-                      <PieChart>
-                        <Pie
-                          data={[
-                            { name: 'Total Health Points', value: Math.max(0, fleetRiskSummary.maxTotalPoints - fleetRiskSummary.totalDeductedPoints) },
-                            { name: 'Deducted Points', value: fleetRiskSummary.totalDeductedPoints },
-                          ]}
-                          cx="50%"
-                          cy="50%"
-                          innerRadius={46}
-                          outerRadius={64}
-                          startAngle={90}
-                          endAngle={-270}
-                          dataKey="value"
-                          stroke="none"
-                        >
-                          <Cell 
-                            fill={
-                              fleetRiskSummary.totalHealthPercentage >= 95 ? '#84cc16' : 
-                              fleetRiskSummary.totalHealthPercentage >= 90 ? '#3b82f6' : 
-                              fleetRiskSummary.totalHealthPercentage >= 80 ? '#f97316' : '#f87171'
-                            } 
-                          />
-                          <Cell fill="#1e293b" />
-                        </Pie>
-                      </PieChart>
-                    </ResponsiveContainer>
-                    <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none select-none">
-                      <span className="text-xl font-extrabold text-text-primary tracking-tight">
-                        {fleetRiskSummary.totalHealthPercentage}%
-                      </span>
-                      <span className="text-[8px] uppercase tracking-wider font-semibold text-text-muted">
-                        Total Health
-                      </span>
-                    </div>
+                <CollectionCompliancePie
+                  equipments={currentKpiEquipments}
+                  selectedTechnology={selectedKpiTechnology}
+                />
+              </DashboardCard>
+
+              {/* Chart 2: Failure Mechanisms */}
+              <DashboardCard
+                title="Failure Mechanisms"
+                timeRange={currentMonthConfig?.label || 'Current Month'}
+                onMaximize={() => setMaximizedChart('kpi-failure-mechanisms')}
+                infoTitle="Failure Mechanisms Methodology (ISO 14224)"
+                infoContent={
+                  <div className="space-y-2">
+                    <p className="text-[10px] text-[#94a3b8] leading-tight">
+                      Displays the distribution of diagnosed failure mechanisms recorded in technical assessments (Log New Analysis) according to ISO 14224 taxonomy.
+                    </p>
                   </div>
-
-                  {/* Breakdown list */}
-                  <div className="flex flex-col gap-2 text-[11px] flex-1 w-full max-w-[210px]">
-                    <div className="flex items-center justify-between">
-                      <span className="text-text-muted font-medium">Avg Total Risk:</span>
-                      <strong className="text-text-primary font-bold">{fleetRiskSummary.avgTotalRisk} / 15</strong>
-                    </div>
-
-                    <div className="flex items-center justify-between border-t border-border-panel/40 pt-1.5">
-                      <span className="text-text-muted font-medium">Crit / High:</span>
-                      <span className={fleetRiskSummary.totalRiskCount.critical + fleetRiskSummary.totalRiskCount.high > 0 ? 'font-bold text-status-error' : 'font-semibold text-text-muted'}>
-                        {fleetRiskSummary.totalRiskCount.critical + fleetRiskSummary.totalRiskCount.high} machines
-                      </span>
-                    </div>
-
-                    <div className="flex items-center justify-between border-t border-border-panel/40 pt-1.5">
-                      <span className="text-text-muted font-medium">Med / Low:</span>
-                      <span className="font-semibold text-status-ok">
-                        {fleetRiskSummary.totalRiskCount.medium + fleetRiskSummary.totalRiskCount.low} machines
-                      </span>
-                    </div>
-
-                    <div className="flex items-center justify-between border-t border-border-panel/40 pt-1.5">
-                      <span className="text-text-muted font-medium">Deduction:</span>
-                      <span className={fleetRiskSummary.totalDeductedPoints > 0 ? 'font-bold text-status-warn' : 'font-semibold text-status-ok'}>
-                        {fleetRiskSummary.totalDeductedPoints > 0 ? `-${fleetRiskSummary.totalDeductedPoints} pts` : '0 pts'}
-                      </span>
-                    </div>
-                  </div>
-                </div>
+                }
+              >
+                <FailureMechanismsPie
+                  reports={reports}
+                  selectedMonth={selectedKpiMonth}
+                  selectedTechnology={selectedKpiTechnology}
+                />
               </DashboardCard>
             </div>
 
-            {/* Row 2: Full-Width Trends with Tab Selector (Overall Health | Compliance Risk | CBM Total Risk) */}
+            {/* Row 3: Full-Width Trends with Tab Selector (Overall Health | Compliance Risk | CBM Total Risk) */}
             <div className="w-full">
               <DashboardCard
                 title={
@@ -3553,6 +3399,8 @@ export default function MainPage() {
               {maximizedChart === 'kpi-health' && (kpiFpsoLabel === 'All FPSOs' ? 'Overall Fleet Health (Maximized View)' : `${kpiFpsoLabel} Health (Maximized View)`)}
               {maximizedChart === 'kpi-compliance' && 'Compliance Risk - FAR Overdue PM (Maximized View)'}
               {maximizedChart === 'kpi-total-risk' && 'CBMnet Total Risk (Maximized View)'}
+              {maximizedChart === 'kpi-collection-compliance' && 'Collection Compliance & Non-Collection Reasons (Maximized View)'}
+              {maximizedChart === 'kpi-failure-mechanisms' && 'Failure Mechanisms (Maximized View)'}
               {maximizedChart === 'kpi-trend' && (
                 selectedTrendTab === 'health'
                   ? 'Overall Health Trend (Maximized View)'
@@ -3798,6 +3646,23 @@ export default function MainPage() {
                       <span className="font-semibold text-status-ok">{fleetRiskSummary.totalRiskCount.low} machines</span>
                     </div>
                   </div>
+                </div>
+              )}
+              {maximizedChart === 'kpi-collection-compliance' && (
+                <div className="w-full h-full p-2">
+                  <CollectionCompliancePie
+                    equipments={currentKpiEquipments}
+                    selectedTechnology={selectedKpiTechnology}
+                  />
+                </div>
+              )}
+              {maximizedChart === 'kpi-failure-mechanisms' && (
+                <div className="w-full h-full p-2">
+                  <FailureMechanismsPie
+                    reports={reports}
+                    selectedMonth={selectedKpiMonth}
+                    selectedTechnology={selectedKpiTechnology}
+                  />
                 </div>
               )}
               {maximizedChart === 'kpi-trend' && (

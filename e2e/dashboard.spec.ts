@@ -223,6 +223,10 @@ test.describe('CBM Dashboard E2E Smoke Tests', () => {
     await expect(page.getByRole('heading', { name: /Compliance Risk/i })).toBeVisible();
     await expect(page.getByRole('heading', { name: /CBM Total Risk/i })).toBeVisible();
 
+    // Valida os dois novos gráficos de rosquinha (Collection Compliance e Failure Mechanisms)
+    await expect(page.getByText(/Collection Compliance & Non-Collection Reasons/i)).toBeVisible();
+    await expect(page.getByText(/^Failure Mechanisms$/i)).toBeVisible();
+
     // Valida a barra de filtros: Vessel Scope, Month e Technology
     await expect(page.getByText('Vessel Scope:')).toBeVisible();
     await expect(page.getByText('Month:')).toBeVisible();
