@@ -142,20 +142,20 @@ function calculateNextPlannedDate(
   return { plannedDateStr, isOverdue };
 }
 
-// Format status to compact SLB badge (e.g. 'T3 - Good', 'T1 - Critical')
+// Format status to standardized CBM badge (matching dropdown: 'Good - Tier 4', 'Degraded - Tier 2', etc.)
 function formatTierBadge(status?: string | null): { text: string; bgClass: string; textClass: string } {
-  if (!status) return { text: 'T4 - Good', bgClass: 'bg-[#10b981]', textClass: 'text-black' };
+  if (!status) return { text: 'Good - Tier 4', bgClass: 'bg-[#10b981]', textClass: 'text-black font-semibold' };
   
   if (status.includes('Critical') || status.includes('Tier 1')) {
-    return { text: 'T1 - Critical', bgClass: 'bg-[#ff5a5f]', textClass: 'text-black font-semibold' };
+    return { text: 'Critical - Tier 1', bgClass: 'bg-[#ff5a5f]', textClass: 'text-black font-semibold' };
   }
-  if (status.includes('Degraded') || status.includes('Tier 2')) {
-    return { text: 'T2 - Warning', bgClass: 'bg-[#f59e0b]', textClass: 'text-black font-semibold' };
+  if (status.includes('Degraded') || status.includes('Tier 2') || status.includes('Warning')) {
+    return { text: 'Degraded - Tier 2', bgClass: 'bg-[#f59e0b]', textClass: 'text-black font-semibold' };
   }
   if (status.includes('Tier 3')) {
-    return { text: 'T3 - Good', bgClass: 'bg-[#ffd000]', textClass: 'text-black font-semibold' };
+    return { text: 'Good - Tier 3', bgClass: 'bg-[#ffd000]', textClass: 'text-black font-semibold' };
   }
-  return { text: 'T4 - Good', bgClass: 'bg-[#10b981]', textClass: 'text-black font-semibold' };
+  return { text: 'Good - Tier 4', bgClass: 'bg-[#10b981]', textClass: 'text-black font-semibold' };
 }
 
 interface CustomYAxisTickProps {
@@ -166,7 +166,7 @@ interface CustomYAxisTickProps {
   };
 }
 
-// Custom Y-Axis Tick matching SLB image labels
+// Custom Y-Axis Tick matching SLB CBM standard labels
 const CustomYAxisTick = ({ x = 0, y = 0, payload }: CustomYAxisTickProps) => {
   let color = '#94a3b8';
   let text = '';
@@ -174,19 +174,19 @@ const CustomYAxisTick = ({ x = 0, y = 0, payload }: CustomYAxisTickProps) => {
   switch (payload?.value) {
     case 4:
       color = '#94a3b8';
-      text = 'Good - T4';
+      text = 'Good - Tier 4';
       break;
     case 3:
       color = '#94a3b8';
-      text = 'Good - T3';
+      text = 'Good - Tier 3';
       break;
     case 2:
       color = '#94a3b8';
-      text = 'Warn - T2';
+      text = 'Degraded - Tier 2';
       break;
     case 1:
       color = '#94a3b8';
-      text = 'Crit. - T1';
+      text = 'Critical - Tier 1';
       break;
     default:
       text = '';
@@ -302,9 +302,10 @@ export default function EquipmentDetailModal({
   const formatStatusText = (status?: string | null) => {
     if (!status) return 'Good - Tier 4';
     if (status.includes(' - Tier ')) return status;
-    if (status.includes('Good')) return 'Good - Tier 4';
-    if (status.includes('Degraded')) return 'Degraded - Tier 2';
-    if (status.includes('Critical')) return 'Critical - Tier 1';
+    if (status.includes('Tier 1') || status.includes('Critical')) return 'Critical - Tier 1';
+    if (status.includes('Tier 2') || status.includes('Degraded') || status.includes('Warning')) return 'Degraded - Tier 2';
+    if (status.includes('Tier 3')) return 'Good - Tier 3';
+    if (status.includes('Tier 4') || status.includes('Good')) return 'Good - Tier 4';
     return status;
   };
 
@@ -383,7 +384,7 @@ export default function EquipmentDetailModal({
               <span className="text-[#8a94a6] font-medium">Overall Status</span>
               <div>
                 <span
-                  className={`inline-block px-2.5 py-0.5 rounded text-[10px] font-bold tracking-wide uppercase ${overallBadge.bgClass} ${overallBadge.textClass}`}
+                  className={`inline-block px-2.5 py-0.5 rounded text-[10px] font-bold tracking-wide ${overallBadge.bgClass} ${overallBadge.textClass}`}
                 >
                   {overallBadge.text}
                 </span>
@@ -461,7 +462,7 @@ export default function EquipmentDetailModal({
                 <div>
                   <span className="text-[#8a94a6] text-[11px] block mb-1">Tier:</span>
                   <span
-                    className={`inline-block px-2 py-0.5 rounded text-[10px] uppercase ${vibBadge.bgClass} ${vibBadge.textClass}`}
+                    className={`inline-block px-2 py-0.5 rounded text-[10px] font-semibold ${vibBadge.bgClass} ${vibBadge.textClass}`}
                   >
                     {vibBadge.text}
                   </span>
@@ -496,7 +497,7 @@ export default function EquipmentDetailModal({
                 <div>
                   <span className="text-[#8a94a6] text-[11px] block mb-1">Tier:</span>
                   <span
-                    className={`inline-block px-2 py-0.5 rounded text-[10px] uppercase ${oilBadge.bgClass} ${oilBadge.textClass}`}
+                    className={`inline-block px-2 py-0.5 rounded text-[10px] font-semibold ${oilBadge.bgClass} ${oilBadge.textClass}`}
                   >
                     {oilBadge.text}
                   </span>
@@ -555,7 +556,7 @@ export default function EquipmentDetailModal({
 
             {mounted ? (
               <ResponsiveContainer width="100%" height={230}>
-                <LineChart data={getChartData()} margin={{ top: 10, right: 15, left: -10, bottom: 0 }}>
+                <LineChart data={getChartData()} margin={{ top: 10, right: 15, left: 10, bottom: 0 }}>
                   <CartesianGrid strokeDasharray="3 3" stroke="#1c253b" vertical={false} opacity={0.6} />
                   <XAxis
                     dataKey="name"
@@ -569,6 +570,7 @@ export default function EquipmentDetailModal({
                     fontSize={9}
                     axisLine={false}
                     tickLine={false}
+                    width={95}
                     domain={[0.5, 4.3]}
                     ticks={[1, 2, 3, 4]}
                     tick={<CustomYAxisTick />}

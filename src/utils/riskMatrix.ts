@@ -150,6 +150,20 @@ export function formatSurveillanceTier(status?: string | null): string {
   return status;
 }
 
+export function getTierBadgeStyle(status?: string | null): { text: string; bgClass: string; textClass: string } {
+  const text = formatSurveillanceTier(status);
+  if (text.includes('Tier 1') || text.includes('Critical')) {
+    return { text, bgClass: 'bg-[#ff5a5f]', textClass: 'text-black font-semibold' };
+  }
+  if (text.includes('Tier 2') || text.includes('Degraded') || text.includes('Warning')) {
+    return { text, bgClass: 'bg-[#f59e0b]', textClass: 'text-black font-semibold' };
+  }
+  if (text.includes('Tier 3')) {
+    return { text, bgClass: 'bg-[#ffd000]', textClass: 'text-black font-semibold' };
+  }
+  return { text, bgClass: 'bg-[#10b981]', textClass: 'text-black font-semibold' };
+}
+
 export function getTierSeverity(status?: string | null): number {
   if (!status) return 1;
   const s = status.toLowerCase();

@@ -656,6 +656,27 @@ export async function seed() {
       eqClass = 'equipmentClass_COBL';
     }
 
+    const reasonsPool = [
+      'Process Not Running',
+      'Operational Constraints',
+      'Awaiting Maintenance',
+      'Process Not Running',
+      'No Safe Access',
+      'Operational Constraints',
+      'Not collected',
+      'Awaiting Maintenance',
+      'Process Not Running',
+      'Operational Constraints',
+    ];
+    let nonColReason: string | null = null;
+    let vibNonColReason: string | null = null;
+    let oilNonColReason: string | null = null;
+    if (index % 5 === 0) {
+      nonColReason = reasonsPool[Math.floor(index / 5) % reasonsPool.length];
+      vibNonColReason = index % 2 === 0 ? nonColReason : null;
+      oilNonColReason = index % 3 === 0 ? nonColReason : null;
+    }
+
     return {
       tag: eq.tag,
       fpso: eq.tag.includes('_') ? eq.tag.split('_')[0] : (eq.fpso || 'DNY'),
@@ -674,11 +695,14 @@ export async function seed() {
       lubeOilFrequency: '84 DAY',
       lastVibrationUpdate: vibDateStr,
       lastLubeOilUpdate: oilDateStr,
+      nonCollectionReason: nonColReason,
+      vibrationNonCollectionReason: vibNonColReason || nonColReason,
+      lubeOilNonCollectionReason: oilNonColReason || nonColReason,
       collectionMethod: eq.collectionMethod || 'Online',
     };
   });
 
-  const expandedHistory = sanitizedEquipments.flatMap((eq: Record<string, string>, index: number) => {
+  const expandedHistory = sanitizedEquipments.flatMap((eq, index: number) => {
     const vibDaysAgo = index % 5 === 0 ? 3 : index % 3 === 0 ? 12 : index % 2 === 0 ? 22 : 45;
     const oilDaysAgo = index % 4 === 0 ? 5 : index % 3 === 0 ? 18 : index % 2 === 0 ? 28 : 60;
 
@@ -755,11 +779,46 @@ export async function seed() {
     eqClassMap.set(e.tag, e.class);
   });
 
-  const enrichedReports = mockReports.map((r) => {
+  const vibMechanisms = [
+    'Mechanical Failure - Unbalance',
+    'Mechanical Failure - Misalignment',
+    'Material Failure - Wear',
+    'Material Failure - Cavitation',
+    'Mechanical Failure - Looseness',
+    'Mechanical Failure - Vibration',
+    'Mechanical Failure - Clearance',
+    'Material Failure - Fatigue',
+  ];
+
+  const oilMechanisms = [
+    'Material Failure - Wear',
+    'External Influence - Contamination',
+    'Material Failure - Overheating',
+    'Material Failure - Corrosion',
+    'Material Failure - Fatigue',
+    'Mechanical Failure - Leakage',
+    'External Influence - Blockage/Plugged',
+  ];
+
+  const enrichedReports = mockReports.map((r, index) => {
     const isGood = (r.conditionAssessment || '').toLowerCase().includes('good') || 
                    (r.overallCondition || '').toLowerCase().includes('good');
+    const isVib = (r.technology || '').toLowerCase().includes('vib');
+    const pool = isVib ? vibMechanisms : oilMechanisms;
+    const selectedMech = pool[index % pool.length];
+
+    let targetMonth = '2026-10';
+    if (index % 5 === 1) targetMonth = '2026-09';
+    else if (index % 5 === 2) targetMonth = '2026-08';
+    else if (index % 5 === 3) targetMonth = '2026-07';
+    else if (index % 5 === 4) targetMonth = '2026-06';
+    const day = String((index % 27) + 1).padStart(2, '0');
+    const newRaisedDate = `${targetMonth}-${day}`;
+
     return {
       ...r,
+      raisedDate: newRaisedDate,
+      failureMechanismSubdivision: selectedMech,
       equipmentClass: eqClassMap.get(r.equipmentTag) || 'equipmentClass_PUCE',
       effectiveness: isGood ? 'N/A' : 'Not Yet Assessable',
     };

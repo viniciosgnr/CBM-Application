@@ -27,7 +27,7 @@ export const mockReports = [
     "subunit": "Drive Train",
     "maintainableItem": "Bearing / Seal",
     "failureModeDescription": "NOI - Abnormal Noise",
-    "failureMechanismSubdivision": "Mechanical Failure - Cavitation",
+    "failureMechanismSubdivision": "Material Failure - Cavitation",
     "createdAt": "2026-03-02T10:00:00Z"
   },
   {
@@ -58,7 +58,7 @@ export const mockReports = [
     "subunit": "Drive Train",
     "maintainableItem": "Bearing / Seal",
     "failureModeDescription": "VIB - Vibration",
-    "failureMechanismSubdivision": "Hydrodynamic Instability - Oil Whirl",
+    "failureMechanismSubdivision": "Mechanical Failure - Vibration",
     "createdAt": "2026-03-18T10:00:00Z"
   },
   {
@@ -120,7 +120,7 @@ export const mockReports = [
     "subunit": "Drive Train",
     "maintainableItem": "Bearing / Seal",
     "failureModeDescription": "PLU - Parameter Deviation",
-    "failureMechanismSubdivision": "Fluid Degradation - Fuel Dilution",
+    "failureMechanismSubdivision": "External Influence - Contamination",
     "createdAt": "2026-03-11T10:00:00Z"
   },
   {
@@ -151,7 +151,7 @@ export const mockReports = [
     "subunit": "Drive Train",
     "maintainableItem": "Bearing / Seal",
     "failureModeDescription": "PLU - Parameter Deviation",
-    "failureMechanismSubdivision": "Fluid Degradation - Fuel Dilution",
+    "failureMechanismSubdivision": "External Influence - Contamination",
     "createdAt": "2026-03-13T10:00:00Z"
   },
   {
@@ -182,7 +182,7 @@ export const mockReports = [
     "subunit": "Drive Train",
     "maintainableItem": "Bearing / Seal",
     "failureModeDescription": "VIB - Vibration",
-    "failureMechanismSubdivision": "Hydrodynamic Instability - Oil Whirl",
+    "failureMechanismSubdivision": "Mechanical Failure - Vibration",
     "createdAt": "2026-03-26T10:00:00Z"
   },
   {
@@ -213,7 +213,7 @@ export const mockReports = [
     "subunit": "Drive Train",
     "maintainableItem": "Bearing / Seal",
     "failureModeDescription": "PLU - Parameter Deviation",
-    "failureMechanismSubdivision": "Fluid Degradation - Fuel Dilution",
+    "failureMechanismSubdivision": "External Influence - Contamination",
     "createdAt": "2026-03-03T10:00:00Z"
   },
   {
@@ -244,7 +244,7 @@ export const mockReports = [
     "subunit": "Drive Train",
     "maintainableItem": "Bearing / Seal",
     "failureModeDescription": "NOI - Abnormal Noise",
-    "failureMechanismSubdivision": "Mechanical Failure - Cavitation",
+    "failureMechanismSubdivision": "Material Failure - Cavitation",
     "createdAt": "2026-03-23T10:00:00Z"
   },
   {
@@ -306,7 +306,7 @@ export const mockReports = [
     "subunit": "Drive Train",
     "maintainableItem": "Bearing / Seal",
     "failureModeDescription": "PLU - Parameter Deviation",
-    "failureMechanismSubdivision": "Fluid Degradation - Fuel Dilution",
+    "failureMechanismSubdivision": "External Influence - Contamination",
     "createdAt": "2026-03-21T10:00:00Z"
   },
   {
@@ -337,7 +337,7 @@ export const mockReports = [
     "subunit": "Drive Train",
     "maintainableItem": "Bearing / Seal",
     "failureModeDescription": "AIR - Abnormal Instrument Reading",
-    "failureMechanismSubdivision": "Instrument Failure - Drift",
+    "failureMechanismSubdivision": "Instrument Failure - Out of Adjustment",
     "createdAt": "2026-03-23T10:00:00Z"
   },
   {
@@ -368,7 +368,7 @@ export const mockReports = [
     "subunit": "Drive Train",
     "maintainableItem": "Bearing / Seal",
     "failureModeDescription": "VIB - Vibration",
-    "failureMechanismSubdivision": "Hydrodynamic Instability - Oil Whirl",
+    "failureMechanismSubdivision": "Mechanical Failure - Vibration",
     "createdAt": "2026-03-06T10:00:00Z"
   },
   {
@@ -399,7 +399,7 @@ export const mockReports = [
     "subunit": "Drive Train",
     "maintainableItem": "Bearing / Seal",
     "failureModeDescription": "AIR - Abnormal Instrument Reading",
-    "failureMechanismSubdivision": "Instrument Failure - Drift",
+    "failureMechanismSubdivision": "Instrument Failure - Out of Adjustment",
     "createdAt": "2026-04-21T10:00:00Z"
   },
   {
@@ -523,7 +523,7 @@ export const mockReports = [
     "subunit": "Drive Train",
     "maintainableItem": "Bearing / Seal",
     "failureModeDescription": "OHE - Overheating",
-    "failureMechanismSubdivision": "Electrical Failure - High Resistance Joint",
+    "failureMechanismSubdivision": "Electrical Failure - Earth/Isolation Fault",
     "createdAt": "2026-04-13T10:00:00Z"
   },
   {
@@ -585,7 +585,7 @@ export const mockReports = [
     "subunit": "Drive Train",
     "maintainableItem": "Bearing / Seal",
     "failureModeDescription": "PLU - Parameter Deviation",
-    "failureMechanismSubdivision": "Fluid Degradation - Water Ingress",
+    "failureMechanismSubdivision": "External Influence - Contamination",
     "createdAt": "2026-04-25T10:00:00Z"
   },
   {
@@ -616,7 +616,7 @@ export const mockReports = [
     "subunit": "Drive Train",
     "maintainableItem": "Bearing / Seal",
     "failureModeDescription": "PLU - Parameter Deviation",
-    "failureMechanismSubdivision": "Fluid Degradation - Water Ingress",
+    "failureMechanismSubdivision": "External Influence - Contamination",
     "createdAt": "2026-04-15T10:00:00Z"
   },
   {
@@ -647,7 +647,7 @@ export const mockReports = [
     "subunit": "Drive Train",
     "maintainableItem": "Bearing / Seal",
     "failureModeDescription": "PLU - Parameter Deviation",
-    "failureMechanismSubdivision": "Fluid Degradation - Water Ingress",
+    "failureMechanismSubdivision": "External Influence - Contamination",
     "createdAt": "2026-04-17T10:00:00Z"
   },
   {
@@ -678,7 +678,7 @@ export const mockReports = [
     "subunit": "Drive Train",
     "maintainableItem": "Bearing / Seal",
     "failureModeDescription": "VIB - Vibration",
-    "failureMechanismSubdivision": "Hydrodynamic Instability - Oil Whirl",
+    "failureMechanismSubdivision": "Mechanical Failure - Vibration",
     "createdAt": "2026-04-05T10:00:00Z"
   },
   {
@@ -771,7 +771,7 @@ export const mockReports = [
     "subunit": "Drive Train",
     "maintainableItem": "Bearing / Seal",
     "failureModeDescription": "PLU - Parameter Deviation",
-    "failureMechanismSubdivision": "Fluid Degradation - Fuel Dilution",
+    "failureMechanismSubdivision": "External Influence - Contamination",
     "createdAt": "2026-05-23T10:00:00Z"
   },
   {
@@ -802,7 +802,7 @@ export const mockReports = [
     "subunit": "Drive Train",
     "maintainableItem": "Bearing / Seal",
     "failureModeDescription": "PLU - Parameter Deviation",
-    "failureMechanismSubdivision": "Fluid Degradation - Fuel Dilution",
+    "failureMechanismSubdivision": "External Influence - Contamination",
     "createdAt": "2026-05-04T10:00:00Z"
   },
   {
@@ -864,7 +864,7 @@ export const mockReports = [
     "subunit": "Drive Train",
     "maintainableItem": "Bearing / Seal",
     "failureModeDescription": "NOI - Abnormal Noise",
-    "failureMechanismSubdivision": "Mechanical Failure - Cavitation",
+    "failureMechanismSubdivision": "Material Failure - Cavitation",
     "createdAt": "2026-05-02T10:00:00Z"
   },
   {
@@ -895,7 +895,7 @@ export const mockReports = [
     "subunit": "Drive Train",
     "maintainableItem": "Bearing / Seal",
     "failureModeDescription": "OHE - Overheating",
-    "failureMechanismSubdivision": "Electrical Failure - High Resistance Joint",
+    "failureMechanismSubdivision": "Electrical Failure - Earth/Isolation Fault",
     "createdAt": "2026-05-07T10:00:00Z"
   },
   {
@@ -1112,7 +1112,7 @@ export const mockReports = [
     "subunit": "Drive Train",
     "maintainableItem": "Bearing / Seal",
     "failureModeDescription": "NOI - Abnormal Noise",
-    "failureMechanismSubdivision": "Mechanical Failure - Cavitation",
+    "failureMechanismSubdivision": "Material Failure - Cavitation",
     "createdAt": "2026-05-06T10:00:00Z"
   },
   {
@@ -1174,7 +1174,7 @@ export const mockReports = [
     "subunit": "Drive Train",
     "maintainableItem": "Bearing / Seal",
     "failureModeDescription": "VIB - Vibration",
-    "failureMechanismSubdivision": "Hydrodynamic Instability - Oil Whirl",
+    "failureMechanismSubdivision": "Mechanical Failure - Vibration",
     "createdAt": "2026-05-10T10:00:00Z"
   },
   {
@@ -1267,7 +1267,7 @@ export const mockReports = [
     "subunit": "Drive Train",
     "maintainableItem": "Bearing / Seal",
     "failureModeDescription": "PLU - Parameter Deviation",
-    "failureMechanismSubdivision": "Fluid Degradation - Fuel Dilution",
+    "failureMechanismSubdivision": "External Influence - Contamination",
     "createdAt": "2026-06-23T10:00:00Z"
   },
   {
@@ -1298,7 +1298,7 @@ export const mockReports = [
     "subunit": "Drive Train",
     "maintainableItem": "Bearing / Seal",
     "failureModeDescription": "PLU - Parameter Deviation",
-    "failureMechanismSubdivision": "Fluid Degradation - Fuel Dilution",
+    "failureMechanismSubdivision": "External Influence - Contamination",
     "createdAt": "2026-06-14T10:00:00Z"
   },
   {
@@ -1360,7 +1360,7 @@ export const mockReports = [
     "subunit": "Drive Train",
     "maintainableItem": "Bearing / Seal",
     "failureModeDescription": "NOI - Abnormal Noise",
-    "failureMechanismSubdivision": "Mechanical Failure - Cavitation",
+    "failureMechanismSubdivision": "Material Failure - Cavitation",
     "createdAt": "2026-06-20T10:00:00Z"
   },
   {
@@ -1391,7 +1391,7 @@ export const mockReports = [
     "subunit": "Drive Train",
     "maintainableItem": "Bearing / Seal",
     "failureModeDescription": "PLU - Parameter Deviation",
-    "failureMechanismSubdivision": "Fluid Degradation - Fuel Dilution",
+    "failureMechanismSubdivision": "External Influence - Contamination",
     "createdAt": "2026-06-14T10:00:00Z"
   },
   {
@@ -1453,7 +1453,7 @@ export const mockReports = [
     "subunit": "Drive Train",
     "maintainableItem": "Bearing / Seal",
     "failureModeDescription": "OHE - Overheating",
-    "failureMechanismSubdivision": "Electrical Failure - High Resistance Joint",
+    "failureMechanismSubdivision": "Electrical Failure - Earth/Isolation Fault",
     "createdAt": "2026-06-28T10:00:00Z"
   },
   {
@@ -1484,7 +1484,7 @@ export const mockReports = [
     "subunit": "Drive Train",
     "maintainableItem": "Bearing / Seal",
     "failureModeDescription": "NOI - Abnormal Noise",
-    "failureMechanismSubdivision": "Mechanical Failure - Cavitation",
+    "failureMechanismSubdivision": "Material Failure - Cavitation",
     "createdAt": "2026-06-27T10:00:00Z"
   },
   {
@@ -1515,7 +1515,7 @@ export const mockReports = [
     "subunit": "Drive Train",
     "maintainableItem": "Bearing / Seal",
     "failureModeDescription": "PLU - Parameter Deviation",
-    "failureMechanismSubdivision": "Fluid Degradation - Water Ingress",
+    "failureMechanismSubdivision": "External Influence - Contamination",
     "createdAt": "2026-06-09T10:00:00Z"
   },
   {
@@ -1577,7 +1577,7 @@ export const mockReports = [
     "subunit": "Drive Train",
     "maintainableItem": "Bearing / Seal",
     "failureModeDescription": "PLU - Parameter Deviation",
-    "failureMechanismSubdivision": "Fluid Degradation - Water Ingress",
+    "failureMechanismSubdivision": "External Influence - Contamination",
     "createdAt": "2026-06-06T10:00:00Z"
   },
   {
@@ -1608,7 +1608,7 @@ export const mockReports = [
     "subunit": "Drive Train",
     "maintainableItem": "Bearing / Seal",
     "failureModeDescription": "PLU - Parameter Deviation",
-    "failureMechanismSubdivision": "Fluid Degradation - Fuel Dilution",
+    "failureMechanismSubdivision": "External Influence - Contamination",
     "createdAt": "2026-06-20T10:00:00Z"
   },
   {
@@ -1670,7 +1670,7 @@ export const mockReports = [
     "subunit": "Drive Train",
     "maintainableItem": "Bearing / Seal",
     "failureModeDescription": "VIB - Vibration",
-    "failureMechanismSubdivision": "Hydrodynamic Instability - Oil Whirl",
+    "failureMechanismSubdivision": "Mechanical Failure - Vibration",
     "createdAt": "2026-06-01T10:00:00Z"
   },
   {
@@ -1701,7 +1701,7 @@ export const mockReports = [
     "subunit": "Drive Train",
     "maintainableItem": "Bearing / Seal",
     "failureModeDescription": "PLU - Parameter Deviation",
-    "failureMechanismSubdivision": "Fluid Degradation - Fuel Dilution",
+    "failureMechanismSubdivision": "External Influence - Contamination",
     "createdAt": "2026-06-12T10:00:00Z"
   },
   {
@@ -1732,7 +1732,7 @@ export const mockReports = [
     "subunit": "Drive Train",
     "maintainableItem": "Bearing / Seal",
     "failureModeDescription": "PLU - Parameter Deviation",
-    "failureMechanismSubdivision": "Fluid Degradation - Water Ingress",
+    "failureMechanismSubdivision": "External Influence - Contamination",
     "createdAt": "2026-06-22T10:00:00Z"
   },
   {
@@ -1763,7 +1763,7 @@ export const mockReports = [
     "subunit": "Drive Train",
     "maintainableItem": "Bearing / Seal",
     "failureModeDescription": "PLU - Parameter Deviation",
-    "failureMechanismSubdivision": "Fluid Degradation - Water Ingress",
+    "failureMechanismSubdivision": "External Influence - Contamination",
     "createdAt": "2026-06-22T10:00:00Z"
   },
   {
@@ -1825,7 +1825,7 @@ export const mockReports = [
     "subunit": "Drive Train",
     "maintainableItem": "Bearing / Seal",
     "failureModeDescription": "VIB - Vibration",
-    "failureMechanismSubdivision": "Hydrodynamic Instability - Oil Whirl",
+    "failureMechanismSubdivision": "Mechanical Failure - Vibration",
     "createdAt": "2026-06-20T10:00:00Z"
   },
   {
@@ -1856,7 +1856,7 @@ export const mockReports = [
     "subunit": "Drive Train",
     "maintainableItem": "Bearing / Seal",
     "failureModeDescription": "PLU - Parameter Deviation",
-    "failureMechanismSubdivision": "Fluid Degradation - Fuel Dilution",
+    "failureMechanismSubdivision": "External Influence - Contamination",
     "createdAt": "2026-06-10T10:00:00Z"
   },
   {
@@ -1887,7 +1887,7 @@ export const mockReports = [
     "subunit": "Drive Train",
     "maintainableItem": "Bearing / Seal",
     "failureModeDescription": "OHE - Overheating",
-    "failureMechanismSubdivision": "Electrical Failure - High Resistance Joint",
+    "failureMechanismSubdivision": "Electrical Failure - Earth/Isolation Fault",
     "createdAt": "2026-06-15T10:00:00Z"
   },
   {
@@ -1918,7 +1918,7 @@ export const mockReports = [
     "subunit": "Drive Train",
     "maintainableItem": "Bearing / Seal",
     "failureModeDescription": "PLU - Parameter Deviation",
-    "failureMechanismSubdivision": "Fluid Degradation - Fuel Dilution",
+    "failureMechanismSubdivision": "External Influence - Contamination",
     "createdAt": "2026-06-22T10:00:00Z"
   },
   {
@@ -1949,7 +1949,7 @@ export const mockReports = [
     "subunit": "Drive Train",
     "maintainableItem": "Bearing / Seal",
     "failureModeDescription": "NOI - Abnormal Noise",
-    "failureMechanismSubdivision": "Mechanical Failure - Cavitation",
+    "failureMechanismSubdivision": "Material Failure - Cavitation",
     "createdAt": "2026-06-22T10:00:00Z"
   },
   {
@@ -2073,7 +2073,7 @@ export const mockReports = [
     "subunit": "Drive Train",
     "maintainableItem": "Bearing / Seal",
     "failureModeDescription": "VIB - Vibration",
-    "failureMechanismSubdivision": "Hydrodynamic Instability - Oil Whirl",
+    "failureMechanismSubdivision": "Mechanical Failure - Vibration",
     "createdAt": "2026-06-08T10:00:00Z"
   },
   {
@@ -2135,7 +2135,7 @@ export const mockReports = [
     "subunit": "Drive Train",
     "maintainableItem": "Bearing / Seal",
     "failureModeDescription": "VIB - Vibration",
-    "failureMechanismSubdivision": "Hydrodynamic Instability - Oil Whirl",
+    "failureMechanismSubdivision": "Mechanical Failure - Vibration",
     "createdAt": "2026-06-26T10:00:00Z"
   },
   {
@@ -2166,7 +2166,7 @@ export const mockReports = [
     "subunit": "Drive Train",
     "maintainableItem": "Bearing / Seal",
     "failureModeDescription": "VIB - Vibration",
-    "failureMechanismSubdivision": "Hydrodynamic Instability - Oil Whirl",
+    "failureMechanismSubdivision": "Mechanical Failure - Vibration",
     "createdAt": "2026-06-25T10:00:00Z"
   },
   {
@@ -2197,7 +2197,7 @@ export const mockReports = [
     "subunit": "Drive Train",
     "maintainableItem": "Bearing / Seal",
     "failureModeDescription": "OHE - Overheating",
-    "failureMechanismSubdivision": "Electrical Failure - High Resistance Joint",
+    "failureMechanismSubdivision": "Electrical Failure - Earth/Isolation Fault",
     "createdAt": "2026-06-06T10:00:00Z"
   },
   {
@@ -2228,7 +2228,7 @@ export const mockReports = [
     "subunit": "Drive Train",
     "maintainableItem": "Bearing / Seal",
     "failureModeDescription": "VIB - Vibration",
-    "failureMechanismSubdivision": "Hydrodynamic Instability - Oil Whirl",
+    "failureMechanismSubdivision": "Mechanical Failure - Vibration",
     "createdAt": "2026-06-27T10:00:00Z"
   },
   {
@@ -2259,7 +2259,7 @@ export const mockReports = [
     "subunit": "Drive Train",
     "maintainableItem": "Bearing / Seal",
     "failureModeDescription": "PLU - Parameter Deviation",
-    "failureMechanismSubdivision": "Fluid Degradation - Water Ingress",
+    "failureMechanismSubdivision": "External Influence - Contamination",
     "createdAt": "2026-06-09T10:00:00Z"
   },
   {
@@ -2321,7 +2321,7 @@ export const mockReports = [
     "subunit": "Drive Train",
     "maintainableItem": "Bearing / Seal",
     "failureModeDescription": "NOI - Abnormal Noise",
-    "failureMechanismSubdivision": "Mechanical Failure - Cavitation",
+    "failureMechanismSubdivision": "Material Failure - Cavitation",
     "createdAt": "2026-06-08T10:00:00Z"
   },
   {
@@ -2414,7 +2414,7 @@ export const mockReports = [
     "subunit": "Drive Train",
     "maintainableItem": "Bearing / Seal",
     "failureModeDescription": "PLU - Parameter Deviation",
-    "failureMechanismSubdivision": "Fluid Degradation - Water Ingress",
+    "failureMechanismSubdivision": "External Influence - Contamination",
     "createdAt": "2026-06-16T10:00:00Z"
   },
   {
@@ -2445,7 +2445,7 @@ export const mockReports = [
     "subunit": "Drive Train",
     "maintainableItem": "Bearing / Seal",
     "failureModeDescription": "NOI - Abnormal Noise",
-    "failureMechanismSubdivision": "Mechanical Failure - Cavitation",
+    "failureMechanismSubdivision": "Material Failure - Cavitation",
     "createdAt": "2026-06-18T10:00:00Z"
   },
   {
@@ -2507,7 +2507,7 @@ export const mockReports = [
     "subunit": "Drive Train",
     "maintainableItem": "Bearing / Seal",
     "failureModeDescription": "AIR - Abnormal Instrument Reading",
-    "failureMechanismSubdivision": "Instrument Failure - Drift",
+    "failureMechanismSubdivision": "Instrument Failure - Out of Adjustment",
     "createdAt": "2026-06-24T10:00:00Z"
   },
   {
@@ -2569,7 +2569,7 @@ export const mockReports = [
     "subunit": "Drive Train",
     "maintainableItem": "Bearing / Seal",
     "failureModeDescription": "PLU - Parameter Deviation",
-    "failureMechanismSubdivision": "Fluid Degradation - Water Ingress",
+    "failureMechanismSubdivision": "External Influence - Contamination",
     "createdAt": "2026-06-05T10:00:00Z"
   },
   {
@@ -2631,7 +2631,7 @@ export const mockReports = [
     "subunit": "Drive Train",
     "maintainableItem": "Bearing / Seal",
     "failureModeDescription": "VIB - Vibration",
-    "failureMechanismSubdivision": "Hydrodynamic Instability - Oil Whirl",
+    "failureMechanismSubdivision": "Mechanical Failure - Vibration",
     "createdAt": "2026-06-09T10:00:00Z"
   },
   {
@@ -2693,7 +2693,7 @@ export const mockReports = [
     "subunit": "Drive Train",
     "maintainableItem": "Bearing / Seal",
     "failureModeDescription": "NOI - Abnormal Noise",
-    "failureMechanismSubdivision": "Mechanical Failure - Cavitation",
+    "failureMechanismSubdivision": "Material Failure - Cavitation",
     "createdAt": "2026-06-07T10:00:00Z"
   },
   {
@@ -2724,7 +2724,7 @@ export const mockReports = [
     "subunit": "Drive Train",
     "maintainableItem": "Bearing / Seal",
     "failureModeDescription": "NOI - Abnormal Noise",
-    "failureMechanismSubdivision": "Mechanical Failure - Cavitation",
+    "failureMechanismSubdivision": "Material Failure - Cavitation",
     "createdAt": "2026-06-22T10:00:00Z"
   },
   {
@@ -2786,7 +2786,7 @@ export const mockReports = [
     "subunit": "Drive Train",
     "maintainableItem": "Bearing / Seal",
     "failureModeDescription": "PLU - Parameter Deviation",
-    "failureMechanismSubdivision": "Fluid Degradation - Water Ingress",
+    "failureMechanismSubdivision": "External Influence - Contamination",
     "createdAt": "2026-06-04T10:00:00Z"
   },
   {
@@ -2817,7 +2817,7 @@ export const mockReports = [
     "subunit": "Drive Train",
     "maintainableItem": "Bearing / Seal",
     "failureModeDescription": "NOI - Abnormal Noise",
-    "failureMechanismSubdivision": "Mechanical Failure - Cavitation",
+    "failureMechanismSubdivision": "Material Failure - Cavitation",
     "createdAt": "2026-06-13T10:00:00Z"
   },
   {
@@ -2879,7 +2879,7 @@ export const mockReports = [
     "subunit": "Drive Train",
     "maintainableItem": "Bearing / Seal",
     "failureModeDescription": "PLU - Parameter Deviation",
-    "failureMechanismSubdivision": "Fluid Degradation - Fuel Dilution",
+    "failureMechanismSubdivision": "External Influence - Contamination",
     "createdAt": "2026-06-12T10:00:00Z"
   },
   {
@@ -2972,7 +2972,7 @@ export const mockReports = [
     "subunit": "Drive Train",
     "maintainableItem": "Bearing / Seal",
     "failureModeDescription": "OHE - Overheating",
-    "failureMechanismSubdivision": "Electrical Failure - High Resistance Joint",
+    "failureMechanismSubdivision": "Electrical Failure - Earth/Isolation Fault",
     "createdAt": "2026-06-20T10:00:00Z"
   },
   {
@@ -3065,7 +3065,7 @@ export const mockReports = [
     "subunit": "Drive Train",
     "maintainableItem": "Bearing / Seal",
     "failureModeDescription": "NOI - Abnormal Noise",
-    "failureMechanismSubdivision": "Mechanical Failure - Cavitation",
+    "failureMechanismSubdivision": "Material Failure - Cavitation",
     "createdAt": "2026-06-16T10:00:00Z"
   },
   {
@@ -3096,7 +3096,7 @@ export const mockReports = [
     "subunit": "Drive Train",
     "maintainableItem": "Bearing / Seal",
     "failureModeDescription": "PLU - Parameter Deviation",
-    "failureMechanismSubdivision": "Fluid Degradation - Water Ingress",
+    "failureMechanismSubdivision": "External Influence - Contamination",
     "createdAt": "2026-06-11T10:00:00Z"
   },
   {
@@ -3158,7 +3158,7 @@ export const mockReports = [
     "subunit": "Drive Train",
     "maintainableItem": "Bearing / Seal",
     "failureModeDescription": "OHE - Overheating",
-    "failureMechanismSubdivision": "Electrical Failure - High Resistance Joint",
+    "failureMechanismSubdivision": "Electrical Failure - Earth/Isolation Fault",
     "createdAt": "2026-06-23T10:00:00Z"
   },
   {
@@ -3189,7 +3189,7 @@ export const mockReports = [
     "subunit": "Drive Train",
     "maintainableItem": "Bearing / Seal",
     "failureModeDescription": "NOI - Abnormal Noise",
-    "failureMechanismSubdivision": "Mechanical Failure - Cavitation",
+    "failureMechanismSubdivision": "Material Failure - Cavitation",
     "createdAt": "2026-06-03T10:00:00Z"
   },
   {
@@ -3251,7 +3251,7 @@ export const mockReports = [
     "subunit": "Drive Train",
     "maintainableItem": "Bearing / Seal",
     "failureModeDescription": "PLU - Parameter Deviation",
-    "failureMechanismSubdivision": "Fluid Degradation - Water Ingress",
+    "failureMechanismSubdivision": "External Influence - Contamination",
     "createdAt": "2026-06-12T10:00:00Z"
   },
   {
@@ -3313,7 +3313,7 @@ export const mockReports = [
     "subunit": "Drive Train",
     "maintainableItem": "Bearing / Seal",
     "failureModeDescription": "PLU - Parameter Deviation",
-    "failureMechanismSubdivision": "Fluid Degradation - Water Ingress",
+    "failureMechanismSubdivision": "External Influence - Contamination",
     "createdAt": "2026-06-07T10:00:00Z"
   },
   {
@@ -3344,7 +3344,7 @@ export const mockReports = [
     "subunit": "Drive Train",
     "maintainableItem": "Bearing / Seal",
     "failureModeDescription": "PLU - Parameter Deviation",
-    "failureMechanismSubdivision": "Fluid Degradation - Fuel Dilution",
+    "failureMechanismSubdivision": "External Influence - Contamination",
     "createdAt": "2026-06-04T10:00:00Z"
   },
   {
@@ -3375,7 +3375,7 @@ export const mockReports = [
     "subunit": "Drive Train",
     "maintainableItem": "Bearing / Seal",
     "failureModeDescription": "PLU - Parameter Deviation",
-    "failureMechanismSubdivision": "Fluid Degradation - Water Ingress",
+    "failureMechanismSubdivision": "External Influence - Contamination",
     "createdAt": "2026-06-01T10:00:00Z"
   },
   {
@@ -3406,7 +3406,7 @@ export const mockReports = [
     "subunit": "Drive Train",
     "maintainableItem": "Bearing / Seal",
     "failureModeDescription": "AIR - Abnormal Instrument Reading",
-    "failureMechanismSubdivision": "Instrument Failure - Drift",
+    "failureMechanismSubdivision": "Instrument Failure - Out of Adjustment",
     "createdAt": "2026-06-18T10:00:00Z"
   },
   {
@@ -3437,7 +3437,7 @@ export const mockReports = [
     "subunit": "Drive Train",
     "maintainableItem": "Bearing / Seal",
     "failureModeDescription": "OHE - Overheating",
-    "failureMechanismSubdivision": "Electrical Failure - High Resistance Joint",
+    "failureMechanismSubdivision": "Electrical Failure - Earth/Isolation Fault",
     "createdAt": "2026-06-04T10:00:00Z"
   },
   {
@@ -3468,7 +3468,7 @@ export const mockReports = [
     "subunit": "Drive Train",
     "maintainableItem": "Bearing / Seal",
     "failureModeDescription": "PLU - Parameter Deviation",
-    "failureMechanismSubdivision": "Fluid Degradation - Water Ingress",
+    "failureMechanismSubdivision": "External Influence - Contamination",
     "createdAt": "2026-06-11T10:00:00Z"
   },
   {
@@ -3530,7 +3530,7 @@ export const mockReports = [
     "subunit": "Drive Train",
     "maintainableItem": "Bearing / Seal",
     "failureModeDescription": "PLU - Parameter Deviation",
-    "failureMechanismSubdivision": "Fluid Degradation - Water Ingress",
+    "failureMechanismSubdivision": "External Influence - Contamination",
     "createdAt": "2026-06-05T10:00:00Z"
   },
   {
@@ -3561,7 +3561,7 @@ export const mockReports = [
     "subunit": "Drive Train",
     "maintainableItem": "Bearing / Seal",
     "failureModeDescription": "NOI - Abnormal Noise",
-    "failureMechanismSubdivision": "Mechanical Failure - Cavitation",
+    "failureMechanismSubdivision": "Material Failure - Cavitation",
     "createdAt": "2026-06-04T10:00:00Z"
   },
   {
@@ -3623,7 +3623,7 @@ export const mockReports = [
     "subunit": "Drive Train",
     "maintainableItem": "Bearing / Seal",
     "failureModeDescription": "NOI - Abnormal Noise",
-    "failureMechanismSubdivision": "Mechanical Failure - Cavitation",
+    "failureMechanismSubdivision": "Material Failure - Cavitation",
     "createdAt": "2026-06-20T10:00:00Z"
   },
   {
@@ -3654,7 +3654,7 @@ export const mockReports = [
     "subunit": "Drive Train",
     "maintainableItem": "Bearing / Seal",
     "failureModeDescription": "NOI - Abnormal Noise",
-    "failureMechanismSubdivision": "Mechanical Failure - Cavitation",
+    "failureMechanismSubdivision": "Material Failure - Cavitation",
     "createdAt": "2026-06-09T10:00:00Z"
   },
   {
@@ -3685,7 +3685,7 @@ export const mockReports = [
     "subunit": "Drive Train",
     "maintainableItem": "Bearing / Seal",
     "failureModeDescription": "OHE - Overheating",
-    "failureMechanismSubdivision": "Electrical Failure - High Resistance Joint",
+    "failureMechanismSubdivision": "Electrical Failure - Earth/Isolation Fault",
     "createdAt": "2026-06-06T10:00:00Z"
   },
   {
@@ -3716,7 +3716,7 @@ export const mockReports = [
     "subunit": "Drive Train",
     "maintainableItem": "Bearing / Seal",
     "failureModeDescription": "OHE - Overheating",
-    "failureMechanismSubdivision": "Electrical Failure - High Resistance Joint",
+    "failureMechanismSubdivision": "Electrical Failure - Earth/Isolation Fault",
     "createdAt": "2026-06-08T10:00:00Z"
   },
   {
@@ -3747,7 +3747,7 @@ export const mockReports = [
     "subunit": "Drive Train",
     "maintainableItem": "Bearing / Seal",
     "failureModeDescription": "NOI - Abnormal Noise",
-    "failureMechanismSubdivision": "Mechanical Failure - Cavitation",
+    "failureMechanismSubdivision": "Material Failure - Cavitation",
     "createdAt": "2026-06-09T10:00:00Z"
   },
   {
@@ -3778,7 +3778,7 @@ export const mockReports = [
     "subunit": "Drive Train",
     "maintainableItem": "Bearing / Seal",
     "failureModeDescription": "OHE - Overheating",
-    "failureMechanismSubdivision": "Electrical Failure - High Resistance Joint",
+    "failureMechanismSubdivision": "Electrical Failure - Earth/Isolation Fault",
     "createdAt": "2026-07-09T10:00:00Z"
   },
   {
@@ -3809,7 +3809,7 @@ export const mockReports = [
     "subunit": "Drive Train",
     "maintainableItem": "Bearing / Seal",
     "failureModeDescription": "PLU - Parameter Deviation",
-    "failureMechanismSubdivision": "Fluid Degradation - Water Ingress",
+    "failureMechanismSubdivision": "External Influence - Contamination",
     "createdAt": "2026-07-14T10:00:00Z"
   },
   {
@@ -3871,7 +3871,7 @@ export const mockReports = [
     "subunit": "Drive Train",
     "maintainableItem": "Bearing / Seal",
     "failureModeDescription": "AIR - Abnormal Instrument Reading",
-    "failureMechanismSubdivision": "Instrument Failure - Drift",
+    "failureMechanismSubdivision": "Instrument Failure - Out of Adjustment",
     "createdAt": "2026-07-19T10:00:00Z"
   },
   {
@@ -3933,7 +3933,7 @@ export const mockReports = [
     "subunit": "Drive Train",
     "maintainableItem": "Bearing / Seal",
     "failureModeDescription": "PLU - Parameter Deviation",
-    "failureMechanismSubdivision": "Fluid Degradation - Fuel Dilution",
+    "failureMechanismSubdivision": "External Influence - Contamination",
     "createdAt": "2026-07-03T10:00:00Z"
   },
   {
@@ -3964,7 +3964,7 @@ export const mockReports = [
     "subunit": "Drive Train",
     "maintainableItem": "Bearing / Seal",
     "failureModeDescription": "OHE - Overheating",
-    "failureMechanismSubdivision": "Electrical Failure - High Resistance Joint",
+    "failureMechanismSubdivision": "Electrical Failure - Earth/Isolation Fault",
     "createdAt": "2026-07-28T10:00:00Z"
   },
   {
@@ -4119,7 +4119,7 @@ export const mockReports = [
     "subunit": "Drive Train",
     "maintainableItem": "Bearing / Seal",
     "failureModeDescription": "OHE - Overheating",
-    "failureMechanismSubdivision": "Electrical Failure - High Resistance Joint",
+    "failureMechanismSubdivision": "Electrical Failure - Earth/Isolation Fault",
     "createdAt": "2026-07-18T10:00:00Z"
   },
   {
@@ -4150,7 +4150,7 @@ export const mockReports = [
     "subunit": "Drive Train",
     "maintainableItem": "Bearing / Seal",
     "failureModeDescription": "NOI - Abnormal Noise",
-    "failureMechanismSubdivision": "Mechanical Failure - Cavitation",
+    "failureMechanismSubdivision": "Material Failure - Cavitation",
     "createdAt": "2026-07-04T10:00:00Z"
   },
   {
@@ -4243,7 +4243,7 @@ export const mockReports = [
     "subunit": "Drive Train",
     "maintainableItem": "Bearing / Seal",
     "failureModeDescription": "PLU - Parameter Deviation",
-    "failureMechanismSubdivision": "Fluid Degradation - Water Ingress",
+    "failureMechanismSubdivision": "External Influence - Contamination",
     "createdAt": "2026-07-16T10:00:00Z"
   },
   {
@@ -4274,7 +4274,7 @@ export const mockReports = [
     "subunit": "Drive Train",
     "maintainableItem": "Bearing / Seal",
     "failureModeDescription": "AIR - Abnormal Instrument Reading",
-    "failureMechanismSubdivision": "Instrument Failure - Drift",
+    "failureMechanismSubdivision": "Instrument Failure - Out of Adjustment",
     "createdAt": "2026-07-16T10:00:00Z"
   },
   {
@@ -4305,7 +4305,7 @@ export const mockReports = [
     "subunit": "Drive Train",
     "maintainableItem": "Bearing / Seal",
     "failureModeDescription": "AIR - Abnormal Instrument Reading",
-    "failureMechanismSubdivision": "Instrument Failure - Drift",
+    "failureMechanismSubdivision": "Instrument Failure - Out of Adjustment",
     "createdAt": "2026-07-20T10:00:00Z"
   },
   {
@@ -4336,7 +4336,7 @@ export const mockReports = [
     "subunit": "Drive Train",
     "maintainableItem": "Bearing / Seal",
     "failureModeDescription": "NOI - Abnormal Noise",
-    "failureMechanismSubdivision": "Mechanical Failure - Cavitation",
+    "failureMechanismSubdivision": "Material Failure - Cavitation",
     "createdAt": "2026-08-28T10:00:00Z"
   },
   {
@@ -4367,7 +4367,7 @@ export const mockReports = [
     "subunit": "Drive Train",
     "maintainableItem": "Bearing / Seal",
     "failureModeDescription": "OHE - Overheating",
-    "failureMechanismSubdivision": "Electrical Failure - High Resistance Joint",
+    "failureMechanismSubdivision": "Electrical Failure - Earth/Isolation Fault",
     "createdAt": "2026-08-08T10:00:00Z"
   },
   {
@@ -4398,7 +4398,7 @@ export const mockReports = [
     "subunit": "Drive Train",
     "maintainableItem": "Bearing / Seal",
     "failureModeDescription": "AIR - Abnormal Instrument Reading",
-    "failureMechanismSubdivision": "Instrument Failure - Drift",
+    "failureMechanismSubdivision": "Instrument Failure - Out of Adjustment",
     "createdAt": "2026-08-13T10:00:00Z"
   },
   {
@@ -4429,7 +4429,7 @@ export const mockReports = [
     "subunit": "Drive Train",
     "maintainableItem": "Bearing / Seal",
     "failureModeDescription": "PLU - Parameter Deviation",
-    "failureMechanismSubdivision": "Fluid Degradation - Fuel Dilution",
+    "failureMechanismSubdivision": "External Influence - Contamination",
     "createdAt": "2026-08-05T10:00:00Z"
   },
   {
@@ -4553,7 +4553,7 @@ export const mockReports = [
     "subunit": "Drive Train",
     "maintainableItem": "Bearing / Seal",
     "failureModeDescription": "OHE - Overheating",
-    "failureMechanismSubdivision": "Electrical Failure - High Resistance Joint",
+    "failureMechanismSubdivision": "Electrical Failure - Earth/Isolation Fault",
     "createdAt": "2026-08-11T10:00:00Z"
   },
   {
@@ -4584,7 +4584,7 @@ export const mockReports = [
     "subunit": "Drive Train",
     "maintainableItem": "Bearing / Seal",
     "failureModeDescription": "PLU - Parameter Deviation",
-    "failureMechanismSubdivision": "Fluid Degradation - Water Ingress",
+    "failureMechanismSubdivision": "External Influence - Contamination",
     "createdAt": "2026-08-20T10:00:00Z"
   },
   {
@@ -4677,7 +4677,7 @@ export const mockReports = [
     "subunit": "Drive Train",
     "maintainableItem": "Bearing / Seal",
     "failureModeDescription": "AIR - Abnormal Instrument Reading",
-    "failureMechanismSubdivision": "Instrument Failure - Drift",
+    "failureMechanismSubdivision": "Instrument Failure - Out of Adjustment",
     "createdAt": "2026-08-10T10:00:00Z"
   },
   {
@@ -4708,7 +4708,7 @@ export const mockReports = [
     "subunit": "Drive Train",
     "maintainableItem": "Bearing / Seal",
     "failureModeDescription": "AIR - Abnormal Instrument Reading",
-    "failureMechanismSubdivision": "Instrument Failure - Drift",
+    "failureMechanismSubdivision": "Instrument Failure - Out of Adjustment",
     "createdAt": "2026-08-19T10:00:00Z"
   },
   {
@@ -4739,7 +4739,7 @@ export const mockReports = [
     "subunit": "Drive Train",
     "maintainableItem": "Bearing / Seal",
     "failureModeDescription": "NOI - Abnormal Noise",
-    "failureMechanismSubdivision": "Mechanical Failure - Cavitation",
+    "failureMechanismSubdivision": "Material Failure - Cavitation",
     "createdAt": "2026-08-20T10:00:00Z"
   },
   {
@@ -4770,7 +4770,7 @@ export const mockReports = [
     "subunit": "Drive Train",
     "maintainableItem": "Bearing / Seal",
     "failureModeDescription": "OHE - Overheating",
-    "failureMechanismSubdivision": "Electrical Failure - High Resistance Joint",
+    "failureMechanismSubdivision": "Electrical Failure - Earth/Isolation Fault",
     "createdAt": "2026-08-08T10:00:00Z"
   },
   {
@@ -4801,7 +4801,7 @@ export const mockReports = [
     "subunit": "Drive Train",
     "maintainableItem": "Bearing / Seal",
     "failureModeDescription": "VIB - Vibration",
-    "failureMechanismSubdivision": "Hydrodynamic Instability - Oil Whirl",
+    "failureMechanismSubdivision": "Mechanical Failure - Vibration",
     "createdAt": "2026-08-26T10:00:00Z"
   },
   {
@@ -4832,7 +4832,7 @@ export const mockReports = [
     "subunit": "Drive Train",
     "maintainableItem": "Bearing / Seal",
     "failureModeDescription": "PLU - Parameter Deviation",
-    "failureMechanismSubdivision": "Fluid Degradation - Water Ingress",
+    "failureMechanismSubdivision": "External Influence - Contamination",
     "createdAt": "2026-08-15T10:00:00Z"
   },
   {
@@ -4863,7 +4863,7 @@ export const mockReports = [
     "subunit": "Drive Train",
     "maintainableItem": "Bearing / Seal",
     "failureModeDescription": "PLU - Parameter Deviation",
-    "failureMechanismSubdivision": "Fluid Degradation - Water Ingress",
+    "failureMechanismSubdivision": "External Influence - Contamination",
     "createdAt": "2026-08-23T10:00:00Z"
   },
   {
@@ -4925,7 +4925,7 @@ export const mockReports = [
     "subunit": "Drive Train",
     "maintainableItem": "Bearing / Seal",
     "failureModeDescription": "PLU - Parameter Deviation",
-    "failureMechanismSubdivision": "Fluid Degradation - Water Ingress",
+    "failureMechanismSubdivision": "External Influence - Contamination",
     "createdAt": "2026-08-19T10:00:00Z"
   },
   {
@@ -4987,7 +4987,7 @@ export const mockReports = [
     "subunit": "Drive Train",
     "maintainableItem": "Bearing / Seal",
     "failureModeDescription": "NOI - Abnormal Noise",
-    "failureMechanismSubdivision": "Mechanical Failure - Cavitation",
+    "failureMechanismSubdivision": "Material Failure - Cavitation",
     "createdAt": "2026-08-27T10:00:00Z"
   }
 ];

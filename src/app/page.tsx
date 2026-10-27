@@ -51,6 +51,7 @@ import {
   calculateOverallHealth,
   calculateFleetCbmRiskSummary,
   formatEquipmentClass,
+  getTierBadgeStyle,
 } from '@/utils/riskMatrix';
 import {
   FAILURE_MODE_OPTIONS,
@@ -2748,19 +2749,28 @@ export default function MainPage() {
               <div className="border border-[#202742] rounded-xl overflow-hidden bg-[#101422]/60 shadow-xl max-w-[620px] mx-auto">
                 
                 {/* Excel Row 1: Solid severity header banner SLB Category Colors + CBM Case Status */}
-                <div className="flex items-center justify-between p-3.5 border-b border-[#202742] bg-[#121626]">
-                  <div className={`font-bold text-xs tracking-widest uppercase px-2.5 py-1 rounded ${
-                    selectedReport.overallCondition?.includes('Critical') ? 'bg-[#ef4444]/20 text-[#ef4444] border border-[#ef4444]/40' :
-                    selectedReport.overallCondition?.includes('Degraded') ? 'bg-[#f59e0b]/20 text-[#f59e0b] border border-[#f59e0b]/40' :
-                    'bg-[#4ade80]/20 text-[#4ade80] border border-[#4ade80]/40'
-                  }`}>
-                    {selectedReport.overallCondition}
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <span className="text-[10px] uppercase font-bold text-text-muted">CBM Case Status:</span>
-                    {getCaseStatusBadge(selectedReport.cbmCaseStatus || (selectedReport.overallCondition?.includes('Good') ? 'Closed' : 'Awaiting Action'))}
-                  </div>
-                </div>
+                {(() => {
+                  const reportCondition = selectedReport.technology === 'Lube Oil Analysis'
+                    ? (selectedReport.lubeOilStatus || selectedReport.overallCondition)
+                    : selectedReport.technology === 'Thermography Analysis'
+                    ? (selectedReport.thermographyStatus || selectedReport.overallCondition)
+                    : (selectedReport.vibrationStatus || selectedReport.overallCondition);
+                  const cbmTierBadge = getTierBadgeStyle(reportCondition);
+
+                  return (
+                    <div className="flex items-center justify-between p-3.5 border-b border-[#202742] bg-[#121626]">
+                      <div>
+                        <span className={`inline-block px-2.5 py-1 rounded text-xs font-bold tracking-wide ${cbmTierBadge.bgClass} ${cbmTierBadge.textClass}`}>
+                          {cbmTierBadge.text}
+                        </span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <span className="text-[10px] uppercase font-bold text-text-muted">CBM Case Status:</span>
+                        {getCaseStatusBadge(selectedReport.cbmCaseStatus || (selectedReport.overallCondition?.includes('Good') ? 'Closed' : 'Awaiting Action'))}
+                      </div>
+                    </div>
+                  );
+                })()}
 
                 {/* Row 1: FPSO & System */}
                 <div className="grid grid-cols-2 text-[10px] border-b border-[#202742] uppercase font-semibold">

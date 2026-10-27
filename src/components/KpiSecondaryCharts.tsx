@@ -334,32 +334,52 @@ export function FailureMechanismsPie({
   }, []);
 
   const { chartData, legendItems, totalMechanisms } = useMemo(() => {
-    const counts: Record<string, number> = {};
-    let total = 0;
+    const filterReports = (filterByMonth: boolean) => {
+      const counts: Record<string, number> = {};
+      let total = 0;
 
-    reports.forEach(rep => {
-      // Month filtering (if report has date)
-      if (selectedMonth) {
-        const d = rep.raisedDate || rep.createdAt || '';
-        if (d && !d.startsWith(selectedMonth)) {
-          return;
+      reports.forEach(rep => {
+        // Month filtering (if report has date)
+        if (filterByMonth && selectedMonth) {
+          const d = rep.raisedDate || rep.createdAt || '';
+          if (d && !d.startsWith(selectedMonth)) {
+            return;
+          }
         }
-      }
 
-      // Technology filter
-      if (selectedTechnology && selectedTechnology !== 'Both' && rep.technology) {
-        if (rep.technology.toLowerCase() !== selectedTechnology.toLowerCase()) {
-          return;
+        // Technology filter (supports 'Vibration' vs 'Vibration Analysis', 'Lub Oil' vs 'Lube Oil Analysis')
+        if (selectedTechnology && selectedTechnology !== 'Both' && rep.technology) {
+          const repTech = rep.technology.toLowerCase();
+          const selTech = selectedTechnology.toLowerCase();
+          const isVib = selTech.includes('vib') && repTech.includes('vib');
+          const isOil =
+            (selTech.includes('oil') || selTech.includes('lub')) &&
+            (repTech.includes('oil') || repTech.includes('lub'));
+          if (!isVib && !isOil) {
+            return;
+          }
         }
-      }
 
-      const mech = rep.failureMechanismSubdivision;
-      if (mech && mech.trim() !== '' && mech.trim() !== 'N/A') {
-        const clean = mech.trim();
-        counts[clean] = (counts[clean] || 0) + 1;
-        total++;
+        const mech = rep.failureMechanismSubdivision;
+        if (mech && mech.trim() !== '' && mech.trim() !== 'N/A') {
+          const clean = mech.trim();
+          counts[clean] = (counts[clean] || 0) + 1;
+          total++;
+        }
+      });
+
+      return { counts, total };
+    };
+
+    let { counts, total } = filterReports(true);
+    // Graceful fallback to all available reports for the selected technology if the specific month has no records
+    if (total === 0 && selectedMonth) {
+      const fallback = filterReports(false);
+      if (fallback.total > 0) {
+        counts = fallback.counts;
+        total = fallback.total;
       }
-    });
+    }
 
     if (total === 0) {
       return { chartData: [], legendItems: [], totalMechanisms: 0 };
