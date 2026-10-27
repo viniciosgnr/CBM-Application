@@ -187,12 +187,12 @@ export default function MainPage() {
   const [selectedTrendTab, setSelectedTrendTab] = useState<'health' | 'compliance' | 'risk'>('health');
 
   const availableKpiMonths = useMemo(() => [
-    { key: '2026-10', label: '26/Oct (Current)', shortLabel: '26/oct', prevKey: '2026-09', prevShortLabel: '26/sep' },
-    { key: '2026-09', label: '26/Sep', shortLabel: '26/sep', prevKey: '2026-08', prevShortLabel: '26/aug' },
-    { key: '2026-08', label: '26/Aug', shortLabel: '26/aug', prevKey: '2026-07', prevShortLabel: '26/jul' },
-    { key: '2026-07', label: '26/Jul', shortLabel: '26/jul', prevKey: '2026-06', prevShortLabel: '26/jun' },
-    { key: '2026-06', label: '26/Jun', shortLabel: '26/jun', prevKey: '2026-05', prevShortLabel: '26/may' },
-    { key: '2026-05', label: '26/May', shortLabel: '26/may', prevKey: '2026-04', prevShortLabel: '26/apr' },
+    { key: '2026-10', label: 'October (Current)', shortLabel: 'October', prevKey: '2026-09', prevShortLabel: 'September' },
+    { key: '2026-09', label: 'September', shortLabel: 'September', prevKey: '2026-08', prevShortLabel: 'August' },
+    { key: '2026-08', label: 'August', shortLabel: 'August', prevKey: '2026-07', prevShortLabel: 'July' },
+    { key: '2026-07', label: 'July', shortLabel: 'July', prevKey: '2026-06', prevShortLabel: 'June' },
+    { key: '2026-06', label: 'June', shortLabel: 'June', prevKey: '2026-05', prevShortLabel: 'May' },
+    { key: '2026-05', label: 'May', shortLabel: 'May', prevKey: '2026-04', prevShortLabel: 'April' },
   ], []);
 
   const currentMonthConfig = useMemo(() => {
@@ -2262,10 +2262,12 @@ export default function MainPage() {
                 workOrders={workOrders}
                 selectedTechnology={selectedKpiTechnology}
                 selectedMonth={selectedKpiMonth}
-                prevMonth={currentMonthConfig?.prevKey || '2026-09'}
-                selectedMonthLabel={currentMonthConfig?.shortLabel || '26/oct'}
-                prevMonthLabel={currentMonthConfig?.prevShortLabel || '26/sep'}
+                selectedMonthLabel={currentMonthConfig?.shortLabel || 'October'}
                 onEquipmentClick={(eq) => handleRowClick({ tag: eq.tag })}
+                onReportClick={(report) => {
+                  setSelectedReport(report as any);
+                  setReportDetailsOpen(true);
+                }}
               />
             </div>
           </div>

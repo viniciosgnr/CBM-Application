@@ -259,12 +259,27 @@ test.describe('CBM Dashboard E2E Smoke Tests', () => {
     await expect(page.getByText('Monthly CBM Routine Report')).toBeVisible();
     await expect(page.getByText(/Vibration Routine/i)).toBeVisible();
 
-    // Valida os cabeçalhos das 6 colunas discretas em inglês (sem banner roxo)
+    // Valida os cabeçalhos das 5 colunas em inglês (com coluna única para o mês selecionado)
     const reportTable = page.locator('table').last();
     await expect(reportTable.locator('th', { hasText: 'Frequency' })).toBeVisible();
     await expect(reportTable.locator('th', { hasText: 'FPSO' })).toBeVisible();
     await expect(reportTable.locator('th', { hasText: 'Equipment' })).toBeVisible();
+    await expect(reportTable.locator('th', { hasText: /Status \(/i })).toBeVisible();
     await expect(reportTable.locator('th', { hasText: 'WO' })).toBeVisible();
+
+    // Valida que a primeira linha exibe o caso mais crítico/degradado no topo com WO
+    const firstRow = reportTable.locator('tbody tr').first();
+    await expect(firstRow).toBeVisible();
+    await expect(firstRow.locator('td').nth(3)).toContainText(/Tier 1|Tier 2/i);
+
+    // Valida que clicar na linha do caso crítico/degradado abre direto o modal CBM Analysis Report Details
+    await firstRow.click();
+    await expect(page.getByText('CBM Analysis Report Details')).toBeVisible();
+
+    // Fecha o modal de detalhes do relatório
+    const closeReportBtn = page.locator('button[title="Close"]').last();
+    await closeReportBtn.click();
+    await expect(page.getByText('CBM Analysis Report Details')).not.toBeVisible();
 
     // Testa a alternância para tecnologia Lub Oil
     await oilBtn.click();

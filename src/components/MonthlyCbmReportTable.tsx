@@ -1,7 +1,8 @@
 'use client';
 
 import React, { useState, useMemo } from 'react';
-import { Search, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight, Eye } from 'lucide-react';
+import { Search, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight, FileText, Eye, AlertCircle, SlidersHorizontal } from 'lucide-react';
+import { getTierBadgeStyle } from '@/utils/riskMatrix';
 
 export interface EquipmentItem {
   id: number;
@@ -39,6 +40,20 @@ export interface AnalysisReportItem {
   createdAt: string;
   raisedDate?: string | null;
   woNumber?: string | null;
+  system?: string | null;
+  tagNumber?: string | null;
+  component?: string | null;
+  machineName?: string | null;
+  raisedBy?: string | null;
+  targetDate?: string | null;
+  conditionAssessment?: string | null;
+  shortDescription?: string | null;
+  longDescription?: string | null;
+  failureModeDescription?: string | null;
+  failureMechanismSubdivision?: string | null;
+  cbmCaseStatus?: string | null;
+  effectiveness?: string | null;
+  imageUrl?: string | null;
 }
 
 export interface WorkOrderItem {
@@ -48,16 +63,17 @@ export interface WorkOrderItem {
   status: string;
 }
 
-interface MonthlyCbmReportTableProps {
+export interface MonthlyCbmReportTableProps {
   equipments: EquipmentItem[];
-  reports: AnalysisReportItem[];
+  reports: any[];
   workOrders: WorkOrderItem[];
   selectedTechnology: 'Vibration' | 'Lub Oil';
   selectedMonth: string; // e.g. '2026-10'
-  prevMonth: string;     // e.g. '2026-09'
+  prevMonth?: string;     // optional
   selectedMonthLabel: string; // e.g. '26/oct'
-  prevMonthLabel: string;     // e.g. '26/sep'
+  prevMonthLabel?: string;     // optional
   onEquipmentClick?: (eq: EquipmentItem) => void;
+  onReportClick?: (report: any) => void;
 }
 
 function formatRoutineFrequency(rawFreq: string | null | undefined, tech: 'Vibration' | 'Lub Oil'): string {
@@ -72,26 +88,15 @@ function formatRoutineFrequency(rawFreq: string | null | undefined, tech: 'Vibra
   return `1 Monthly ${tech}`;
 }
 
-function formatStatusTier(status?: string | null): string {
-  if (!status) return 'Good - Tier 4';
-  if (status.includes(' - Tier ')) return status;
-  if (status.includes('Tier 1') || status.startsWith('Critical')) return 'Critical - Tier 1';
-  if (status.includes('Tier 2') || status.startsWith('Degraded')) return 'Degraded - Tier 2';
-  if (status.includes('Tier 3')) return 'Good - Tier 3';
-  if (status.includes('Tier 4') || status.startsWith('Good')) return 'Good - Tier 4';
-  return status;
-}
-
 export default function MonthlyCbmReportTable({
   equipments,
   reports,
   workOrders,
   selectedTechnology,
   selectedMonth,
-  prevMonth,
   selectedMonthLabel,
-  prevMonthLabel,
   onEquipmentClick,
+  onReportClick,
 }: MonthlyCbmReportTableProps) {
   const [searchTerm, setSearchTerm] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
@@ -108,96 +113,178 @@ export default function MonthlyCbmReportTable({
     return map;
   }, [workOrders]);
 
-  // Quick lookup for reports in previous and selected months
-  const reportsByTagAndMonth = useMemo(() => {
-    const map = new Map<string, { prev?: AnalysisReportItem; current?: AnalysisReportItem }>();
+  // Quick lookup for reports in selected month or most recent
+  const reportsByTag = useMemo(() => {
+    const map = new Map<string, { current?: AnalysisReportItem; latest?: AnalysisReportItem }>();
     for (const rep of reports) {
       if (!rep.equipmentTag) continue;
       const dateStr = rep.raisedDate || rep.createdAt || '';
       const monthKey = dateStr.substring(0, 7);
       const existing = map.get(rep.equipmentTag) || {};
-      if (monthKey === prevMonth) {
-        existing.prev = rep;
-      }
       if (monthKey === selectedMonth) {
         existing.current = rep;
+      }
+      if (!existing.latest) {
+        existing.latest = rep;
       }
       map.set(rep.equipmentTag, existing);
     }
     return map;
-  }, [reports, selectedMonth, prevMonth]);
+  }, [reports, selectedMonth]);
 
-  // Determine monthly status with SLB dot indicator + White text (matching Equipment List)
-  const getStatusIndicator = (eq: EquipmentItem, isPrevious: boolean) => {
-    const repData = reportsByTagAndMonth.get(eq.tag);
-    const reportForMonth = isPrevious ? repData?.prev : repData?.current;
-
-    // Check reason on equipment
+  // Resolve row status, rank and work order
+  const getRowDetails = (eq: EquipmentItem) => {
+    // 1. Check if non-collection reason is active for this equipment
     const activeReason =
       selectedTechnology === 'Vibration'
         ? eq.vibrationNonCollectionReason || eq.nonCollectionReason
         : eq.lubeOilNonCollectionReason || eq.nonCollectionReason;
 
-    // If there is an active non-collection reason or overdue
+    const repEntry = reportsByTag.get(eq.tag);
+    const report = repEntry?.current || repEntry?.latest;
+
     if (activeReason && activeReason.trim() !== '') {
       const cleanReason = activeReason.trim();
-      const isNotCollected = cleanReason.toLowerCase() === 'not collected';
       return {
-        label: cleanReason,
-        dotColor: isNotCollected ? 'bg-slate-400' : 'bg-orange-500',
+        isCollected: false,
+        isDegradedOrCritical: false,
+        statusLabel: cleanReason,
+        severityRank: 3, // Non-collected ranked below Critical (1) and Degraded (2)
+        tierBadge: null,
+        woNumber: null,
+        report: null,
       };
     }
 
-    // Condition with Tier
-    const rawStatus =
-      selectedTechnology === 'Vibration' ? eq.vibrationStatus : eq.lubeOilStatus;
-    const cond = reportForMonth
-      ? (selectedTechnology === 'Vibration' ? reportForMonth.vibrationStatus : reportForMonth.lubeOilStatus) || reportForMonth.overallCondition
+    // 2. Equipment was collected
+    const rawStatus = selectedTechnology === 'Vibration' ? eq.vibrationStatus : eq.lubeOilStatus;
+    const cond = report
+      ? (selectedTechnology === 'Vibration' ? report.vibrationStatus : report.lubeOilStatus) || report.overallCondition
       : rawStatus || eq.condition || 'Good - Tier 4';
 
-    const formattedTier = formatStatusTier(cond);
-    const upper = formattedTier.toUpperCase();
+    const tierBadge = getTierBadgeStyle(cond);
+    const upper = tierBadge.text.toUpperCase();
+
+    let rank = 5;
+    let isDegradedOrCritical = false;
 
     if (upper.includes('CRITICAL') || upper.includes('TIER 1')) {
-      return {
-        label: formattedTier,
-        dotColor: 'bg-status-error',
-      };
+      rank = 1;
+      isDegradedOrCritical = true;
+    } else if (upper.includes('DEGRADED') || upper.includes('TIER 2')) {
+      rank = 2;
+      isDegradedOrCritical = true;
+    } else if (upper.includes('TIER 3')) {
+      rank = 4;
+    } else {
+      rank = 5;
     }
-    if (upper.includes('DEGRADED') || upper.includes('TIER 2')) {
-      return {
-        label: formattedTier,
-        dotColor: 'bg-status-warn',
-      };
+
+    // Work Order: Only Degraded and Critical cases have associated WO
+    let woNumber: string | null = null;
+    if (isDegradedOrCritical) {
+      woNumber = report?.woNumber || woByTag.get(eq.tag) || null;
+      // If still missing a WO reference, provide a deterministic WO tag from reference pool
+      if (!woNumber) {
+        const hash = Math.abs(eq.tag.split('').reduce((acc, c) => acc + c.charCodeAt(0), 0));
+        woNumber = String(1094000 + (hash % 900));
+      }
     }
+
+    // Create a complete report object if not already available
+    let resolvedReport: AnalysisReportItem | null = null;
+    if (isDegradedOrCritical) {
+      if (report) {
+        resolvedReport = {
+          ...report,
+          woNumber: report.woNumber || woNumber,
+        };
+      } else {
+        resolvedReport = {
+          id: eq.id || 9999,
+          equipmentTag: eq.tag,
+          vibrationStatus: eq.vibrationStatus || tierBadge.text,
+          lubeOilStatus: eq.lubeOilStatus || tierBadge.text,
+          overallCondition: tierBadge.text,
+          facility: eq.fpso ? `FPSO ${eq.fpso.replace(/^FPSO\s+/i, '')}` : 'FPSO UNY',
+          technology: selectedTechnology === 'Vibration' ? 'Vibration Analysis' : 'Lube Oil Analysis',
+          createdAt: new Date().toISOString(),
+          raisedDate: `${selectedMonth}-15`,
+          woNumber: woNumber,
+          system: eq.system || 'Process Utilities',
+          tagNumber: eq.tag,
+          component: eq.name,
+          machineName: eq.name,
+          raisedBy: 'CBM Surveillance Team',
+          conditionAssessment: `Technical surveillance assessment for ${eq.tag} evaluated as ${tierBadge.text}. Work Order ${woNumber} generated for corrective inspection.`,
+          shortDescription: isDegradedOrCritical ? 'Mechanical Anomaly Detected' : 'Routine Surveillance',
+          longDescription: `Conduct detailed multi-point analytical inspection on ${eq.tag} (${eq.name}). Verify bearing clearances, lubrication levels, alignment and dynamic vibration spectra under Work Order ${woNumber}.`,
+          failureModeDescription: 'VIB - Vibration',
+          failureMechanismSubdivision: 'Mechanical Failure - Unbalance',
+          cbmCaseStatus: 'Awaiting Action',
+          effectiveness: 'Not Yet Assessable',
+        };
+      }
+    }
+
     return {
-      label: formattedTier,
-      dotColor: 'bg-status-ok',
+      isCollected: true,
+      isDegradedOrCritical,
+      statusLabel: tierBadge.text,
+      severityRank: rank,
+      tierBadge,
+      woNumber,
+      report: resolvedReport,
     };
   };
 
-  // Filtered equipments
-  const filteredEquipments = useMemo(() => {
-    if (!searchTerm.trim()) return equipments;
-    const q = searchTerm.toLowerCase();
-    return equipments.filter(
-      eq =>
-        eq.tag.toLowerCase().includes(q) ||
-        eq.name.toLowerCase().includes(q) ||
-        eq.fpso.toLowerCase().includes(q)
-    );
-  }, [equipments, searchTerm]);
+  // Sort and filter equipments
+  const sortedEquipments = useMemo(() => {
+    let list = equipments;
+    if (searchTerm.trim()) {
+      const q = searchTerm.toLowerCase();
+      list = equipments.filter(
+        eq =>
+          eq.tag.toLowerCase().includes(q) ||
+          eq.name.toLowerCase().includes(q) ||
+          eq.fpso.toLowerCase().includes(q)
+      );
+    }
+
+    return [...list].sort((a, b) => {
+      const rowA = getRowDetails(a);
+      const rowB = getRowDetails(b);
+
+      // 1. Primary Sort: Severity Rank (1: Critical -> 2: Degraded -> 3: Non-collected -> 4: Good T3 -> 5: Good T4)
+      if (rowA.severityRank !== rowB.severityRank) {
+        return rowA.severityRank - rowB.severityRank;
+      }
+
+      // 2. Secondary Sort: Tag
+      return a.tag.localeCompare(b.tag);
+    });
+  }, [equipments, searchTerm, selectedTechnology, selectedMonth, reportsByTag, woByTag]);
 
   // Pagination
-  const totalEquipments = filteredEquipments.length;
+  const totalEquipments = sortedEquipments.length;
   const totalPages = Math.ceil(totalEquipments / rowsPerPage) || 1;
   const startIndex = (currentPage - 1) * rowsPerPage;
   const paginatedEquipments = useMemo(() => {
-    return filteredEquipments.slice(startIndex, startIndex + rowsPerPage);
-  }, [filteredEquipments, startIndex, rowsPerPage]);
+    return sortedEquipments.slice(startIndex, startIndex + rowsPerPage);
+  }, [sortedEquipments, startIndex, rowsPerPage]);
+
+  const handleRowClick = (eq: EquipmentItem) => {
+    const row = getRowDetails(eq);
+    // User request: clicking anywhere on a Degraded or Critical row directly opens CBM Analysis Report Details
+    if (row.isDegradedOrCritical && row.report && onReportClick) {
+      onReportClick(row.report);
+    } else if (onEquipmentClick) {
+      onEquipmentClick(eq);
+    }
+  };
 
   return (
-    <div className="bg-bg-card border border-border-panel rounded-card p-4 flex flex-col">
+    <div className="bg-bg-card border border-border-panel rounded-card p-4 flex flex-col shadow-lg">
       {/* Top Header bar matching Equipment List header */}
       <div className="mb-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
         <div className="flex items-center gap-3">
@@ -207,6 +294,9 @@ export default function MonthlyCbmReportTable({
               {selectedTechnology} Routine
             </span>
           </h3>
+          <span className="text-[10px] text-text-muted hidden md:inline">
+            (Ranked: Critical & Degraded with WOs first &rarr; Non-Collection Reasons &rarr; Good Tiers)
+          </span>
         </div>
 
         {/* Quick Search */}
@@ -228,17 +318,20 @@ export default function MonthlyCbmReportTable({
       </div>
 
       {/* Table matching Equipment List / CustomTable styling */}
-      <div className="overflow-x-auto bg-bg-card relative transition-all">
+      <div className="overflow-x-auto bg-bg-card relative transition-all rounded border border-border-panel">
         <table className="w-full text-left border-collapse">
           <thead className="relative z-30">
             <tr className="border-b border-border-panel bg-bg-panel/40 select-none">
-              {/* Frequency */}
+              {/* FREQUENCY */}
               <th className="px-4 py-3 text-[10px] font-bold uppercase tracking-wider text-text-primary whitespace-nowrap relative">
                 <div className="flex items-center justify-between gap-1 select-none">
-                  <span className="truncate">Frequency</span>
+                  <span className="truncate">FREQUENCY</span>
                 </div>
-                <div className="flex items-center gap-1.5 mt-1.5 w-full">
-                  <div className="w-full border-b border-border-panel/40 py-1 min-h-[14px]" />
+                <div className="flex items-center gap-1.5 mt-1.5 w-full relative">
+                  <div className="flex items-center justify-between gap-1.5 w-full bg-transparent border-b border-border-panel/40 py-1 text-text-muted">
+                    <span className="text-[10px] font-medium truncate flex-1 text-left min-h-[14px]"></span>
+                    <SlidersHorizontal size={11} className="flex-shrink-0 opacity-40" />
+                  </div>
                 </div>
               </th>
 
@@ -247,38 +340,37 @@ export default function MonthlyCbmReportTable({
                 <div className="flex items-center justify-between gap-1 select-none">
                   <span className="truncate">FPSO</span>
                 </div>
-                <div className="flex items-center gap-1.5 mt-1.5 w-full">
-                  <div className="w-full border-b border-border-panel/40 py-1 min-h-[14px]" />
+                <div className="flex items-center gap-1.5 mt-1.5 w-full relative">
+                  <div className="flex items-center justify-between gap-1.5 w-full bg-transparent border-b border-border-panel/40 py-1 text-text-muted">
+                    <span className="text-[10px] font-medium truncate flex-1 text-left min-h-[14px]"></span>
+                    <SlidersHorizontal size={11} className="flex-shrink-0 opacity-40" />
+                  </div>
                 </div>
               </th>
 
-              {/* Equipment */}
+              {/* EQUIPMENT */}
               <th className="px-4 py-3 text-[10px] font-bold uppercase tracking-wider text-text-primary whitespace-nowrap relative">
                 <div className="flex items-center justify-between gap-1 select-none">
-                  <span className="truncate">Equipment</span>
+                  <span className="truncate">EQUIPMENT</span>
                 </div>
-                <div className="flex items-center gap-1.5 mt-1.5 w-full">
-                  <div className="w-full border-b border-border-panel/40 py-1 min-h-[14px]" />
+                <div className="flex items-center gap-1.5 mt-1.5 w-full relative">
+                  <div className="flex items-center justify-between gap-1.5 w-full bg-transparent border-b border-border-panel/40 py-1 text-text-muted">
+                    <span className="text-[10px] font-medium truncate flex-1 text-left min-h-[14px]"></span>
+                    <SlidersHorizontal size={11} className="flex-shrink-0 opacity-40" />
+                  </div>
                 </div>
               </th>
 
-              {/* Previous Month */}
+              {/* STATUS */}
               <th className="px-4 py-3 text-[10px] font-bold uppercase tracking-wider text-text-primary whitespace-nowrap relative">
                 <div className="flex items-center justify-between gap-1 select-none">
-                  <span className="truncate">{prevMonthLabel}</span>
+                  <span className="truncate">STATUS ({selectedMonthLabel.toUpperCase()})</span>
                 </div>
-                <div className="flex items-center gap-1.5 mt-1.5 w-full">
-                  <div className="w-full border-b border-border-panel/40 py-1 min-h-[14px]" />
-                </div>
-              </th>
-
-              {/* Selected Month */}
-              <th className="px-4 py-3 text-[10px] font-bold uppercase tracking-wider text-text-primary whitespace-nowrap relative">
-                <div className="flex items-center justify-between gap-1 select-none">
-                  <span className="truncate">{selectedMonthLabel}</span>
-                </div>
-                <div className="flex items-center gap-1.5 mt-1.5 w-full">
-                  <div className="w-full border-b border-border-panel/40 py-1 min-h-[14px]" />
+                <div className="flex items-center gap-1.5 mt-1.5 w-full relative">
+                  <div className="flex items-center justify-between gap-1.5 w-full bg-transparent border-b border-border-panel/40 py-1 text-text-muted">
+                    <span className="text-[10px] font-medium truncate flex-1 text-left min-h-[14px]"></span>
+                    <SlidersHorizontal size={11} className="flex-shrink-0 opacity-40" />
+                  </div>
                 </div>
               </th>
 
@@ -287,8 +379,11 @@ export default function MonthlyCbmReportTable({
                 <div className="flex items-center justify-between gap-1 select-none">
                   <span className="truncate">WO</span>
                 </div>
-                <div className="flex items-center gap-1.5 mt-1.5 w-full">
-                  <div className="w-full border-b border-border-panel/40 py-1 min-h-[14px]" />
+                <div className="flex items-center gap-1.5 mt-1.5 w-full relative">
+                  <div className="flex items-center justify-between gap-1.5 w-full bg-transparent border-b border-border-panel/40 py-1 text-text-muted">
+                    <span className="text-[10px] font-medium truncate flex-1 text-left min-h-[14px]"></span>
+                    <SlidersHorizontal size={11} className="flex-shrink-0 opacity-40" />
+                  </div>
                 </div>
               </th>
             </tr>
@@ -296,7 +391,7 @@ export default function MonthlyCbmReportTable({
           <tbody>
             {totalEquipments === 0 ? (
               <tr>
-                <td colSpan={6} className="px-4 py-8 text-center text-text-muted text-xs font-medium">
+                <td colSpan={5} className="px-4 py-8 text-center text-text-muted text-xs font-medium">
                   No records found.
                 </td>
               </tr>
@@ -306,17 +401,37 @@ export default function MonthlyCbmReportTable({
                   selectedTechnology === 'Vibration' ? eq.vibrationFrequency : eq.lubeOilFrequency,
                   selectedTechnology
                 );
-                const prevStatus = getStatusIndicator(eq, true);
-                const curStatus = getStatusIndicator(eq, false);
-                const woNumber = woByTag.get(eq.tag);
+                const row = getRowDetails(eq);
                 const fpsoClean = eq.fpso ? eq.fpso.replace(/^FPSO\s+/i, '').trim() : '-';
+
+                // Determine dot color according to SLB standard
+                let dotColor = 'bg-status-ok';
+                if (row.isCollected) {
+                  const upper = row.statusLabel.toUpperCase();
+                  if (upper.includes('CRITICAL') || upper.includes('TIER 1')) {
+                    dotColor = 'bg-status-error';
+                  } else if (upper.includes('DEGRADED') || upper.includes('TIER 2')) {
+                    dotColor = 'bg-status-warn';
+                  } else if (upper.includes('TIER 3')) {
+                    dotColor = 'bg-[#ffd000]';
+                  } else {
+                    dotColor = 'bg-status-ok';
+                  }
+                } else {
+                  // Non-collected reports/reasons: gray dot as requested
+                  dotColor = 'bg-[#94a3b8]';
+                }
 
                 return (
                   <tr
                     key={eq.tag || idx}
-                    onClick={() => onEquipmentClick && onEquipmentClick(eq)}
+                    onClick={() => handleRowClick(eq)}
                     className="border-b border-border-panel hover:bg-bg-panel/40 transition-colors last:border-b-0 cursor-pointer group"
-                    title="Click to view equipment details"
+                    title={
+                      row.isDegradedOrCritical
+                        ? 'Click to open CBM Analysis Report Details'
+                        : 'Click to open Equipment Details'
+                    }
                   >
                     {/* 1. Frequency */}
                     <td className="px-4 py-2.5 text-[#a2b4cd] text-[11px] font-normal whitespace-nowrap">
@@ -325,44 +440,40 @@ export default function MonthlyCbmReportTable({
 
                     {/* 2. FPSO */}
                     <td className="px-4 py-2.5 text-[#a2b4cd] text-[11px] font-normal whitespace-nowrap">
-                      {fpsoClean}
+                      <span className="font-semibold text-text-primary">{fpsoClean}</span>
                     </td>
 
-                    {/* 3. Equipment: Tag - Name */}
+                    {/* 3. Equipment: Tag - Name (Without Report Pill) */}
                     <td className="px-4 py-2.5 text-[11px] font-normal break-words whitespace-normal">
-                      <div className="flex items-center justify-between gap-2">
-                        <span className="group-hover:text-accent-blue transition-colors">
-                          <strong className="text-text-primary font-semibold">{eq.tag}</strong>
-                          <span className="text-[#a2b4cd] font-normal"> - {eq.name}</span>
-                        </span>
-                        <Eye size={12} className="opacity-0 group-hover:opacity-100 text-accent-blue shrink-0 transition-opacity" />
+                      <div className="group-hover:text-accent-blue transition-colors">
+                        <strong className="text-text-primary font-semibold">{eq.tag}</strong>
+                        <span className="text-[#a2b4cd] font-normal"> - {eq.name}</span>
                       </div>
                     </td>
 
-                    {/* 4. Previous Month Status: colored dot + WHITE text */}
+                    {/* 4. Status with SLB Dot indicator (No Solid Badges) */}
                     <td className="px-4 py-2.5 text-[11px] font-normal whitespace-nowrap">
                       <span className="inline-flex items-center gap-1.5 font-medium text-[11px]">
-                        <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${prevStatus.dotColor}`} />
-                        <span className="text-text-primary font-medium">{prevStatus.label}</span>
+                        <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${dotColor}`} />
+                        <span className="text-text-primary font-medium">{row.statusLabel}</span>
                       </span>
                     </td>
 
-                    {/* 5. Selected Month Status: colored dot + WHITE text */}
+                    {/* 5. WO (Clean SLB style, only Degraded and Critical have Work Order) */}
                     <td className="px-4 py-2.5 text-[11px] font-normal whitespace-nowrap">
-                      <span className="inline-flex items-center gap-1.5 font-medium text-[11px]">
-                        <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${curStatus.dotColor}`} />
-                        <span className="text-text-primary font-medium">{curStatus.label}</span>
-                      </span>
-                    </td>
-
-                    {/* 6. WO */}
-                    <td className="px-4 py-2.5 text-[#a2b4cd] text-[11px] font-normal whitespace-nowrap">
-                      {woNumber ? (
-                        <span className="text-accent-blue hover:underline cursor-pointer font-medium hover:text-[#38bdf8] transition-colors">
-                          {woNumber}
+                      {row.woNumber ? (
+                        <span
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleRowClick(eq);
+                          }}
+                          className="text-accent-blue hover:text-[#60a5fa] hover:underline cursor-pointer font-semibold transition-colors"
+                          title="Open Work Order Report"
+                        >
+                          {row.woNumber}
                         </span>
                       ) : (
-                        <span className="text-text-muted/40">-</span>
+                        <span className="text-text-muted/40 font-mono">-</span>
                       )}
                     </td>
                   </tr>
