@@ -2803,7 +2803,9 @@ export default function MainPage() {
                     <h4 className="text-sm font-semibold text-text-primary tracking-wide">
                       Details
                     </h4>
-                    <Info size={15} className="text-text-muted hover:text-accent-blue transition-colors cursor-pointer" title="Report Equipment Details" />
+                    <span title="Report Equipment Details">
+                      <Info size={15} className="text-text-muted hover:text-accent-blue transition-colors cursor-pointer" />
+                    </span>
                   </div>
 
                   {/* Rows List */}
