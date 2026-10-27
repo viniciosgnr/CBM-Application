@@ -23,6 +23,11 @@ import {
   Search,
   Activity,
   Filter,
+  Maximize2,
+  Minimize2,
+  Trash2,
+  Download,
+  Info,
 } from 'lucide-react';
 import {
   WorkOrderStatusPie,
@@ -559,6 +564,7 @@ export default function MainPage() {
   // Report Detail Viewer state
   const [selectedReport, setSelectedReport] = useState<AnalysisReport | null>(null);
   const [reportDetailsOpen, setReportDetailsOpen] = useState(false);
+  const [isReportDrawerMaximized, setIsReportDrawerMaximized] = useState(false);
   const [isSavingEffectiveness, setIsSavingEffectiveness] = useState(false);
 
   // States and Handlers for Work Order (Fault Report) creation
@@ -957,6 +963,24 @@ export default function MainPage() {
       }
     };
     reader.readAsDataURL(file);
+  };
+
+  // Handle removing evidence image directly for a report
+  const handleReportImageRemove = async (reportId: number) => {
+    try {
+      const res = await fetch('/api/reports', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id: reportId, imageUrl: null }),
+      });
+      if (res.ok) {
+        const updated = await res.json();
+        setSelectedReport(updated);
+        await fetchReports();
+      }
+    } catch (err) {
+      console.error('Failed to remove evidence image:', err);
+    }
   };
 
   // Handle updating recommendation effectiveness classification
@@ -2724,392 +2748,430 @@ export default function MainPage() {
         </div>
       )}
 
-      {/* Digital Excel Report Viewer Side-Overlay (Details of a Recommendations report) */}
+      {/* CBM Analysis Report Details SLB Side Drawer */}
       {reportDetailsOpen && selectedReport && (
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[999] flex items-center justify-end p-0">
-          <div className="bg-[#0b0f19] border-l border-[#202742] w-full max-w-[680px] h-full flex flex-col animate-slideLeft shadow-2xl relative">
-            
-            {/* Top Bar Details close */}
-            <div className="p-4 border-b border-[#202742] bg-[#101422] flex items-center justify-between select-none">
-              <span className="text-xs font-bold text-text-muted flex items-center gap-1.5">
-                <FileText size={14} className="text-accent-blue" />
-                CBM Analysis Report Details
-              </span>
-              <button
-                onClick={() => setReportDetailsOpen(false)}
-                className="p-1 text-text-muted hover:text-text-primary hover:bg-[#202742] rounded transition-all cursor-pointer"
-                title="Close"
-              >
-                <X size={16} />
-              </button>
+        <div 
+          className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[999] flex items-center justify-end p-0 transition-opacity animate-fadeIn"
+          onClick={() => setReportDetailsOpen(false)}
+        >
+          <div 
+            onClick={(e) => e.stopPropagation()}
+            className={`bg-[#0b0f19] border-l border-[#202742] h-full flex flex-col shadow-2xl relative transition-all duration-300 ease-out animate-slideLeft ${
+              isReportDrawerMaximized ? 'w-full max-w-full' : 'w-full md:w-[85vw] max-w-6xl'
+            }`}
+          >
+            {/* Top Bar Header with Section Title & Window Controls */}
+            <div className="border-b border-[#202742] bg-[#0d121f] px-6 py-3.5 flex items-center justify-between select-none shrink-0">
+              <div className="flex items-center gap-2.5">
+                <span className="w-6 h-6 rounded-full bg-[#1e2746] flex items-center justify-center text-accent-blue text-xs font-bold">
+                  <Activity size={13} />
+                </span>
+                <h3 className="text-sm font-bold text-text-primary tracking-wide">
+                  CBM Analysis Report Details
+                </h3>
+              </div>
+
+              {/* Controls: Maximize / Minimize / Close */}
+              <div className="flex items-center gap-1.5 shrink-0">
+                <button
+                  type="button"
+                  onClick={() => setIsReportDrawerMaximized(prev => !prev)}
+                  className="p-1.5 text-text-muted hover:text-text-primary hover:bg-[#1a233a] rounded transition-all cursor-pointer"
+                  title={isReportDrawerMaximized ? 'Restore Drawer' : 'Maximize Drawer'}
+                >
+                  {isReportDrawerMaximized ? <Minimize2 size={15} /> : <Maximize2 size={15} />}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setReportDetailsOpen(false)}
+                  className="p-1.5 text-text-muted hover:text-text-primary hover:bg-[#1a233a] rounded transition-all cursor-pointer"
+                  title="Close Drawer"
+                >
+                  <X size={16} />
+                </button>
+              </div>
             </div>
 
-            {/* Excel Sheet Simulator container SLB Style */}
-            <div className="flex-1 overflow-y-auto p-6 bg-[#0b0f19] text-[#f1f5f9] select-text">
-              
-              {/* simulated Excel Border wrapper */}
-              <div className="border border-[#202742] rounded-xl overflow-hidden bg-[#101422]/60 shadow-xl max-w-[620px] mx-auto">
+            {/* Main Drawer Scrollable Content: 2 Cards matching SLB Reference Layout */}
+            <div className="flex-1 overflow-y-auto p-6">
+              <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
                 
-                {/* Excel Row 1: Solid severity header banner SLB Category Colors + CBM Case Status */}
-                {(() => {
-                  const reportCondition = selectedReport.technology === 'Lube Oil Analysis'
-                    ? (selectedReport.lubeOilStatus || selectedReport.overallCondition)
-                    : selectedReport.technology === 'Thermography Analysis'
-                    ? (selectedReport.thermographyStatus || selectedReport.overallCondition)
-                    : (selectedReport.vibrationStatus || selectedReport.overallCondition);
-                  const cbmTierBadge = getTierBadgeStyle(reportCondition);
+                {/* LEFT CARD: Details (~42% on desktop) */}
+                <div className="lg:col-span-5 bg-[#0c101d] border border-[#202742] rounded-xl p-5 shadow-lg">
+                  {/* Card Header: Details & Info icon */}
+                  <div className="flex items-center justify-between pb-3 border-b border-[#202742]/80 mb-1 select-none">
+                    <h4 className="text-sm font-semibold text-text-primary tracking-wide">
+                      Details
+                    </h4>
+                    <Info size={15} className="text-text-muted hover:text-accent-blue transition-colors cursor-pointer" title="Report Equipment Details" />
+                  </div>
 
-                  return (
-                    <div className="flex items-center justify-between p-3.5 border-b border-[#202742] bg-[#121626]">
-                      <div>
-                        <span className={`inline-block px-2.5 py-1 rounded text-xs font-bold tracking-wide ${cbmTierBadge.bgClass} ${cbmTierBadge.textClass}`}>
-                          {cbmTierBadge.text}
-                        </span>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <span className="text-[10px] uppercase font-bold text-text-muted">CBM Case Status:</span>
+                  {/* Rows List */}
+                  <div className="space-y-0 text-xs">
+                    {/* Status */}
+                    <div className="grid grid-cols-12 py-2.5 border-b border-[#182035]/80 items-center">
+                      <span className="col-span-5 text-[#8a94a6] font-medium">Status:</span>
+                      <div className="col-span-7 flex items-center justify-end gap-2">
+                        {(() => {
+                          const reportCondition = selectedReport.technology === 'Lube Oil Analysis'
+                            ? (selectedReport.lubeOilStatus || selectedReport.overallCondition)
+                            : selectedReport.technology === 'Thermography Analysis'
+                            ? (selectedReport.thermographyStatus || selectedReport.overallCondition)
+                            : (selectedReport.vibrationStatus || selectedReport.overallCondition);
+                          const cbmTierBadge = getTierBadgeStyle(reportCondition);
+                          return (
+                            <span className={`inline-block px-2.5 py-0.5 rounded text-[11px] font-bold tracking-wide ${cbmTierBadge.bgClass} ${cbmTierBadge.textClass}`}>
+                              {cbmTierBadge.text}
+                            </span>
+                          );
+                        })()}
                         {getCaseStatusBadge(selectedReport.cbmCaseStatus || (selectedReport.overallCondition?.includes('Good') ? 'Closed' : 'Awaiting Action'))}
                       </div>
                     </div>
-                  );
-                })()}
 
-                {/* Row 1: FPSO & System */}
-                <div className="grid grid-cols-2 text-[10px] border-b border-[#202742] uppercase font-semibold">
-                  <div className="border-r border-[#202742] flex">
-                    <span className="bg-[#121626] text-text-muted p-2.5 w-[110px] flex-shrink-0 border-r border-[#202742] flex items-center">FPSO</span>
-                    <span className="p-2.5 text-text-primary flex-1 flex items-center">
-                      {equipments.find(e => e.tag === selectedReport.equipmentTag)?.fpso || selectedReport.facility}
-                    </span>
-                  </div>
-                  <div className="flex">
-                    <span className="bg-[#121626] text-text-muted p-2.5 w-[110px] flex-shrink-0 border-r border-[#202742] flex items-center">System</span>
-                    <span className="p-2.5 text-text-primary flex-1 flex items-center">
-                      {equipments.find(e => e.tag === selectedReport.equipmentTag)?.system || selectedReport.system}
-                    </span>
-                  </div>
-                </div>
-
-                {/* Row 2: Equipment Tag & Name */}
-                <div className="grid grid-cols-2 text-[10px] border-b border-[#202742] uppercase font-semibold">
-                  <div className="border-r border-[#202742] flex">
-                    <span className="bg-[#121626] text-text-muted p-2.5 w-[110px] flex-shrink-0 border-r border-[#202742] flex items-center">Equipment Tag</span>
-                    <span className="p-2.5 text-[#fbbf24] flex-1 flex items-center font-bold">
-                      {selectedReport.equipmentTag}
-                    </span>
-                  </div>
-                  <div className="flex">
-                    <span className="bg-[#121626] text-text-muted p-2.5 w-[110px] flex-shrink-0 border-r border-[#202742] flex items-center">Name</span>
-                    <span className="p-2.5 text-text-primary flex-1 flex items-center">
-                      {equipments.find(e => e.tag === selectedReport.equipmentTag)?.name || selectedReport.component}
-                    </span>
-                  </div>
-                </div>
-
-                {/* Row 3: Equipment Class & Criticality */}
-                <div className="grid grid-cols-2 text-[10px] border-b border-[#202742] uppercase font-semibold">
-                  <div className="border-r border-[#202742] flex">
-                    <span className="bg-[#121626] text-text-muted p-2.5 w-[110px] flex-shrink-0 border-r border-[#202742] flex items-center">Equipment Class</span>
-                    <span className="p-2.5 text-text-primary flex-1 flex items-center">
-                      {formatEquipmentClass(equipments.find(e => e.tag === selectedReport.equipmentTag)?.class || selectedReport.equipmentClass || 'N/A')}
-                    </span>
-                  </div>
-                  <div className="flex">
-                    <span className="bg-[#121626] text-text-muted p-2.5 w-[110px] flex-shrink-0 border-r border-[#202742] flex items-center">Criticality</span>
-                    <span className="p-2.5 text-text-primary flex-1 flex items-center">
-                      {equipments.find(e => e.tag === selectedReport.equipmentTag)?.criticality || selectedReport.cof || 'N/A'}
-                    </span>
-                  </div>
-                </div>
-
-                {/* Row 4: Object Type & Last Update */}
-                <div className="grid grid-cols-2 text-[10px] border-b border-[#202742] uppercase font-semibold">
-                  <div className="border-r border-[#202742] flex">
-                    <span className="bg-[#121626] text-text-muted p-2.5 w-[110px] flex-shrink-0 border-r border-[#202742] flex items-center">Object Type</span>
-                    <span className="p-2.5 text-text-primary flex-1 flex items-center">
-                      {equipments.find(e => e.tag === selectedReport.equipmentTag)?.objectType || 'N/A'}
-                    </span>
-                  </div>
-                  <div className="flex">
-                    <span className="bg-[#121626] text-text-muted p-2.5 w-[110px] flex-shrink-0 border-r border-[#202742] flex items-center">Last Update</span>
-                    <span className="p-2.5 text-text-primary flex-1 flex items-center">
-                      {equipments.find(e => e.tag === selectedReport.equipmentTag)?.lastUpdate || selectedReport.raisedDate}
-                    </span>
-                  </div>
-                </div>
-
-                {/* Condition Assessment / Observations */}
-                <div className="border-b border-[#202742] text-[10px]">
-                  <div className="bg-[#121626] text-text-muted p-2.5 font-bold uppercase tracking-wider border-b border-[#202742]">
-                    Condition Assessment (Observations)
-                  </div>
-                  <div className="p-3.5 text-text-primary leading-relaxed text-[11px] bg-[#101422]/40">
-                    {selectedReport.conditionAssessment}
-                  </div>
-                </div>
-
-                {/* Supporting Images / Analytical Evidence */}
-                <div className="border-b border-[#202742] text-[10px] bg-[#101422]/60 p-4">
-                  <div className="flex items-center justify-between mb-2.5">
-                    <span className="text-text-muted font-bold uppercase tracking-wider text-[9px]">Supporting Images / Analytical Evidence</span>
-                    <label className="bg-[#121626] border border-[#333e68] hover:border-accent-blue text-text-primary px-3 py-1 rounded-full text-[9px] font-semibold cursor-pointer transition-colors flex items-center gap-1 select-none">
-                      <PlusCircle size={10} className="text-[#60a5fa]" />
-                      {selectedReport.imageUrl ? 'Change Image' : 'Attach Image'}
-                      <input
-                        type="file"
-                        accept="image/*"
-                        className="hidden"
-                        onChange={(e) => {
-                          const file = e.target.files?.[0];
-                          if (file) handleReportImageUpload(selectedReport.id, file);
-                        }}
-                      />
-                    </label>
-                  </div>
-                  {selectedReport.imageUrl ? (
-                    <div className="border border-[#202742] rounded-lg overflow-hidden bg-[#0b0f19] p-2 flex flex-col items-center justify-center relative group">
-                      <img 
-                        src={selectedReport.imageUrl} 
-                        alt="Supporting Analytical Evidence" 
-                        className="max-h-[280px] w-auto object-contain rounded border border-[#202742]"
-                      />
+                    {/* FPSO */}
+                    <div className="grid grid-cols-12 py-2.5 border-b border-[#182035]/80 items-start">
+                      <span className="col-span-5 text-[#8a94a6] font-medium">FPSO:</span>
+                      <span className="col-span-7 font-semibold text-text-primary text-right">
+                        {equipments.find(e => e.tag === selectedReport.equipmentTag)?.fpso ? equipments.find(e => e.tag === selectedReport.equipmentTag)?.fpso.replace(/^FPSO\s+/i, '').trim() : (selectedReport.facility?.replace(/^FPSO\s+/i, '').trim() || '-')}
+                      </span>
                     </div>
-                  ) : (
-                    <label className="border border-dashed border-[#333e68] hover:border-accent-blue rounded-lg p-6 bg-[#0b0f19] flex flex-col items-center justify-center text-text-muted italic text-[9px] gap-2 cursor-pointer transition-colors select-none">
-                      <FileText size={24} className="text-[#60a5fa]/50" />
-                      <span className="text-text-primary font-medium font-sans">Click to attach an evidence image / screenshot</span>
-                      <span className="text-text-muted text-[8px]">Supports PNG, JPG, WebP</span>
-                      <input
-                        type="file"
-                        accept="image/*"
-                        className="hidden"
-                        onChange={(e) => {
-                          const file = e.target.files?.[0];
-                          if (file) handleReportImageUpload(selectedReport.id, file);
-                        }}
-                      />
-                    </label>
-                  )}
+
+                    {/* System */}
+                    <div className="grid grid-cols-12 py-2.5 border-b border-[#182035]/80 items-start">
+                      <span className="col-span-5 text-[#8a94a6] font-medium">System:</span>
+                      <span className="col-span-7 text-text-primary text-right">
+                        {equipments.find(e => e.tag === selectedReport.equipmentTag)?.system || selectedReport.system || 'Oil & Process'}
+                      </span>
+                    </div>
+
+                    {/* Equipment Tag */}
+                    <div className="grid grid-cols-12 py-2.5 border-b border-[#182035]/80 items-start">
+                      <span className="col-span-5 text-[#8a94a6] font-medium">Equipment Tag</span>
+                      <span className="col-span-7 font-bold text-[#fbbf24] font-mono break-all text-right">
+                        {selectedReport.equipmentTag}
+                      </span>
+                    </div>
+
+                    {/* Name */}
+                    <div className="grid grid-cols-12 py-2.5 border-b border-[#182035]/80 items-start">
+                      <span className="col-span-5 text-[#8a94a6] font-medium">Name</span>
+                      <span className="col-span-7 text-text-primary text-right">
+                        {equipments.find(e => e.tag === selectedReport.equipmentTag)?.name || selectedReport.component || selectedReport.machineName}
+                      </span>
+                    </div>
+
+                    {/* Equipment Class */}
+                    <div className="grid grid-cols-12 py-2.5 border-b border-[#182035]/80 items-start">
+                      <span className="col-span-5 text-[#8a94a6] font-medium">Equipment Class</span>
+                      <span className="col-span-7 text-text-primary text-right">
+                        {formatEquipmentClass(equipments.find(e => e.tag === selectedReport.equipmentTag)?.class || selectedReport.equipmentClass || 'PUCE')}
+                      </span>
+                    </div>
+
+                    {/* Criticality */}
+                    <div className="grid grid-cols-12 py-2.5 border-b border-[#182035]/80 items-start">
+                      <span className="col-span-5 text-[#8a94a6] font-medium">Criticality</span>
+                      <span className="col-span-7 text-text-primary text-right">
+                        {equipments.find(e => e.tag === selectedReport.equipmentTag)?.criticality || selectedReport.cof || 'Medium'}
+                      </span>
+                    </div>
+
+                    {/* Object Type */}
+                    <div className="grid grid-cols-12 py-2.5 border-b border-[#182035]/80 items-start">
+                      <span className="col-span-5 text-[#8a94a6] font-medium">Object Type</span>
+                      <span className="col-span-7 text-text-primary text-right">
+                        {equipments.find(e => e.tag === selectedReport.equipmentTag)?.objectType || 'NCE'}
+                      </span>
+                    </div>
+
+                    {/* Last update */}
+                    <div className="grid grid-cols-12 py-2.5 border-b border-[#182035]/80 items-start">
+                      <span className="col-span-5 text-[#8a94a6] font-medium">Last update</span>
+                      <span className="col-span-7 text-text-primary font-mono text-[11px] text-right">
+                        {equipments.find(e => e.tag === selectedReport.equipmentTag)?.lastUpdate || selectedReport.raisedDate || selectedReport.createdAt?.substring(0, 10)}
+                      </span>
+                    </div>
+
+                    {/* Condition Assessment (Observations) */}
+                    <div className="grid grid-cols-12 py-2.5 items-start">
+                      <span className="col-span-5 text-[#8a94a6] font-medium">Condition Assesment (Observations)</span>
+                      <span className="col-span-7 text-text-primary leading-relaxed text-[11px] text-right">
+                        {selectedReport.conditionAssessment || `Surveillance assessment for ${selectedReport.equipmentTag} evaluated as ${selectedReport.overallCondition || 'Tier 1'} based on Vibration Analysis parameters.`}
+                      </span>
+                    </div>
+                  </div>
                 </div>
 
-                {/* Technical Metadata info section */}
-                <div className="grid grid-cols-2 text-[10px] border-b border-[#202742] uppercase font-semibold">
-                  <div className="border-r border-[#202742] flex">
-                    <span className="bg-[#121626] text-text-muted p-2.5 w-[100px] flex-shrink-0 border-r border-[#202742] flex items-center">Component</span>
-                    <span className="p-2.5 text-text-primary flex-1 flex items-center">{selectedReport.component || 'N/A'}</span>
-                  </div>
-                  <div className="flex">
-                    <span className="bg-[#121626] text-text-muted p-2.5 w-[100px] flex-shrink-0 border-r border-[#202742] flex items-center">Raised By</span>
-                    <span className="p-2.5 text-[#38bdf8] flex-1 flex items-center flex-row gap-1">
-                      <User size={10} />
-                      {selectedReport.raisedBy}
-                    </span>
-                  </div>
-                </div>
-
-                {/* Date metadata */}
-                <div className="grid grid-cols-2 text-[10px] border-b border-[#202742] uppercase font-semibold">
-                  <div className="border-r border-[#202742] flex">
-                    <span className="bg-[#121626] text-text-muted p-2.5 w-[100px] flex-shrink-0 border-r border-[#202742] flex items-center">Raised Date</span>
-                    <span className="p-2.5 text-text-primary flex-1 flex items-center flex-row gap-1">
-                      <Calendar size={10} />
-                      {selectedReport.raisedDate}
-                    </span>
-                  </div>
-                  <div className="flex">
-                    <span className="bg-[#121626] text-text-muted p-2.5 w-[100px] flex-shrink-0 border-r border-[#202742] flex items-center">Target Date</span>
-                    <span className="p-2.5 text-text-primary flex-1 flex items-center flex-row gap-1">
-                      <Calendar size={10} />
-                      {selectedReport.targetDate || 'N/A'}
-                    </span>
-                  </div>
-                </div>
-
-                {/* Description info */}
-                <div className="grid grid-cols-2 text-[10px] border-b border-[#202742] uppercase font-semibold">
-                  <div className="border-r border-[#202742] flex">
-                    <span className="bg-[#121626] text-text-muted p-2.5 w-[100px] flex-shrink-0 border-r border-[#202742] flex items-center">Description</span>
-                    <span className="p-2.5 text-text-primary flex-1 flex items-center">{selectedReport.shortDescription}</span>
-                  </div>
-                  <div className="flex items-center">
-                    <span className="bg-[#121626] text-[#f87171] p-2.5 w-[100px] flex-shrink-0 border-r border-[#202742] flex items-center">WO Number</span>
-                    <div className="p-2 flex-1 flex items-center gap-2">
-                      <div className="relative flex-1">
-                        <select
-                          value={selectedReport.woNumber || 'N/A'}
-                          onChange={e => handleReportWoChange(selectedReport.id, e.target.value)}
-                          className="w-full bg-[#0c101d] border border-[#232a42] rounded px-2.5 py-1 text-xs text-[#f1f5f9] focus:border-[#3b82f6] outline-none cursor-pointer appearance-none pr-7 font-semibold"
-                        >
-                          <option value="N/A" className="bg-[#0c101d] text-[#94a3b8]">N/A (No Work Order)</option>
-                          {availableWosForReport.map(wo => (
-                            <option key={wo.id} value={wo.reference} className="bg-[#0c101d] text-[#f1f5f9]">
-                              {wo.reference} - {wo.description.substring(0, 30)}... ({wo.status})
-                            </option>
-                          ))}
-                        </select>
-                        <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-[#8a94a6]">
-                          <ChevronDown size={12} />
-                        </div>
-                      </div>
-                      {selectedReport.woNumber && selectedReport.woNumber !== 'N/A' && (
+                {/* RIGHT CARD: Supporting Images / Analytical Evidence (~58% on desktop) */}
+                <div className="lg:col-span-7 bg-[#0c101d] border border-[#202742] rounded-xl p-5 shadow-lg space-y-5">
+                  {/* Card Header: Title & Action Buttons */}
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between pb-3 border-b border-[#202742]/80 gap-3 select-none">
+                    <h4 className="text-sm font-semibold text-text-primary tracking-wide">
+                      Supporting Images / Analytical Evidence
+                    </h4>
+                    <div className="flex items-center gap-2 shrink-0">
+                      {/* Remove image button (only when image exists) */}
+                      {selectedReport.imageUrl && (
                         <button
                           type="button"
-                          onClick={() => navigateToWorkOrder(selectedReport.woNumber!)}
-                          className="text-[10px] text-accent-blue hover:underline font-semibold flex items-center gap-0.5 shrink-0 cursor-pointer"
-                          title="Open Work Order in Work Orders tab"
+                          onClick={() => handleReportImageRemove(selectedReport.id)}
+                          className="flex items-center gap-1.5 px-3 py-1 rounded-full border border-[#f87171]/40 text-[#f87171] hover:bg-[#f87171]/10 text-xs font-medium transition-colors cursor-pointer"
+                          title="Remove attached image"
                         >
-                          View WO
+                          <Trash2 size={12} />
+                          Remove
+                        </button>
+                      )}
+
+                      {/* Change Image / Attach Image button */}
+                      <label className="flex items-center gap-1.5 px-3 py-1 rounded-full border border-[#202742] bg-[#121626] hover:border-accent-blue text-xs text-text-primary font-medium transition-colors cursor-pointer">
+                        <RefreshCw size={12} className="text-accent-blue" />
+                        {selectedReport.imageUrl ? 'Change Image' : 'Change Image'}
+                        <input
+                          type="file"
+                          accept="image/*"
+                          className="hidden"
+                          onChange={(e) => {
+                            const file = e.target.files?.[0];
+                            if (file) handleReportImageUpload(selectedReport.id, file);
+                          }}
+                        />
+                      </label>
+
+                      {/* Download Image button */}
+                      <button
+                        type="button"
+                        disabled={!selectedReport.imageUrl}
+                        onClick={() => {
+                          if (!selectedReport.imageUrl) return;
+                          const a = document.createElement('a');
+                          a.href = selectedReport.imageUrl;
+                          a.download = `analytical_evidence_${selectedReport.equipmentTag || 'report'}.png`;
+                          a.click();
+                        }}
+                        className={`flex items-center gap-1.5 px-3 py-1 rounded-full border border-[#202742] bg-[#121626] text-xs font-medium transition-colors ${
+                          selectedReport.imageUrl
+                            ? 'hover:border-accent-blue text-text-primary cursor-pointer'
+                            : 'opacity-40 text-text-muted cursor-not-allowed'
+                        }`}
+                        title={selectedReport.imageUrl ? 'Download Image' : 'No image to download'}
+                      >
+                        <Download size={12} className={selectedReport.imageUrl ? 'text-accent-blue' : 'text-text-muted'} />
+                        Download Image
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* ONLY render image container when imageUrl exists; otherwise DO NOT USE ANY SPACE */}
+                  {selectedReport.imageUrl && (
+                    <div className="p-3 bg-white rounded-lg border border-[#202742] flex items-center justify-center">
+                      <img
+                        src={selectedReport.imageUrl}
+                        alt="Analytical Evidence"
+                        className="max-h-[300px] w-auto object-contain mx-auto"
+                      />
+                    </div>
+                  )}
+
+                  {/* Metadata Rows List */}
+                  <div className="space-y-0 text-xs">
+                    {/* Component */}
+                    <div className="grid grid-cols-12 py-2.5 border-b border-[#182035]/80 items-start">
+                      <span className="col-span-5 text-[#8a94a6] font-medium">Component</span>
+                      <span className="col-span-7 font-normal text-text-primary">{selectedReport.component || 'Main assembly'}</span>
+                    </div>
+
+                    {/* Raised by */}
+                    <div className="grid grid-cols-12 py-2.5 border-b border-[#182035]/80 items-start">
+                      <span className="col-span-5 text-[#8a94a6] font-medium">Raised by</span>
+                      <span className="col-span-7 font-normal text-text-primary">{selectedReport.raisedBy || 'Fernanda Lima'}</span>
+                    </div>
+
+                    {/* Raised Date */}
+                    <div className="grid grid-cols-12 py-2.5 border-b border-[#182035]/80 items-start">
+                      <span className="col-span-5 text-[#8a94a6] font-medium">Raised Date</span>
+                      <span className="col-span-7 font-normal text-text-primary font-mono text-[11px]">{selectedReport.raisedDate || selectedReport.createdAt?.substring(0, 10)}</span>
+                    </div>
+
+                    {/* Target Date */}
+                    <div className="grid grid-cols-12 py-2.5 border-b border-[#182035]/80 items-start">
+                      <span className="col-span-5 text-[#8a94a6] font-medium">Target Date</span>
+                      <span className="col-span-7 font-normal text-text-primary font-mono text-[11px]">{selectedReport.targetDate || selectedReport.raisedDate || 'N/A'}</span>
+                    </div>
+
+                    {/* Short Description */}
+                    <div className="grid grid-cols-12 py-2.5 border-b border-[#182035]/80 items-start">
+                      <span className="col-span-5 text-[#8a94a6] font-medium">Short Description</span>
+                      <span className="col-span-7 font-normal text-text-primary">{selectedReport.shortDescription || 'Cavitation'}</span>
+                    </div>
+
+                    {/* W.O. Number */}
+                    <div className="grid grid-cols-12 py-2.5 border-b border-[#182035]/80 items-center">
+                      <span className="col-span-5 text-[#8a94a6] font-medium">W.O. Number</span>
+                      <div className="col-span-7 flex items-center gap-2">
+                        <span className="font-semibold text-accent-blue font-mono">
+                          {selectedReport.woNumber || 'N/A'}
+                        </span>
+                        {selectedReport.woNumber && selectedReport.woNumber !== 'N/A' && (
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setReportDetailsOpen(false);
+                              navigateToWorkOrder(selectedReport.woNumber!);
+                            }}
+                            className="text-[10px] text-accent-blue hover:underline font-semibold cursor-pointer"
+                          >
+                            (View WO)
+                          </button>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Failure Mode Description */}
+                    <div className="grid grid-cols-12 py-2.5 border-b border-[#182035]/80 items-start">
+                      <span className="col-span-5 text-[#8a94a6] font-medium">Failure Mode Description</span>
+                      <span className="col-span-7 font-medium text-[#f59e0b]">{selectedReport.failureModeDescription || 'NOI - Abnormal Noise'}</span>
+                    </div>
+
+                    {/* Failure Mechanism Subdivision */}
+                    <div className="grid grid-cols-12 py-2.5 border-b border-[#182035]/80 items-start">
+                      <span className="col-span-5 text-[#8a94a6] font-medium">Failure Mechanism Subdivision</span>
+                      <span className="col-span-7 font-normal text-text-primary">{selectedReport.failureMechanismSubdivision || 'Mechanical Failure - Cavitation'}</span>
+                    </div>
+
+                    {/* Long Description (Recommendations) */}
+                    <div className="grid grid-cols-12 py-2.5 items-start">
+                      <span className="col-span-5 text-[#8a94a6] font-medium">Long Description (Recommendations)</span>
+                      <span className="col-span-7 font-normal text-text-primary leading-relaxed whitespace-pre-line text-[11px]">
+                        {selectedReport.longDescription || 'Inspect suction strainer and upstream isolation valves for blockage or throttling. Verify net positive suction head (NPSHa) against pump design curve (NPSHr). Check suction pressure transmitters and discharge recirculation line operation. Inspect pump impeller vanes and wear rings for cavitation pitting.'}
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* Recommendation Effectiveness Classification (ISO 6.4.6.1) & Action Buttons */}
+                  <div className="border-t border-[#202742] pt-4 space-y-4">
+                    {(() => {
+                      const isGood = selectedReport.overallCondition?.includes('Good') || selectedReport.overallCondition?.includes('Tier 3') || selectedReport.overallCondition?.includes('Tier 4');
+                      const currentCaseStatus = selectedReport.cbmCaseStatus || (isGood ? 'Closed' : 'Awaiting Action');
+                      const isAwaitingFeedback = currentCaseStatus === 'Awaiting Feedback';
+                      const isClosed = currentCaseStatus === 'Closed';
+                      const isCancelled = currentCaseStatus === 'Cancelled';
+                      const isAwaitingAction = currentCaseStatus === 'Awaiting Action';
+
+                      // Only enabled when Awaiting Feedback or Closed (and not Good Tier 3/4 or Cancelled)
+                      const isSelectEnabled = !isGood && !isCancelled && (isAwaitingFeedback || isClosed);
+
+                      let helperMsg = '';
+                      if (isGood) {
+                        helperMsg = 'N/A: Not applicable (routine baseline surveillance with no corrective action required).';
+                      } else if (isCancelled) {
+                        helperMsg = 'Case Cancelled: Work Order was cancelled, no effectiveness evaluation required.';
+                      } else if (isAwaitingAction) {
+                        helperMsg = 'Awaiting Action: Work Order action is currently pending or in progress. Effectiveness selection will be enabled once the Work Order is Completed.';
+                      } else if (isAwaitingFeedback) {
+                        helperMsg = 'Awaiting Feedback: Work Order has been Completed! Please assign the Recommendation Effectiveness below to finalize and Close this CBM case.';
+                      } else {
+                        helperMsg = EFFECTIVENESS_DESCRIPTIONS[selectedReport.effectiveness || 'Not Yet Assessable'] || EFFECTIVENESS_DESCRIPTIONS['Not Yet Assessable'];
+                      }
+
+                      const currentVal = isGood 
+                        ? 'N/A' 
+                        : (selectedReport.effectiveness || 'Pending Assessment');
+
+                      return (
+                        <div className="bg-[#101422]/60 border border-[#202742] rounded-lg p-3.5 space-y-2.5">
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-1.5 text-xs font-bold text-text-primary uppercase tracking-wider">
+                              <CheckCircle2 size={13} className="text-[#10b981]" />
+                              Recommendation Effectiveness Classification (ISO 6.4.6.1)
+                            </div>
+                            {isSavingEffectiveness && (
+                              <span className="text-[9px] text-[#60a5fa] font-semibold animate-pulse lowercase">
+                                saving...
+                              </span>
+                            )}
+                          </div>
+
+                          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                            <label className="text-[#8a94a6] font-medium text-xs flex items-center gap-1.5">
+                              Effectiveness Status:
+                              {!isSelectEnabled && (
+                                <span className="text-[10px] text-text-muted lowercase">
+                                  (locked)
+                                </span>
+                              )}
+                            </label>
+                            <div className="relative min-w-[220px]">
+                              <select
+                                disabled={!isSelectEnabled}
+                                value={currentVal}
+                                onChange={(e) => handleEffectivenessChange(e.target.value)}
+                                className={`w-full bg-[#0c101d] border rounded px-3 py-1.5 text-xs appearance-none pr-8 transition-colors font-semibold ${
+                                  isSelectEnabled
+                                    ? 'border-[#3b82f6] text-[#f1f5f9] cursor-pointer hover:border-[#60a5fa]'
+                                    : 'border-[#232a42] text-[#64748b] cursor-not-allowed opacity-80'
+                                }`}
+                              >
+                                {isGood ? (
+                                  <option value="N/A" className="bg-[#0c101d] text-[#f1f5f9]">N/A</option>
+                                ) : (
+                                  <>
+                                    <option value="Pending Assessment" disabled className="bg-[#0c101d] text-[#94a3b8]">
+                                      Pending Assessment (Select to Close)
+                                    </option>
+                                    <option value="Effective" className="bg-[#0c101d] text-[#f1f5f9]">Effective</option>
+                                    <option value="Partially Effective" className="bg-[#0c101d] text-[#f1f5f9]">Partially Effective</option>
+                                    <option value="Ineffective" className="bg-[#0c101d] text-[#f1f5f9]">Ineffective</option>
+                                    <option value="Not Yet Assessable" className="bg-[#0c101d] text-[#f1f5f9]">Not Yet Assessable</option>
+                                  </>
+                                )}
+                              </select>
+                              <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2.5 text-[#8a94a6]">
+                                <ChevronDown size={14} />
+                              </div>
+                            </div>
+                          </div>
+
+                          <div className={`text-[11px] italic border rounded p-2.5 leading-relaxed ${
+                            isAwaitingFeedback
+                              ? 'bg-[#0284c7]/10 border-[#0284c7]/30 text-[#38bdf8]'
+                              : 'bg-[#0c101d]/80 border-[#1e2538] text-[#94a3b8]'
+                          }`}>
+                            {helperMsg}
+                          </div>
+                        </div>
+                      );
+                    })()}
+
+                    {/* Bottom Action Buttons */}
+                    <div className="flex justify-end gap-3 select-none">
+                      {selectedReport.woNumber && selectedReport.woNumber !== 'N/A' ? (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setReportDetailsOpen(false);
+                            navigateToWorkOrder(selectedReport.woNumber!);
+                          }}
+                          className="flex items-center gap-2 bg-[#60a5fa] hover:bg-[#3b82f6] text-[#090d16] font-semibold px-5 py-2 rounded-full text-xs transition-colors cursor-pointer shadow active:scale-95"
+                        >
+                          <FileText size={14} />
+                          View Work Order ({selectedReport.woNumber})
+                        </button>
+                      ) : (
+                        <button
+                          type="button"
+                          onClick={() => openWorkOrderForm(selectedReport)}
+                          className="flex items-center gap-2 bg-[#60a5fa] hover:bg-[#3b82f6] text-[#090d16] font-semibold px-5 py-2 rounded-full text-xs transition-colors cursor-pointer shadow active:scale-95"
+                        >
+                          <PlusCircle size={14} />
+                          Generate Work Order (Fault Report)
                         </button>
                       )}
                     </div>
                   </div>
                 </div>
 
-                {/* Failure Mode Information Section */}
-                <div className="border-b border-[#202742]">
-                  <div className="bg-[#121626] text-text-muted p-2.5 font-bold uppercase tracking-wider text-[10px] border-b border-[#202742] flex items-center gap-1.5">
-                    <AlertCircle size={12} className="text-status-warn" />
-                    Failure Mode Information
-                  </div>
-                  <div className="grid grid-cols-1 md:grid-cols-2 text-[10px] uppercase font-semibold">
-                    <div className="border-r border-[#202742] flex">
-                      <span className="bg-[#121626] text-text-muted p-2.5 w-[140px] sm:w-[160px] flex-shrink-0 border-r border-[#202742] flex items-center">Failure Mode Description</span>
-                      <span className="p-2.5 text-text-primary flex-1 flex items-center font-bold text-[#f59e0b]">{selectedReport.failureModeDescription || 'N/A'}</span>
-                    </div>
-                    <div className="flex">
-                      <span className="bg-[#121626] text-text-muted p-2.5 w-[145px] sm:w-[170px] flex-shrink-0 border-r border-[#202742] flex items-center">Failure Mechanism Subdivision</span>
-                      <span className="p-2.5 text-text-primary flex-1 flex items-center">{selectedReport.failureMechanismSubdivision || 'N/A'}</span>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Recommendations (Long Description) */}
-                <div className="text-[10px]">
-                  <div className="bg-[#121626] text-text-muted p-2.5 font-bold uppercase tracking-wider border-b border-[#202742] flex items-center gap-1.5">
-                    <Wrench size={12} className="text-accent-blue" />
-                    Long Description (Recommendations)
-                  </div>
-                  <div className="p-3.5 text-text-primary leading-relaxed text-[11px] whitespace-pre-line bg-[#101422]/40">
-                    {selectedReport.longDescription}
-                  </div>
-                </div>
-
-                {/* Recommendation Effectiveness Classification (ISO 6.4.6.1) */}
-                {(() => {
-                  const isGood = selectedReport.overallCondition?.includes('Good') || selectedReport.overallCondition?.includes('Tier 3') || selectedReport.overallCondition?.includes('Tier 4');
-                  const currentCaseStatus = selectedReport.cbmCaseStatus || (isGood ? 'Closed' : 'Awaiting Action');
-                  const isAwaitingFeedback = currentCaseStatus === 'Awaiting Feedback';
-                  const isClosed = currentCaseStatus === 'Closed';
-                  const isCancelled = currentCaseStatus === 'Cancelled';
-                  const isAwaitingAction = currentCaseStatus === 'Awaiting Action';
-
-                  // Only enabled when Awaiting Feedback or Closed (and not Good Tier 3/4 or Cancelled)
-                  const isSelectEnabled = !isGood && !isCancelled && (isAwaitingFeedback || isClosed);
-
-                  let helperMsg = '';
-                  if (isGood) {
-                    helperMsg = 'N/A: Not applicable (routine baseline surveillance with no corrective action required).';
-                  } else if (isCancelled) {
-                    helperMsg = 'Case Cancelled: Work Order was cancelled, no effectiveness evaluation required.';
-                  } else if (isAwaitingAction) {
-                    helperMsg = 'Awaiting Action: Work Order action is currently pending or in progress. Effectiveness selection will be enabled once the Work Order is Completed.';
-                  } else if (isAwaitingFeedback) {
-                    helperMsg = 'Awaiting Feedback: Work Order has been Completed! Please assign the Recommendation Effectiveness below to finalize and Close this CBM case.';
-                  } else {
-                    helperMsg = EFFECTIVENESS_DESCRIPTIONS[selectedReport.effectiveness || 'Not Yet Assessable'] || EFFECTIVENESS_DESCRIPTIONS['Not Yet Assessable'];
-                  }
-
-                  const currentVal = isGood 
-                    ? 'N/A' 
-                    : (selectedReport.effectiveness || 'Pending Assessment');
-
-                  return (
-                    <div className="border-t border-[#202742] text-[10px]">
-                      <div className="bg-[#121626] text-text-muted p-2.5 font-bold uppercase tracking-wider border-b border-[#202742] flex items-center justify-between">
-                        <div className="flex items-center gap-1.5">
-                          <CheckCircle2 size={12} className="text-[#10b981]" />
-                          Recommendation Effectiveness Classification (ISO 6.4.6.1)
-                        </div>
-                        {isSavingEffectiveness && (
-                          <span className="text-[9px] text-[#60a5fa] font-semibold animate-pulse lowercase">
-                            saving...
-                          </span>
-                        )}
-                      </div>
-                      <div className="p-3.5 bg-[#101422]/60 flex flex-col gap-2.5">
-                        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-                          <label className="text-[#8a94a6] font-bold text-[10px] uppercase tracking-wider flex items-center gap-1.5">
-                            Effectiveness Status:
-                            {!isSelectEnabled && (
-                              <span className="text-[9px] font-normal text-text-muted lowercase">
-                                (locked)
-                              </span>
-                            )}
-                          </label>
-                          <div className="relative min-w-[230px]">
-                            <select
-                              disabled={!isSelectEnabled}
-                              value={currentVal}
-                              onChange={(e) => handleEffectivenessChange(e.target.value)}
-                              className={`w-full bg-[#0c101d] border rounded-md px-3 py-1.5 text-xs appearance-none pr-8 transition-colors font-semibold ${
-                                isSelectEnabled
-                                  ? 'border-[#3b82f6] text-[#f1f5f9] cursor-pointer hover:border-[#60a5fa]'
-                                  : 'border-[#232a42] text-[#64748b] cursor-not-allowed opacity-80'
-                              }`}
-                            >
-                              {isGood ? (
-                                <option value="N/A" className="bg-[#0c101d] text-[#f1f5f9]">N/A</option>
-                              ) : (
-                                <>
-                                  <option value="Pending Assessment" disabled className="bg-[#0c101d] text-[#94a3b8]">
-                                    Pending Assessment (Select to Close)
-                                  </option>
-                                  <option value="Effective" className="bg-[#0c101d] text-[#f1f5f9]">Effective</option>
-                                  <option value="Partially Effective" className="bg-[#0c101d] text-[#f1f5f9]">Partially Effective</option>
-                                  <option value="Ineffective" className="bg-[#0c101d] text-[#f1f5f9]">Ineffective</option>
-                                  <option value="Not Yet Assessable" className="bg-[#0c101d] text-[#f1f5f9]">Not Yet Assessable</option>
-                                </>
-                              )}
-                            </select>
-                            <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2.5 text-[#8a94a6]">
-                              <ChevronDown size={14} />
-                            </div>
-                          </div>
-                        </div>
-
-                        {/* Explanatory description from standard / status guidance */}
-                        <div className={`text-[11px] italic border rounded p-2.5 leading-relaxed ${
-                          isAwaitingFeedback
-                            ? 'bg-[#0284c7]/10 border-[#0284c7]/30 text-[#38bdf8]'
-                            : 'bg-[#0c101d]/80 border-[#1e2538] text-[#94a3b8]'
-                        }`}>
-                          {helperMsg}
-                        </div>
-                      </div>
-                    </div>
-                  );
-                })()}
-              </div>
-
-              {/* Action Buttons SLB Style */}
-              <div className="max-w-[620px] mx-auto mt-5 flex justify-end gap-3 select-none">
-                {selectedReport.woNumber ? (
-                  <button
-                    onClick={() => navigateToWorkOrder(selectedReport.woNumber!)}
-                    className="flex items-center gap-2 bg-[#60a5fa] hover:bg-[#3b82f6] text-[#090d16] font-semibold px-5 py-2 rounded-full text-xs transition-colors cursor-pointer shadow active:scale-95"
-                  >
-                    <FileText size={14} />
-                    View Work Order ({selectedReport.woNumber})
-                  </button>
-                ) : (
-                  <button
-                    onClick={() => openWorkOrderForm(selectedReport)}
-                    className="flex items-center gap-2 bg-[#60a5fa] hover:bg-[#3b82f6] text-[#090d16] font-semibold px-5 py-2 rounded-full text-xs transition-colors cursor-pointer shadow active:scale-95"
-                  >
-                    <PlusCircle size={14} />
-                    Generate Work Order (Fault Report)
-                  </button>
-                )}
               </div>
             </div>
           </div>
