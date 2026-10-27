@@ -1024,7 +1024,9 @@ export default function MainPage() {
 
     const targetWo = newWo === 'N/A' ? null : newWo;
     const linkedWo = targetWo ? workOrders.find(w => w.reference === targetWo) : undefined;
-    const resolved = resolveCbmCaseStatus(selectedReport.overallCondition || '', linkedWo?.status, selectedReport.effectiveness);
+    // Selecting or changing a Work Order ALWAYS resets effectiveness to 'Pending Assessment',
+    // advancing to 'Awaiting Feedback' if Completed, and only going to 'Closed' upon manual user assessment.
+    const resolved = resolveCbmCaseStatus(selectedReport.overallCondition || '', linkedWo?.status, 'Pending Assessment');
 
     // Optimistic UI update
     setSelectedReport(prev => prev ? {

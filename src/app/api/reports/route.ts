@@ -245,8 +245,13 @@ export async function PUT(request: Request) {
         ? (woNumber && woNumber !== 'N/A' ? woNumber : null) 
         : currentReport.woNumber;
       
+      // If user is explicitly updating effectiveness, use that value;
+      // If only the Work Order is being changed/linked, reset effectiveness to 'Pending Assessment'
+      // so that linking a Completed WO moves the case to 'Awaiting Feedback' (never auto-closing).
       const targetEffectiveness = hasEffectivenessUpdate 
         ? effectiveness 
+        : hasWoUpdate 
+        ? 'Pending Assessment' 
         : currentReport.effectiveness;
 
       let targetWoStatus: string | null = null;
@@ -271,7 +276,7 @@ export async function PUT(request: Request) {
         updateData.woNumber = targetWoNumber;
       }
       updateData.effectiveness = caseStatusInfo.effectiveness;
-      updateData.cbmCaseStatus = cbmCaseStatus || caseStatusInfo.cbmCaseStatus;
+      updateData.cbmCaseStatus = caseStatusInfo.cbmCaseStatus;
     }
 
     if (Object.keys(updateData).length === 0) {

@@ -33,7 +33,11 @@ export function resolveCbmCaseStatus(
       'Ineffective',
       'Not Yet Assessable',
     ];
-    if (currentEffectiveness && validClosedEffectiveness.includes(currentEffectiveness)) {
+    if (
+      currentEffectiveness &&
+      currentEffectiveness !== 'Pending Assessment' &&
+      validClosedEffectiveness.includes(currentEffectiveness)
+    ) {
       return { cbmCaseStatus: 'Closed', effectiveness: currentEffectiveness };
     }
     return {
@@ -45,9 +49,6 @@ export function resolveCbmCaseStatus(
   // Without WO or with WO Opened, In Progress, Pending, Accepted, etc.
   return {
     cbmCaseStatus: 'Awaiting Action',
-    effectiveness:
-      currentEffectiveness && currentEffectiveness !== 'N/A'
-        ? currentEffectiveness
-        : 'Pending Assessment',
+    effectiveness: 'Pending Assessment',
   };
 }

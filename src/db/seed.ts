@@ -820,7 +820,7 @@ export async function seed() {
       raisedDate: newRaisedDate,
       failureMechanismSubdivision: selectedMech,
       equipmentClass: eqClassMap.get(r.equipmentTag) || 'equipmentClass_PUCE',
-      effectiveness: isGood ? 'N/A' : 'Not Yet Assessable',
+      effectiveness: isGood ? 'N/A' : 'Pending Assessment',
     };
   });
 
