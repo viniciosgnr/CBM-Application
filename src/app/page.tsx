@@ -58,6 +58,7 @@ import {
   formatEquipmentClass,
   getTierBadgeStyle,
 } from '@/utils/riskMatrix';
+import { resolveCbmCaseStatus } from '@/utils/cbmCaseStatus';
 import {
   FAILURE_MODE_OPTIONS,
   FAILURE_MECHANISM_SUBDIVISION_OPTIONS,
@@ -988,16 +989,19 @@ export default function MainPage() {
     if (!selectedReport) return;
     setIsSavingEffectiveness(true);
 
+    const linkedWo = selectedReport.woNumber ? workOrders.find(w => w.reference === selectedReport.woNumber) : undefined;
+    const resolved = resolveCbmCaseStatus(selectedReport.overallCondition || '', linkedWo?.status, newVal);
+
     // Optimistic UI update
-    const updated = { ...selectedReport, effectiveness: newVal };
+    const updated = { ...selectedReport, effectiveness: newVal, cbmCaseStatus: resolved.cbmCaseStatus };
     setSelectedReport(updated);
-    setReports(prev => prev.map(r => r.id === selectedReport.id ? { ...r, effectiveness: newVal } : r));
+    setReports(prev => prev.map(r => r.id === selectedReport.id ? { ...r, effectiveness: newVal, cbmCaseStatus: resolved.cbmCaseStatus } : r));
 
     try {
       const res = await fetch('/api/reports', {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ id: selectedReport.id, effectiveness: newVal }),
+        body: JSON.stringify({ id: selectedReport.id, effectiveness: newVal, cbmCaseStatus: resolved.cbmCaseStatus }),
       });
       if (res.ok) {
         const saved = await res.json();
@@ -1019,11 +1023,33 @@ export default function MainPage() {
     setIsSavingEffectiveness(true);
 
     const targetWo = newWo === 'N/A' ? null : newWo;
+    const linkedWo = targetWo ? workOrders.find(w => w.reference === targetWo) : undefined;
+    const resolved = resolveCbmCaseStatus(selectedReport.overallCondition || '', linkedWo?.status, selectedReport.effectiveness);
+
+    // Optimistic UI update
+    setSelectedReport(prev => prev ? {
+      ...prev,
+      woNumber: targetWo,
+      cbmCaseStatus: resolved.cbmCaseStatus,
+      effectiveness: resolved.effectiveness,
+    } : null);
+    setReports(prev => prev.map(r => r.id === reportId ? {
+      ...r,
+      woNumber: targetWo,
+      cbmCaseStatus: resolved.cbmCaseStatus,
+      effectiveness: resolved.effectiveness,
+    } : r));
+
     try {
       const res = await fetch('/api/reports', {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ id: reportId, woNumber: targetWo }),
+        body: JSON.stringify({
+          id: reportId,
+          woNumber: targetWo,
+          cbmCaseStatus: resolved.cbmCaseStatus,
+          effectiveness: resolved.effectiveness,
+        }),
       });
       if (res.ok) {
         const saved = await res.json();
@@ -1042,25 +1068,37 @@ export default function MainPage() {
   // Work orders matching currently selected equipment for report creation
   const availableWosForEquipment = useMemo(() => {
     if (!selectedEquipment) return [];
-    const eqTag = (selectedEquipment.tag || '').trim();
-    const eqFpso = (selectedEquipment.fpso || '').replace(/^FPSO\s+/i, '').trim().toUpperCase();
-    return workOrders.filter(w => {
-      const wTag = (w.tagNumber || '').trim();
-      const wFpso = (w.fpso || '').replace(/^FPSO\s+/i, '').trim().toUpperCase();
-      return wTag === eqTag && (!eqFpso || !wFpso || wFpso === eqFpso);
-    });
+    const eqTag = (selectedEquipment.tag || '').trim().toUpperCase();
+    return workOrders.filter(w => (w.tagNumber || '').trim().toUpperCase() === eqTag);
   }, [workOrders, selectedEquipment]);
 
-  // Work orders matching currently selected report for linking
+  // Work orders matching currently selected report for linking by Equipment Tag
   const availableWosForReport = useMemo(() => {
     if (!selectedReport) return [];
-    const repTag = (selectedReport.equipmentTag || selectedReport.tagNumber || '').trim();
-    const repFpso = (selectedReport.facility || '').replace(/^FPSO\s+/i, '').trim().toUpperCase();
-    return workOrders.filter(w => {
-      const wTag = (w.tagNumber || '').trim();
-      const wFpso = (w.fpso || '').replace(/^FPSO\s+/i, '').trim().toUpperCase();
-      return wTag === repTag && (!repFpso || !wFpso || wFpso === repFpso);
-    });
+    const repTag = (selectedReport.equipmentTag || selectedReport.tagNumber || '').trim().toUpperCase();
+    if (!repTag) return [];
+    const matching = workOrders.filter(w => (w.tagNumber || '').trim().toUpperCase() === repTag);
+    if (selectedReport.woNumber && selectedReport.woNumber !== 'N/A' && !matching.some(w => w.reference === selectedReport.woNumber)) {
+      const currentWo = workOrders.find(w => w.reference === selectedReport.woNumber);
+      if (currentWo) {
+        matching.push(currentWo);
+      } else {
+        matching.push({
+          id: -1,
+          reference: selectedReport.woNumber,
+          description: 'Assigned Work Order',
+          status: 'Open',
+          tagNumber: selectedReport.equipmentTag || selectedReport.tagNumber || '',
+          tagDescription: '',
+          priority: 'Medium',
+          fpso: selectedReport.facility || '',
+          monitoringTechnique: selectedReport.technology || 'CBM Analysis',
+          creationDate: '',
+          dueDate: '',
+        });
+      }
+    }
+    return matching;
   }, [workOrders, selectedReport]);
 
   function parseDate(dateStr?: string | null): Date | null {
@@ -1387,8 +1425,8 @@ export default function MainPage() {
       ? r.thermographyStatus
       : r.vibrationStatus || r.overallCondition;
 
-    const isGood = r.overallCondition?.includes('Good') || r.overallCondition?.includes('Tier 3') || r.overallCondition?.includes('Tier 4');
-    const caseStatus = r.cbmCaseStatus || (isGood ? 'Closed' : 'Awaiting Action');
+    const linkedWo = r.woNumber ? workOrders.find(w => w.reference === r.woNumber) : undefined;
+    const resolved = resolveCbmCaseStatus(r.overallCondition || '', linkedWo?.status, r.effectiveness);
 
     return {
       id: String(r.id),
@@ -1397,10 +1435,10 @@ export default function MainPage() {
       name: r.machineName || r.component || 'Compressor Performance',
       equipmentClass: r.equipmentClass || 'Centrifugal Compressor',
       analysisType: r.technology || 'Vibration Analysis',
-      effectiveness: r.effectiveness || (isGood ? 'N/A' : 'Pending Assessment'),
+      effectiveness: resolved.effectiveness,
       shortDescription: r.shortDescription || '-',
       cbmStatus: formatSurveillanceTier(techniqueStatus),
-      cbmCaseStatus: caseStatus,
+      cbmCaseStatus: resolved.cbmCaseStatus,
       failureModeDescription: r.failureModeDescription || '-',
       raisedDate: r.raisedDate,
       raisedBy: r.raisedBy,
@@ -2827,7 +2865,11 @@ export default function MainPage() {
                             </span>
                           );
                         })()}
-                        {getCaseStatusBadge(selectedReport.cbmCaseStatus || (selectedReport.overallCondition?.includes('Good') ? 'Closed' : 'Awaiting Action'))}
+                        {(() => {
+                          const linkedWo = selectedReport.woNumber ? workOrders.find(w => w.reference === selectedReport.woNumber) : undefined;
+                          const resolved = resolveCbmCaseStatus(selectedReport.overallCondition || '', linkedWo?.status, selectedReport.effectiveness);
+                          return getCaseStatusBadge(resolved.cbmCaseStatus);
+                        })()}
                       </div>
                     </div>
 
@@ -3011,10 +3053,20 @@ export default function MainPage() {
                     {/* W.O. Number */}
                     <div className="grid grid-cols-12 py-2.5 border-b border-[#182035]/80 items-center">
                       <span className="col-span-5 text-[#8a94a6] font-medium">W.O. Number</span>
-                      <div className="col-span-7 flex items-center gap-2">
-                        <span className="font-semibold text-accent-blue font-mono">
-                          {selectedReport.woNumber || 'N/A'}
-                        </span>
+                      <div className="col-span-7 flex items-center justify-end gap-2">
+                        <select
+                          value={selectedReport.woNumber || 'N/A'}
+                          onChange={(e) => handleReportWoChange(selectedReport.id, e.target.value)}
+                          className="bg-[#141a2e] border border-[#263152] text-accent-blue font-semibold rounded px-2 py-1 text-xs focus:outline-none focus:border-accent-blue transition-colors font-mono cursor-pointer max-w-[210px] truncate"
+                          title="Select Work Order assigned to this equipment"
+                        >
+                          <option value="N/A" className="bg-[#141a2e] text-text-muted">N/A (No Work Order)</option>
+                          {availableWosForReport.map(wo => (
+                            <option key={wo.id || wo.reference} value={wo.reference} className="bg-[#141a2e] text-text-primary">
+                              {wo.reference} ({wo.status})
+                            </option>
+                          ))}
+                        </select>
                         {selectedReport.woNumber && selectedReport.woNumber !== 'N/A' && (
                           <button
                             type="button"
@@ -3022,7 +3074,7 @@ export default function MainPage() {
                               setReportDetailsOpen(false);
                               navigateToWorkOrder(selectedReport.woNumber!);
                             }}
-                            className="text-[10px] text-accent-blue hover:underline font-semibold cursor-pointer"
+                            className="text-[10px] text-accent-blue hover:underline font-semibold cursor-pointer whitespace-nowrap"
                           >
                             (View WO)
                           </button>
@@ -3054,8 +3106,10 @@ export default function MainPage() {
                   {/* Recommendation Effectiveness Classification (ISO 6.4.6.1) & Action Buttons */}
                   <div className="border-t border-[#202742] pt-4 space-y-4">
                     {(() => {
+                      const linkedWo = selectedReport.woNumber ? workOrders.find(w => w.reference === selectedReport.woNumber) : undefined;
+                      const resolved = resolveCbmCaseStatus(selectedReport.overallCondition || '', linkedWo?.status, selectedReport.effectiveness);
+                      const currentCaseStatus = resolved.cbmCaseStatus;
                       const isGood = selectedReport.overallCondition?.includes('Good') || selectedReport.overallCondition?.includes('Tier 3') || selectedReport.overallCondition?.includes('Tier 4');
-                      const currentCaseStatus = selectedReport.cbmCaseStatus || (isGood ? 'Closed' : 'Awaiting Action');
                       const isAwaitingFeedback = currentCaseStatus === 'Awaiting Feedback';
                       const isClosed = currentCaseStatus === 'Closed';
                       const isCancelled = currentCaseStatus === 'Cancelled';
@@ -3069,10 +3123,12 @@ export default function MainPage() {
                         helperMsg = 'N/A: Not applicable (routine baseline surveillance with no corrective action required).';
                       } else if (isCancelled) {
                         helperMsg = 'Case Cancelled: Work Order was cancelled, no effectiveness evaluation required.';
+                      } else if (!selectedReport.woNumber || selectedReport.woNumber === 'N/A') {
+                        helperMsg = 'Awaiting Action: No Work Order linked. Select an assigned Work Order above. Effectiveness selection will be enabled once the Work Order is Completed.';
                       } else if (isAwaitingAction) {
-                        helperMsg = 'Awaiting Action: Work Order action is currently pending or in progress. Effectiveness selection will be enabled once the Work Order is Completed.';
+                        helperMsg = `Awaiting Action: Work Order ${selectedReport.woNumber} is currently ${linkedWo?.status || 'Open'}. Effectiveness selection will be enabled once the Work Order is Completed.`;
                       } else if (isAwaitingFeedback) {
-                        helperMsg = 'Awaiting Feedback: Work Order has been Completed! Please assign the Recommendation Effectiveness below to finalize and Close this CBM case.';
+                        helperMsg = `Awaiting Feedback: Work Order ${selectedReport.woNumber} has been Completed! Please assign the Recommendation Effectiveness below to finalize and Close this CBM case.`;
                       } else {
                         helperMsg = EFFECTIVENESS_DESCRIPTIONS[selectedReport.effectiveness || 'Not Yet Assessable'] || EFFECTIVENESS_DESCRIPTIONS['Not Yet Assessable'];
                       }
