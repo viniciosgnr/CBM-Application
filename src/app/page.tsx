@@ -197,7 +197,6 @@ export default function MainPage() {
   const [kpiMonthPopoverOpen, setKpiMonthPopoverOpen] = useState(false);
   const kpiMonthPopoverRef = useRef<HTMLDivElement>(null);
   const [selectedTrendTab, setSelectedTrendTab] = useState<'health' | 'compliance' | 'risk'>('health');
-  const [kpiSubTab, setKpiSubTab] = useState<'analytics' | 'reports'>('analytics');
 
   const availableKpiMonths = useMemo(() => [
     { key: '2026-10', label: 'October (Current)', shortLabel: 'October', prevKey: '2026-09', prevShortLabel: 'September' },
@@ -1845,50 +1844,35 @@ export default function MainPage() {
         {/* Lógica SPA: Tela de KPIs & Overall Health (Strictly SLB Optisite DashboardCards) */}
         {activeTab === 'kpis' && (
           <div className="flex flex-col gap-6 animate-fadeIn">
-            {/* Top Control Bar: Subtabs on the Left + Evaluated count, Filters on the Right (Seamless SLB standard) */}
+            {/* Top Control Bar: Technology on the Left, Scope & Month on the Right (Seamless SLB standard) */}
             <div className="flex flex-wrap items-center justify-between gap-4 py-1 select-none">
-              {/* Left Side: SLB Subtabs Pill Selector & Evaluated Count */}
-              <div className="flex items-center gap-3">
-                {/* Official SLB Subtabs Segmented Pill Selector */}
-                <div className="flex items-center bg-[#070b14] p-1 rounded-full border border-[#1e293b] select-none shadow-inner">
-                  <button
-                    type="button"
-                    onClick={() => setKpiSubTab('analytics')}
-                    className={`text-xs font-semibold px-3.5 py-1 rounded-full transition-all flex items-center gap-1.5 cursor-pointer ${
-                      kpiSubTab === 'analytics'
-                        ? 'bg-[#131d33] text-[#38bdf8] border border-[#233554] shadow-sm font-bold'
-                        : 'text-white hover:text-[#38bdf8]'
-                    }`}
-                  >
-                    {kpiSubTab === 'analytics' && (
-                      <Check size={13} className="text-[#38bdf8] stroke-[2.5]" />
-                    )}
-                    <span>Analytics & Trends</span>
-                  </button>
-
-                  <button
-                    type="button"
-                    onClick={() => setKpiSubTab('reports')}
-                    className={`text-xs font-semibold px-3.5 py-1 rounded-full transition-all flex items-center gap-1.5 cursor-pointer ${
-                      kpiSubTab === 'reports'
-                        ? 'bg-[#131d33] text-[#38bdf8] border border-[#233554] shadow-sm font-bold'
-                        : 'text-white hover:text-[#38bdf8]'
-                    }`}
-                  >
-                    {kpiSubTab === 'reports' && (
-                      <Check size={13} className="text-[#38bdf8] stroke-[2.5]" />
-                    )}
-                    <span>Monthly Routine Report</span>
-                  </button>
-                </div>
-
-                {/* Evaluated Count inline like '(385 alerts)' in SLB component */}
-                <span className="text-xs text-text-muted font-normal select-none">
-                  ({overallHealthData.totalMachines} evaluated)
-                </span>
+              {/* Left Side: Technology Segmented Filter (Vibration | Lub Oil) */}
+              <div className="flex items-center bg-[#0c101d] p-0.5 rounded-full border border-[#202742]">
+                <button
+                  type="button"
+                  onClick={() => setSelectedKpiTechnology('Vibration')}
+                  className={`px-3 py-1 rounded-full text-xs font-semibold transition-all ${
+                    selectedKpiTechnology === 'Vibration'
+                      ? 'bg-accent-blue text-white shadow-sm'
+                      : 'text-text-muted hover:text-text-primary'
+                  }`}
+                >
+                  Vibration
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setSelectedKpiTechnology('Lub Oil')}
+                  className={`px-3 py-1 rounded-full text-xs font-semibold transition-all ${
+                    selectedKpiTechnology === 'Lub Oil'
+                      ? 'bg-accent-blue text-white shadow-sm'
+                      : 'text-text-muted hover:text-text-primary'
+                  }`}
+                >
+                  Lub Oil
+                </button>
               </div>
 
-              {/* Right Side: Filters (Vessel Scope, Month, Technology) - Compact without text labels */}
+              {/* Right Side: Filters (Vessel Scope, Month) - Compact without text labels */}
               <div className="flex flex-wrap items-center gap-2.5">
                 {/* 1. Vessel Scope Filter */}
                 <div className="relative" ref={kpiFpsoPopoverRef}>
@@ -2020,32 +2004,6 @@ export default function MainPage() {
                     </div>
                   )}
                 </div>
-
-                {/* 3. Technology Segmented Filter (Vibration | Lub Oil) */}
-                <div className="flex items-center bg-[#0c101d] p-0.5 rounded-full border border-[#202742]">
-                  <button
-                    type="button"
-                    onClick={() => setSelectedKpiTechnology('Vibration')}
-                    className={`px-3 py-1 rounded-full text-xs font-semibold transition-all ${
-                      selectedKpiTechnology === 'Vibration'
-                        ? 'bg-accent-blue text-white shadow-sm'
-                        : 'text-text-muted hover:text-text-primary'
-                    }`}
-                  >
-                    Vibration
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setSelectedKpiTechnology('Lub Oil')}
-                    className={`px-3 py-1 rounded-full text-xs font-semibold transition-all ${
-                      selectedKpiTechnology === 'Lub Oil'
-                        ? 'bg-accent-blue text-white shadow-sm'
-                        : 'text-text-muted hover:text-text-primary'
-                    }`}
-                  >
-                    Lub Oil
-                  </button>
-                </div>
               </div>
             </div>
 
@@ -2169,11 +2127,8 @@ export default function MainPage() {
               />
             </div>
 
-            {/* Subtab 1: Analytics & Trends (Donut charts and Full-Width Line Trend) */}
-            {kpiSubTab === 'analytics' && (
-              <div className="flex flex-col gap-6 animate-fadeIn">
-                {/* Row 2: Secondary Donut Charts (Collection Compliance & Failure Mechanisms) */}
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            {/* Row 2: Secondary Donut Charts (Collection Compliance & Failure Mechanisms) */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
               {/* Chart 1: Collection Compliance & Non-Collection Reasons */}
               <DashboardCard
                 title="Collection Compliance & Non-Collection Reasons"
@@ -2359,27 +2314,23 @@ export default function MainPage() {
                 </div>
               </DashboardCard>
             </div>
-          </div>
-        )}
 
-            {/* Subtab 2: Monthly Routine Report Table */}
-            {kpiSubTab === 'reports' && (
-              <div className="w-full animate-fadeIn">
-                <MonthlyCbmReportTable
-                  equipments={currentKpiEquipments}
-                  reports={reports}
-                  workOrders={workOrders}
-                  selectedTechnology={selectedKpiTechnology}
-                  selectedMonth={selectedKpiMonth}
-                  selectedMonthLabel={currentMonthConfig?.shortLabel || 'October'}
-                  onEquipmentClick={(eq) => handleRowClick({ tag: eq.tag })}
-                  onReportClick={(report) => {
-                    setSelectedReport(report as any);
-                    setReportDetailsOpen(true);
-                  }}
-                />
-              </div>
-            )}
+            {/* Row 4: Full-Width Monthly CBM Routine Report Table */}
+            <div className="w-full">
+              <MonthlyCbmReportTable
+                equipments={currentKpiEquipments}
+                reports={reports}
+                workOrders={workOrders}
+                selectedTechnology={selectedKpiTechnology}
+                selectedMonth={selectedKpiMonth}
+                selectedMonthLabel={currentMonthConfig?.shortLabel || 'October'}
+                onEquipmentClick={(eq) => handleRowClick({ tag: eq.tag })}
+                onReportClick={(report) => {
+                  setSelectedReport(report as any);
+                  setReportDetailsOpen(true);
+                }}
+              />
+            </div>
           </div>
         )}
       </main>

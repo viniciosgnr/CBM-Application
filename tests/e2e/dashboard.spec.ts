@@ -266,37 +266,24 @@ test.describe('CBM Dashboard E2E Smoke Tests', () => {
     await expect(page.getByText(/CBM Total Risk Trend/i)).toBeVisible();
     await expect(riskTrendBtn).toHaveClass(/bg-accent-blue/);
 
-    // Valida o seletor oficial de subtabs SLB (Analytics & Trends / Monthly Routine Report)
-    const analyticsSubTabBtn = page.getByRole('button', { name: /Analytics & Trends/i });
-    const reportsSubTabBtn = page.getByRole('button', { name: /Monthly Routine Report/i });
-    await expect(analyticsSubTabBtn).toBeVisible();
-    await expect(reportsSubTabBtn).toBeVisible();
-
-    // Na subtab Analytics & Trends, a tabela ainda não está visível
-    await expect(page.getByText('Monthly CBM Routine Report')).not.toBeVisible();
-
-    // Clica na subtab Monthly Routine Report
-    await reportsSubTabBtn.click();
-
-    // Valida a tabela de relatório mensal (Monthly CBM Routine Report)
+    // Valida a tabela de relatório mensal (Monthly CBM Routine Report) diretamente na tela
     await expect(page.getByText('Monthly CBM Routine Report')).toBeVisible();
-    await expect(page.getByText(/Vibration Routine/i)).toBeVisible();
 
-    // Valida que os cards de KPI continuam visíveis na subtab de relatórios
+    // Valida que os cards de KPI continuam visíveis junto com a tabela
     await expect(page.getByText('Fault Risk & Overall Health')).toBeVisible();
 
-    // Valida os cabeçalhos das 5 colunas em inglês (com coluna única para o mês selecionado)
+    // Valida os cabeçalhos das 5 colunas em inglês (com coluna única para o mês selecionado e Work Order)
     const reportTable = page.locator('table').last();
     await expect(reportTable.locator('th', { hasText: 'Frequency' })).toBeVisible();
     await expect(reportTable.locator('th', { hasText: 'FPSO' })).toBeVisible();
     await expect(reportTable.locator('th', { hasText: 'Equipment' })).toBeVisible();
     await expect(reportTable.locator('th', { hasText: /Status \(/i })).toBeVisible();
-    await expect(reportTable.locator('th', { hasText: 'WO' })).toBeVisible();
+    await expect(reportTable.locator('th', { hasText: 'Work Order' })).toBeVisible();
 
     // Valida que a primeira linha exibe o caso mais crítico/degradado no topo com WO
     const firstRow = reportTable.locator('tbody tr').first();
     await expect(firstRow).toBeVisible();
-    await expect(firstRow.locator('td').nth(3)).toContainText(/Tier 1|Tier 2/i);
+    await expect(firstRow.locator('td').nth(3)).toContainText(/Tier 1|Tier 2|T1|T2/i);
 
     // Valida que clicar na linha do caso crítico/degradado abre direto o Drawer lateral
     await firstRow.click();
@@ -309,7 +296,8 @@ test.describe('CBM Dashboard E2E Smoke Tests', () => {
 
     // Testa a alternância para tecnologia Lub Oil
     await oilBtn.click();
-    await expect(page.getByText(/Lub Oil Routine/i)).toBeVisible();
+    await expect(oilBtn).toHaveClass(/bg-accent-blue/);
+    await expect(page.getByText(/Monthly Lub Oil/i).first()).toBeVisible();
   });
 
   test('deve filtrar corretamente pelas colunas da tabela Equipment List sem bolinhas coloridas nas opções de condição', async ({ page }) => {

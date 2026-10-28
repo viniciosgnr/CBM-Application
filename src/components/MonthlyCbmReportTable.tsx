@@ -288,15 +288,9 @@ export default function MonthlyCbmReportTable({
       {/* Top Header bar matching Equipment List header */}
       <div className="mb-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
         <div className="flex items-center gap-3">
-          <h3 className="text-sm font-semibold text-text-primary flex items-center gap-2">
+          <h3 className="text-sm font-semibold text-text-primary">
             Monthly CBM Routine Report
-            <span className="text-[10px] font-semibold uppercase px-2 py-0.5 rounded-full bg-accent-blue/10 text-accent-blue border border-accent-blue/30">
-              {selectedTechnology} Routine
-            </span>
           </h3>
-          <span className="text-[10px] text-text-muted hidden md:inline">
-            (Ranked: Critical & Degraded with WOs first &rarr; Non-Collection Reasons &rarr; Good Tiers)
-          </span>
         </div>
 
         {/* Quick Search */}
@@ -364,7 +358,7 @@ export default function MonthlyCbmReportTable({
               {/* STATUS */}
               <th className="px-4 py-3 text-[10px] font-bold uppercase tracking-wider text-text-primary whitespace-nowrap relative">
                 <div className="flex items-center justify-between gap-1 select-none">
-                  <span className="truncate">STATUS ({selectedMonthLabel.toUpperCase()})</span>
+                  <span className="truncate">Status ({selectedMonthLabel})</span>
                 </div>
                 <div className="flex items-center gap-1.5 mt-1.5 w-full relative">
                   <div className="flex items-center justify-between gap-1.5 w-full bg-transparent border-b border-border-panel/40 py-1 text-text-muted">
@@ -374,10 +368,10 @@ export default function MonthlyCbmReportTable({
                 </div>
               </th>
 
-              {/* WO */}
+              {/* WORK ORDER */}
               <th className="px-4 py-3 text-[10px] font-bold uppercase tracking-wider text-text-primary whitespace-nowrap relative">
                 <div className="flex items-center justify-between gap-1 select-none">
-                  <span className="truncate">WO</span>
+                  <span className="truncate">Work Order</span>
                 </div>
                 <div className="flex items-center gap-1.5 mt-1.5 w-full relative">
                   <div className="flex items-center justify-between gap-1.5 w-full bg-transparent border-b border-border-panel/40 py-1 text-text-muted">
@@ -404,22 +398,40 @@ export default function MonthlyCbmReportTable({
                 const row = getRowDetails(eq);
                 const fpsoClean = eq.fpso ? eq.fpso.replace(/^FPSO\s+/i, '').trim() : '-';
 
-                // Determine dot color according to SLB standard
-                let dotColor = 'bg-status-ok';
-                if (row.isCollected) {
-                  const upper = row.statusLabel.toUpperCase();
-                  if (upper.includes('CRITICAL') || upper.includes('TIER 1')) {
-                    dotColor = 'bg-status-error';
-                  } else if (upper.includes('DEGRADED') || upper.includes('TIER 2')) {
-                    dotColor = 'bg-status-warn';
-                  } else if (upper.includes('TIER 3')) {
-                    dotColor = 'bg-[#ffd000]';
-                  } else {
-                    dotColor = 'bg-status-ok';
-                  }
+                // Render CBM Status Badge according to SLB design reference
+                const upperStatus = row.statusLabel.toUpperCase();
+                let statusBadgeNode: React.ReactNode;
+
+                if (!row.isCollected) {
+                  statusBadgeNode = (
+                    <span className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-semibold bg-[#334155]/60 text-[#cbd5e1] border border-[#475569]/40 whitespace-nowrap">
+                      {row.statusLabel}
+                    </span>
+                  );
+                } else if (upperStatus.includes('CRITICAL') || upperStatus.includes('TIER 1') || upperStatus.includes('T1')) {
+                  statusBadgeNode = (
+                    <span className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-semibold bg-[#e05252] text-white shadow-sm whitespace-nowrap tracking-wide">
+                      T1 - Critical
+                    </span>
+                  );
+                } else if (upperStatus.includes('DEGRADED') || upperStatus.includes('TIER 2') || upperStatus.includes('T2')) {
+                  statusBadgeNode = (
+                    <span className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-semibold bg-[#f97316] text-white shadow-sm whitespace-nowrap tracking-wide">
+                      T2 - Degraded
+                    </span>
+                  );
+                } else if (upperStatus.includes('TIER 3') || upperStatus.includes('T3')) {
+                  statusBadgeNode = (
+                    <span className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-semibold bg-[#10b981] text-white shadow-sm whitespace-nowrap tracking-wide">
+                      Good - Tier 3
+                    </span>
+                  );
                 } else {
-                  // Non-collected reports/reasons: gray dot as requested
-                  dotColor = 'bg-[#94a3b8]';
+                  statusBadgeNode = (
+                    <span className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-semibold bg-[#10b981] text-white shadow-sm whitespace-nowrap tracking-wide">
+                      Good - Tier 4
+                    </span>
+                  );
                 }
 
                 return (
@@ -451,12 +463,9 @@ export default function MonthlyCbmReportTable({
                       </div>
                     </td>
 
-                    {/* 4. Status with SLB Dot indicator (No Solid Badges) */}
+                    {/* 4. Status with SLB Badge */}
                     <td className="px-4 py-2.5 text-[11px] font-normal whitespace-nowrap">
-                      <span className="inline-flex items-center gap-1.5 font-medium text-[11px]">
-                        <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${dotColor}`} />
-                        <span className="text-text-primary font-medium">{row.statusLabel}</span>
-                      </span>
+                      {statusBadgeNode}
                     </td>
 
                     {/* 5. WO (Clean SLB style, only Degraded and Critical have Work Order) */}
