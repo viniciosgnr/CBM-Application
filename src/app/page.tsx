@@ -3098,9 +3098,9 @@ export default function MainPage() {
                       <span className="col-span-7 font-normal text-text-primary">{selectedReport.shortDescription || 'Cavitation'}</span>
                     </div>
 
-                    {/* W.O. Number */}
+                    {/* Work Order Number */}
                     <div className="grid grid-cols-12 py-2.5 border-b border-[#182035]/80 items-center">
-                      <span className="col-span-5 text-[#8a94a6] font-medium">W.O. Number</span>
+                      <span className="col-span-5 text-[#8a94a6] font-medium">Work Order Number</span>
                       <div className="col-span-7 flex items-center justify-end gap-2">
                         <select
                           value={selectedReport.woNumber || 'N/A'}

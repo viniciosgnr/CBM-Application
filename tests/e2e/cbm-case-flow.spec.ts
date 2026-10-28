@@ -41,7 +41,7 @@ test.describe('E2E Tests: CBM Case Status & Recommendation Drawer Interaction Fl
     const detailsCard = page.locator('h4', { hasText: /^Details$/i });
     await expect(detailsCard).toBeVisible({ timeout: 10000 });
 
-    // 4. Localiza o dropdown de W.O. Number no card Details
+    // 4. Localiza o dropdown de Work Order Number no card Details
     const woSelect = page.locator('select[title="Select Work Order assigned to this equipment"]');
     await expect(woSelect).toBeVisible({ timeout: 10000 });
 
