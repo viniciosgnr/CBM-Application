@@ -35,10 +35,10 @@ export default function KpiMetricCard({
   }, [showInfo]);
 
   return (
-    <div className="bg-[#0b1329] border border-[#1e293b] rounded-xl p-5 flex flex-col justify-between hover:border-[#334155]/80 transition-all shadow-sm relative">
+    <div className="bg-bg-card border border-border-panel rounded-card p-5 flex flex-col justify-between hover:border-accent-blue/40 transition-all shadow-sm relative">
       <div>
         <div className="flex items-center gap-1.5" ref={infoRef}>
-          <h3 className="text-xs sm:text-sm font-semibold text-[#cbd5e1] tracking-wide">{title}</h3>
+          <h3 className="text-xs sm:text-sm font-semibold text-text-primary tracking-wide">{title}</h3>
           
           {infoContent && (
             <div className="relative inline-flex items-center">

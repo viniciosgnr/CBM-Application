@@ -265,9 +265,24 @@ test.describe('CBM Dashboard E2E Smoke Tests', () => {
     await expect(page.getByText(/CBM Total Risk Trend/i)).toBeVisible();
     await expect(riskTrendBtn).toHaveClass(/bg-accent-blue/);
 
-    // Valida a nova tabela de relatório mensal (Monthly CBM Routine Report)
+    // Valida o seletor oficial de subtabs SLB (Analytics & Trends / Monthly Routine Report)
+    const analyticsSubTabBtn = page.getByRole('button', { name: /Analytics & Trends/i });
+    const reportsSubTabBtn = page.getByRole('button', { name: /Monthly Routine Report/i });
+    await expect(analyticsSubTabBtn).toBeVisible();
+    await expect(reportsSubTabBtn).toBeVisible();
+
+    // Na subtab Analytics & Trends, a tabela ainda não está visível
+    await expect(page.getByText('Monthly CBM Routine Report')).not.toBeVisible();
+
+    // Clica na subtab Monthly Routine Report
+    await reportsSubTabBtn.click();
+
+    // Valida a tabela de relatório mensal (Monthly CBM Routine Report)
     await expect(page.getByText('Monthly CBM Routine Report')).toBeVisible();
     await expect(page.getByText(/Vibration Routine/i)).toBeVisible();
+
+    // Valida que os cards de KPI continuam visíveis na subtab de relatórios
+    await expect(page.getByText('Fault Risk & Overall Health')).toBeVisible();
 
     // Valida os cabeçalhos das 5 colunas em inglês (com coluna única para o mês selecionado)
     const reportTable = page.locator('table').last();

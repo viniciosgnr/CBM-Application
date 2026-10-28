@@ -19,6 +19,7 @@ import {
   Wrench,
   AlertCircle,
   CheckCircle2,
+  Check,
   ChevronDown,
   Search,
   Activity,
@@ -196,6 +197,7 @@ export default function MainPage() {
   const [kpiMonthPopoverOpen, setKpiMonthPopoverOpen] = useState(false);
   const kpiMonthPopoverRef = useRef<HTMLDivElement>(null);
   const [selectedTrendTab, setSelectedTrendTab] = useState<'health' | 'compliance' | 'risk'>('health');
+  const [kpiSubTab, setKpiSubTab] = useState<'analytics' | 'reports'>('analytics');
 
   const availableKpiMonths = useMemo(() => [
     { key: '2026-10', label: 'October (Current)', shortLabel: 'October', prevKey: '2026-09', prevShortLabel: 'September' },
@@ -1843,8 +1845,50 @@ export default function MainPage() {
         {/* Lógica SPA: Tela de KPIs & Overall Health (Strictly SLB Optisite DashboardCards) */}
         {activeTab === 'kpis' && (
           <div className="flex flex-col gap-6 animate-fadeIn">
-            {/* Top Filter Bar: Vessel Scope, Month, Technology (SLB Optisite Standard) */}
-            <div className="flex flex-wrap items-center justify-between gap-4 bg-bg-card border border-border-panel rounded-card px-4 py-2.5 shadow-sm select-none">
+            {/* Top Control Bar: Subtabs on the Left + Evaluated count, Filters on the Right (Seamless SLB standard) */}
+            <div className="flex flex-wrap items-center justify-between gap-4 py-1 select-none">
+              {/* Left Side: SLB Subtabs Pill Selector & Evaluated Count */}
+              <div className="flex items-center gap-3">
+                {/* Official SLB Subtabs Segmented Pill Selector */}
+                <div className="flex items-center bg-[#070b14] p-1 rounded-full border border-[#1e293b] select-none shadow-inner">
+                  <button
+                    type="button"
+                    onClick={() => setKpiSubTab('analytics')}
+                    className={`text-xs font-semibold px-3.5 py-1 rounded-full transition-all flex items-center gap-1.5 cursor-pointer ${
+                      kpiSubTab === 'analytics'
+                        ? 'bg-[#131d33] text-[#38bdf8] border border-[#233554] shadow-sm font-bold'
+                        : 'text-white hover:text-[#38bdf8]'
+                    }`}
+                  >
+                    {kpiSubTab === 'analytics' && (
+                      <Check size={13} className="text-[#38bdf8] stroke-[2.5]" />
+                    )}
+                    <span>Analytics & Trends</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => setKpiSubTab('reports')}
+                    className={`text-xs font-semibold px-3.5 py-1 rounded-full transition-all flex items-center gap-1.5 cursor-pointer ${
+                      kpiSubTab === 'reports'
+                        ? 'bg-[#131d33] text-[#38bdf8] border border-[#233554] shadow-sm font-bold'
+                        : 'text-white hover:text-[#38bdf8]'
+                    }`}
+                  >
+                    {kpiSubTab === 'reports' && (
+                      <Check size={13} className="text-[#38bdf8] stroke-[2.5]" />
+                    )}
+                    <span>Monthly Routine Report</span>
+                  </button>
+                </div>
+
+                {/* Evaluated Count inline like '(385 alerts)' in SLB component */}
+                <span className="text-xs text-text-muted font-normal select-none">
+                  ({overallHealthData.totalMachines} evaluated)
+                </span>
+              </div>
+
+              {/* Right Side: Filters (Vessel Scope, Month, Technology) */}
               <div className="flex flex-wrap items-center gap-4">
                 {/* 1. Vessel Scope Filter */}
                 <div className="flex items-center gap-2">
@@ -1863,7 +1907,7 @@ export default function MainPage() {
 
                     {/* Multi-Select Capsule Popover */}
                     {kpiFpsoPopoverOpen && (
-                      <div className="absolute top-full left-0 mt-2 w-64 bg-[#0c101d] border border-[#202742] rounded-2xl shadow-2xl p-3 z-50 animate-fadeIn text-left text-xs text-text-primary">
+                      <div className="absolute top-full right-0 mt-2 w-64 bg-[#0c101d] border border-[#202742] rounded-2xl shadow-2xl p-3 z-50 animate-fadeIn text-left text-xs text-text-primary">
                         {/* Search Input */}
                         <div className="relative mb-2.5">
                           <Search size={13} className="absolute left-2.5 top-2.5 text-text-muted" />
@@ -1957,7 +2001,7 @@ export default function MainPage() {
                     </button>
 
                     {kpiMonthPopoverOpen && (
-                      <div className="absolute top-full left-0 mt-2 w-48 bg-[#0c101d] border border-[#202742] rounded-2xl shadow-2xl p-2 z-50 animate-fadeIn text-left text-xs text-text-primary">
+                      <div className="absolute top-full right-0 mt-2 w-48 bg-[#0c101d] border border-[#202742] rounded-2xl shadow-2xl p-2 z-50 animate-fadeIn text-left text-xs text-text-primary">
                         <div className="flex flex-col gap-1">
                           {availableKpiMonths.map(m => (
                             <button
@@ -2011,11 +2055,6 @@ export default function MainPage() {
                     </button>
                   </div>
                 </div>
-              </div>
-
-              <div className="text-xs text-text-muted font-medium hidden md:flex items-center gap-1.5">
-                <span>Evaluated ({selectedKpiTechnology}):</span>
-                <strong className="text-text-primary font-bold">{overallHealthData.totalMachines}</strong>
               </div>
             </div>
 
@@ -2139,8 +2178,11 @@ export default function MainPage() {
               />
             </div>
 
-            {/* Row 2: Secondary Donut Charts (Collection Compliance & Failure Mechanisms) */}
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            {/* Subtab 1: Analytics & Trends (Donut charts and Full-Width Line Trend) */}
+            {kpiSubTab === 'analytics' && (
+              <div className="flex flex-col gap-6 animate-fadeIn">
+                {/* Row 2: Secondary Donut Charts (Collection Compliance & Failure Mechanisms) */}
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
               {/* Chart 1: Collection Compliance & Non-Collection Reasons */}
               <DashboardCard
                 title="Collection Compliance & Non-Collection Reasons"
@@ -2326,23 +2368,27 @@ export default function MainPage() {
                 </div>
               </DashboardCard>
             </div>
+          </div>
+        )}
 
-            {/* Row 3: Full-Width Monthly CBM Routine Report Table */}
-            <div className="w-full">
-              <MonthlyCbmReportTable
-                equipments={currentKpiEquipments}
-                reports={reports}
-                workOrders={workOrders}
-                selectedTechnology={selectedKpiTechnology}
-                selectedMonth={selectedKpiMonth}
-                selectedMonthLabel={currentMonthConfig?.shortLabel || 'October'}
-                onEquipmentClick={(eq) => handleRowClick({ tag: eq.tag })}
-                onReportClick={(report) => {
-                  setSelectedReport(report as any);
-                  setReportDetailsOpen(true);
-                }}
-              />
-            </div>
+            {/* Subtab 2: Monthly Routine Report Table */}
+            {kpiSubTab === 'reports' && (
+              <div className="w-full animate-fadeIn">
+                <MonthlyCbmReportTable
+                  equipments={currentKpiEquipments}
+                  reports={reports}
+                  workOrders={workOrders}
+                  selectedTechnology={selectedKpiTechnology}
+                  selectedMonth={selectedKpiMonth}
+                  selectedMonthLabel={currentMonthConfig?.shortLabel || 'October'}
+                  onEquipmentClick={(eq) => handleRowClick({ tag: eq.tag })}
+                  onReportClick={(report) => {
+                    setSelectedReport(report as any);
+                    setReportDetailsOpen(true);
+                  }}
+                />
+              </div>
+            )}
           </div>
         )}
       </main>
