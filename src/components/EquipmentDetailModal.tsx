@@ -522,8 +522,7 @@ export default function EquipmentDetailModal({
           {(vibNext.isOverdue || oilNext.isOverdue) && (
             <div className="bg-[#101726]/80 border border-[#1c253b] rounded-lg p-3 my-3 animate-fadeIn">
               <div className="flex items-center justify-between mb-1.5">
-                <span className="text-[10px] font-semibold text-[#ff5a5f] uppercase tracking-wider flex items-center gap-1.5">
-                  <span className="w-1.5 h-1.5 rounded-full bg-[#ff5a5f]" />
+                <span className="text-[11px] font-medium text-[#f8fafc] tracking-wide">
                   Non-collection Reason (Overdue)
                 </span>
                 {isSavingReason && (

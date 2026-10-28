@@ -2127,57 +2127,7 @@ export default function MainPage() {
               />
             </div>
 
-            {/* Row 2: Secondary Donut Charts (Collection Compliance & Failure Mechanisms) */}
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              {/* Chart 1: Collection Compliance & Non-Collection Reasons */}
-              <DashboardCard
-                title="Collection Compliance & Non-Collection Reasons"
-                timeRange={currentMonthConfig?.label || 'Current Month'}
-                onMaximize={() => setMaximizedChart('kpi-collection-compliance')}
-                infoTitle="Collection Compliance Methodology"
-                infoContent={
-                  <div className="space-y-2">
-                    <p className="text-[10px] text-[#94a3b8] leading-tight">
-                      Displays the percentage of equipment with routine data collected for the selected month, along with the detailed distribution of non-collection reasons.
-                    </p>
-                    <div className="border-t border-[#1e2538] pt-1.5">
-                      <span className="font-semibold text-accent-blue block text-[11px]">Compliance Formula:</span>
-                      <code className="text-[10px] block mt-0.5 bg-[#141a29] p-1.5 rounded border border-[#232d48]">
-                        Surveyed % = (Surveyed Machines / Total Evaluated) × 100%
-                      </code>
-                    </div>
-                  </div>
-                }
-              >
-                <CollectionCompliancePie
-                  equipments={currentKpiEquipments}
-                  selectedTechnology={selectedKpiTechnology}
-                />
-              </DashboardCard>
-
-              {/* Chart 2: Failure Mechanisms */}
-              <DashboardCard
-                title="Failure Mechanisms"
-                timeRange={currentMonthConfig?.label || 'Current Month'}
-                onMaximize={() => setMaximizedChart('kpi-failure-mechanisms')}
-                infoTitle="Failure Mechanisms Methodology (ISO 14224)"
-                infoContent={
-                  <div className="space-y-2">
-                    <p className="text-[10px] text-[#94a3b8] leading-tight">
-                      Displays the distribution of diagnosed failure mechanisms recorded in technical assessments (Log New Analysis) according to ISO 14224 taxonomy.
-                    </p>
-                  </div>
-                }
-              >
-                <FailureMechanismsPie
-                  reports={reports}
-                  selectedMonth={selectedKpiMonth}
-                  selectedTechnology={selectedKpiTechnology}
-                />
-              </DashboardCard>
-            </div>
-
-            {/* Row 3: Full-Width Trends with Tab Selector (Overall Health | Compliance Risk | CBM Total Risk) */}
+            {/* Row 2: Full-Width Trends with Tab Selector (Overall Health | Compliance Risk | CBM Total Risk) */}
             <div className="w-full">
               <DashboardCard
                 title={
@@ -2312,6 +2262,56 @@ export default function MainPage() {
                     </LineChart>
                   </ResponsiveContainer>
                 </div>
+              </DashboardCard>
+            </div>
+
+            {/* Row 3: Secondary Donut Charts (Collection Compliance & Failure Mechanisms) */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              {/* Chart 1: Collection Compliance & Non-Collection Reasons */}
+              <DashboardCard
+                title="Collection Compliance & Non-Collection Reasons"
+                timeRange={currentMonthConfig?.label || 'Current Month'}
+                onMaximize={() => setMaximizedChart('kpi-collection-compliance')}
+                infoTitle="Collection Compliance Methodology"
+                infoContent={
+                  <div className="space-y-2">
+                    <p className="text-[10px] text-[#94a3b8] leading-tight">
+                      Displays the percentage of equipment with routine data collected for the selected month, along with the detailed distribution of non-collection reasons.
+                    </p>
+                    <div className="border-t border-[#1e2538] pt-1.5">
+                      <span className="font-semibold text-accent-blue block text-[11px]">Compliance Formula:</span>
+                      <code className="text-[10px] block mt-0.5 bg-[#141a29] p-1.5 rounded border border-[#232d48]">
+                        Surveyed % = (Surveyed Machines / Total Evaluated) × 100%
+                      </code>
+                    </div>
+                  </div>
+                }
+              >
+                <CollectionCompliancePie
+                  equipments={currentKpiEquipments}
+                  selectedTechnology={selectedKpiTechnology}
+                />
+              </DashboardCard>
+
+              {/* Chart 2: Failure Mechanisms */}
+              <DashboardCard
+                title="Failure Mechanisms"
+                timeRange={currentMonthConfig?.label || 'Current Month'}
+                onMaximize={() => setMaximizedChart('kpi-failure-mechanisms')}
+                infoTitle="Failure Mechanisms Methodology (ISO 14224)"
+                infoContent={
+                  <div className="space-y-2">
+                    <p className="text-[10px] text-[#94a3b8] leading-tight">
+                      Displays the distribution of diagnosed failure mechanisms recorded in technical assessments (Log New Analysis) according to ISO 14224 taxonomy.
+                    </p>
+                  </div>
+                }
+              >
+                <FailureMechanismsPie
+                  reports={reports}
+                  selectedMonth={selectedKpiMonth}
+                  selectedTechnology={selectedKpiTechnology}
+                />
               </DashboardCard>
             </div>
 
