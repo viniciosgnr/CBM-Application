@@ -1888,172 +1888,163 @@ export default function MainPage() {
                 </span>
               </div>
 
-              {/* Right Side: Filters (Vessel Scope, Month, Technology) */}
-              <div className="flex flex-wrap items-center gap-4">
+              {/* Right Side: Filters (Vessel Scope, Month, Technology) - Compact without text labels */}
+              <div className="flex flex-wrap items-center gap-2.5">
                 {/* 1. Vessel Scope Filter */}
-                <div className="flex items-center gap-2">
-                  <span className="text-xs text-text-muted font-medium">Vessel Scope:</span>
-                  <div className="relative" ref={kpiFpsoPopoverRef}>
-                    <button
-                      type="button"
-                      onClick={() => setKpiFpsoPopoverOpen(prev => !prev)}
-                      className="flex items-center gap-2 bg-[#0c101d] hover:bg-[#121829] border border-[#202742] hover:border-accent-blue/80 rounded-full px-3.5 py-1.5 cursor-pointer transition-all shadow-sm text-xs"
-                      title="Filter by FPSO"
-                    >
-                      <Filter size={12} className="text-accent-blue shrink-0" />
-                      <span className="font-semibold text-text-primary tracking-wide">{kpiFpsoLabel}</span>
-                      <ChevronDown size={12} className={`text-text-muted transition-transform shrink-0 ${kpiFpsoPopoverOpen ? 'rotate-180 text-accent-blue' : ''}`} />
-                    </button>
+                <div className="relative" ref={kpiFpsoPopoverRef}>
+                  <button
+                    type="button"
+                    onClick={() => setKpiFpsoPopoverOpen(prev => !prev)}
+                    className="flex items-center gap-2 bg-[#0c101d] hover:bg-[#121829] border border-[#202742] hover:border-accent-blue/80 rounded-full px-3.5 py-1.5 cursor-pointer transition-all shadow-sm text-xs"
+                    title="Vessel Scope: Filter by FPSO"
+                  >
+                    <Filter size={12} className="text-accent-blue shrink-0" />
+                    <span className="font-semibold text-text-primary tracking-wide">{kpiFpsoLabel}</span>
+                    <ChevronDown size={12} className={`text-text-muted transition-transform shrink-0 ${kpiFpsoPopoverOpen ? 'rotate-180 text-accent-blue' : ''}`} />
+                  </button>
 
-                    {/* Multi-Select Capsule Popover */}
-                    {kpiFpsoPopoverOpen && (
-                      <div className="absolute top-full right-0 mt-2 w-64 bg-[#0c101d] border border-[#202742] rounded-2xl shadow-2xl p-3 z-50 animate-fadeIn text-left text-xs text-text-primary">
-                        {/* Search Input */}
-                        <div className="relative mb-2.5">
-                          <Search size={13} className="absolute left-2.5 top-2.5 text-text-muted" />
+                  {/* Multi-Select Capsule Popover */}
+                  {kpiFpsoPopoverOpen && (
+                    <div className="absolute top-full right-0 mt-2 w-64 bg-[#0c101d] border border-[#202742] rounded-2xl shadow-2xl p-3 z-50 animate-fadeIn text-left text-xs text-text-primary">
+                      {/* Search Input */}
+                      <div className="relative mb-2.5">
+                        <Search size={13} className="absolute left-2.5 top-2.5 text-text-muted" />
+                        <input
+                          type="text"
+                          value={kpiFpsoSearch}
+                          onChange={e => setKpiFpsoSearch(e.target.value)}
+                          placeholder="Search FPSO..."
+                          className="w-full bg-[#111728] border border-[#202742] rounded-xl pl-8 pr-2.5 py-1.5 text-xs text-text-primary focus:border-accent-blue focus:outline-none placeholder:text-text-muted/60"
+                        />
+                      </div>
+
+                      {/* Options Checklist */}
+                      <div className="flex flex-col gap-0.5 max-h-52 overflow-y-auto pr-1">
+                        {/* (Select All) Checkbox */}
+                        <label className="flex items-center gap-2.5 px-2.5 py-1.5 rounded-lg hover:bg-[#172033] cursor-pointer font-semibold select-none text-text-primary transition-colors">
                           <input
-                            type="text"
-                            value={kpiFpsoSearch}
-                            onChange={e => setKpiFpsoSearch(e.target.value)}
-                            placeholder="Search FPSO..."
-                            className="w-full bg-[#111728] border border-[#202742] rounded-xl pl-8 pr-2.5 py-1.5 text-xs text-text-primary focus:border-accent-blue focus:outline-none placeholder:text-text-muted/60"
-                          />
-                        </div>
-
-                        {/* Options Checklist */}
-                        <div className="flex flex-col gap-0.5 max-h-52 overflow-y-auto pr-1">
-                          {/* (Select All) Checkbox */}
-                          <label className="flex items-center gap-2.5 px-2.5 py-1.5 rounded-lg hover:bg-[#172033] cursor-pointer font-semibold select-none text-text-primary transition-colors">
-                            <input
-                              type="checkbox"
-                              checked={selectedKpiFpsos.size === availableKpiFpsos.length || selectedKpiFpsos.size === 0}
-                              ref={el => {
-                                if (el) {
-                                  el.indeterminate =
+                            type="checkbox"
+                            checked={selectedKpiFpsos.size === availableKpiFpsos.length || selectedKpiFpsos.size === 0}
+                            ref={el => {
+                              if (el) {
+                                el.indeterminate =
                                     selectedKpiFpsos.size > 0 &&
                                     selectedKpiFpsos.size < availableKpiFpsos.length;
-                                }
-                              }}
-                              onChange={() => {
-                                if (selectedKpiFpsos.size === availableKpiFpsos.length || selectedKpiFpsos.size === 0) {
-                                  setSelectedKpiFpsos(new Set());
-                                } else {
-                                  setSelectedKpiFpsos(new Set(availableKpiFpsos));
-                                }
-                              }}
-                              className="accent-accent-blue cursor-pointer rounded"
-                            />
-                            <span className="text-xs font-semibold">(Select All)</span>
-                          </label>
+                              }
+                            }}
+                            onChange={() => {
+                              if (selectedKpiFpsos.size === availableKpiFpsos.length || selectedKpiFpsos.size === 0) {
+                                setSelectedKpiFpsos(new Set());
+                              } else {
+                                setSelectedKpiFpsos(new Set(availableKpiFpsos));
+                              }
+                            }}
+                            className="accent-accent-blue cursor-pointer rounded"
+                          />
+                          <span className="text-xs font-semibold">(Select All)</span>
+                        </label>
 
-                          <hr className="border-[#202742] my-1" />
+                        <hr className="border-[#202742] my-1" />
 
-                          {availableKpiFpsos
-                            .filter(f => f.toLowerCase().includes(kpiFpsoSearch.toLowerCase()))
-                            .map(trigram => {
-                              const isChecked = selectedKpiFpsos.has(trigram) || selectedKpiFpsos.size === 0;
-                              return (
-                                <label
-                                  key={trigram}
-                                  className="flex items-center justify-between px-2.5 py-1.5 rounded-lg hover:bg-[#172033] cursor-pointer select-none text-text-primary transition-colors"
-                                >
-                                  <div className="flex items-center gap-2.5">
-                                    <input
-                                      type="checkbox"
-                                      checked={isChecked}
-                                      onChange={() => {
-                                        const next = new Set(selectedKpiFpsos.size === 0 ? availableKpiFpsos : selectedKpiFpsos);
-                                        if (next.has(trigram)) {
-                                          next.delete(trigram);
-                                        } else {
-                                          next.add(trigram);
-                                        }
-                                        setSelectedKpiFpsos(next);
-                                      }}
-                                      className="accent-accent-blue cursor-pointer rounded"
-                                    />
-                                    <span className="text-xs font-medium">{trigram}</span>
-                                  </div>
-                                </label>
-                              );
-                            })}
-                        </div>
+                        {availableKpiFpsos
+                          .filter(f => f.toLowerCase().includes(kpiFpsoSearch.toLowerCase()))
+                          .map(trigram => {
+                            const isChecked = selectedKpiFpsos.has(trigram) || selectedKpiFpsos.size === 0;
+                            return (
+                              <label
+                                key={trigram}
+                                className="flex items-center justify-between px-2.5 py-1.5 rounded-lg hover:bg-[#172033] cursor-pointer select-none text-text-primary transition-colors"
+                              >
+                                <div className="flex items-center gap-2.5">
+                                  <input
+                                    type="checkbox"
+                                    checked={isChecked}
+                                    onChange={() => {
+                                      const next = new Set(selectedKpiFpsos.size === 0 ? availableKpiFpsos : selectedKpiFpsos);
+                                      if (next.has(trigram)) {
+                                        next.delete(trigram);
+                                      } else {
+                                        next.add(trigram);
+                                      }
+                                      setSelectedKpiFpsos(next);
+                                    }}
+                                    className="accent-accent-blue cursor-pointer rounded"
+                                  />
+                                  <span className="text-xs font-medium">{trigram}</span>
+                                </div>
+                              </label>
+                            );
+                          })}
                       </div>
-                    )}
-                  </div>
+                    </div>
+                  )}
                 </div>
 
                 {/* 2. Month Filter */}
-                <div className="flex items-center gap-2">
-                  <span className="text-xs text-text-muted font-medium">Month:</span>
-                  <div className="relative" ref={kpiMonthPopoverRef}>
-                    <button
-                      type="button"
-                      onClick={() => setKpiMonthPopoverOpen(prev => !prev)}
-                      className="flex items-center gap-2 bg-[#0c101d] hover:bg-[#121829] border border-[#202742] hover:border-accent-blue/80 rounded-full px-3.5 py-1.5 cursor-pointer transition-all shadow-sm text-xs"
-                      title="Select Reference Month"
-                    >
-                      <Calendar size={12} className="text-accent-blue shrink-0" />
-                      <span className="font-semibold text-text-primary tracking-wide">
-                        {currentMonthConfig.label}
-                      </span>
-                      <ChevronDown size={12} className={`text-text-muted transition-transform shrink-0 ${kpiMonthPopoverOpen ? 'rotate-180 text-accent-blue' : ''}`} />
-                    </button>
+                <div className="relative" ref={kpiMonthPopoverRef}>
+                  <button
+                    type="button"
+                    onClick={() => setKpiMonthPopoverOpen(prev => !prev)}
+                    className="flex items-center gap-2 bg-[#0c101d] hover:bg-[#121829] border border-[#202742] hover:border-accent-blue/80 rounded-full px-3.5 py-1.5 cursor-pointer transition-all shadow-sm text-xs"
+                    title="Reference Month"
+                  >
+                    <Calendar size={12} className="text-accent-blue shrink-0" />
+                    <span className="font-semibold text-text-primary tracking-wide">
+                      {currentMonthConfig.label}
+                    </span>
+                    <ChevronDown size={12} className={`text-text-muted transition-transform shrink-0 ${kpiMonthPopoverOpen ? 'rotate-180 text-accent-blue' : ''}`} />
+                  </button>
 
-                    {kpiMonthPopoverOpen && (
-                      <div className="absolute top-full right-0 mt-2 w-48 bg-[#0c101d] border border-[#202742] rounded-2xl shadow-2xl p-2 z-50 animate-fadeIn text-left text-xs text-text-primary">
-                        <div className="flex flex-col gap-1">
-                          {availableKpiMonths.map(m => (
-                            <button
-                              key={m.key}
-                              type="button"
-                              onClick={() => {
-                                setSelectedKpiMonth(m.key);
-                                setKpiMonthPopoverOpen(false);
-                              }}
-                              className={`flex items-center justify-between px-3 py-1.5 rounded-lg text-xs font-medium transition-colors text-left ${
-                                selectedKpiMonth === m.key
-                                  ? 'bg-accent-blue text-white font-semibold'
-                                  : 'hover:bg-[#172033] text-text-primary'
-                              }`}
-                            >
-                              <span>{m.label}</span>
-                              {selectedKpiMonth === m.key && <span className="text-[10px]">●</span>}
-                            </button>
-                          ))}
-                        </div>
+                  {kpiMonthPopoverOpen && (
+                    <div className="absolute top-full right-0 mt-2 w-48 bg-[#0c101d] border border-[#202742] rounded-2xl shadow-2xl p-2 z-50 animate-fadeIn text-left text-xs text-text-primary">
+                      <div className="flex flex-col gap-1">
+                        {availableKpiMonths.map(m => (
+                          <button
+                            key={m.key}
+                            type="button"
+                            onClick={() => {
+                              setSelectedKpiMonth(m.key);
+                              setKpiMonthPopoverOpen(false);
+                            }}
+                            className={`flex items-center justify-between px-3 py-1.5 rounded-lg text-xs font-medium transition-colors text-left ${
+                              selectedKpiMonth === m.key
+                                ? 'bg-accent-blue text-white font-semibold'
+                                : 'hover:bg-[#172033] text-text-primary'
+                            }`}
+                          >
+                            <span>{m.label}</span>
+                            {selectedKpiMonth === m.key && <span className="text-[10px]">●</span>}
+                          </button>
+                        ))}
                       </div>
-                    )}
-                  </div>
+                    </div>
+                  )}
                 </div>
 
                 {/* 3. Technology Segmented Filter (Vibration | Lub Oil) */}
-                <div className="flex items-center gap-2">
-                  <span className="text-xs text-text-muted font-medium">Technology:</span>
-                  <div className="flex items-center bg-[#0c101d] p-0.5 rounded-full border border-[#202742]">
-                    <button
-                      type="button"
-                      onClick={() => setSelectedKpiTechnology('Vibration')}
-                      className={`px-3 py-1 rounded-full text-xs font-semibold transition-all ${
-                        selectedKpiTechnology === 'Vibration'
-                          ? 'bg-accent-blue text-white shadow-sm'
-                          : 'text-text-muted hover:text-text-primary'
-                      }`}
-                    >
-                      Vibration
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setSelectedKpiTechnology('Lub Oil')}
-                      className={`px-3 py-1 rounded-full text-xs font-semibold transition-all ${
-                        selectedKpiTechnology === 'Lub Oil'
-                          ? 'bg-accent-blue text-white shadow-sm'
-                          : 'text-text-muted hover:text-text-primary'
-                      }`}
-                    >
-                      Lub Oil
-                    </button>
-                  </div>
+                <div className="flex items-center bg-[#0c101d] p-0.5 rounded-full border border-[#202742]">
+                  <button
+                    type="button"
+                    onClick={() => setSelectedKpiTechnology('Vibration')}
+                    className={`px-3 py-1 rounded-full text-xs font-semibold transition-all ${
+                      selectedKpiTechnology === 'Vibration'
+                        ? 'bg-accent-blue text-white shadow-sm'
+                        : 'text-text-muted hover:text-text-primary'
+                    }`}
+                  >
+                    Vibration
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setSelectedKpiTechnology('Lub Oil')}
+                    className={`px-3 py-1 rounded-full text-xs font-semibold transition-all ${
+                      selectedKpiTechnology === 'Lub Oil'
+                        ? 'bg-accent-blue text-white shadow-sm'
+                        : 'text-text-muted hover:text-text-primary'
+                    }`}
+                  >
+                    Lub Oil
+                  </button>
                 </div>
               </div>
             </div>

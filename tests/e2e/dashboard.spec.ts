@@ -237,10 +237,11 @@ test.describe('CBM Dashboard E2E Smoke Tests', () => {
     await expect(page.getByText(/Collection Compliance & Non-Collection Reasons/i)).toBeVisible();
     await expect(page.getByText(/^Failure Mechanisms$/i)).toBeVisible();
 
-    // Valida a barra de filtros: Vessel Scope, Month e Technology
-    await expect(page.getByText('Vessel Scope:')).toBeVisible();
-    await expect(page.getByText('Month:')).toBeVisible();
-    await expect(page.getByText('Technology:')).toBeVisible();
+    // Valida os botões de filtros compactos: Vessel Scope (FPSO) e Month (Mês de referência)
+    const vesselScopeBtn = page.getByTitle(/Vessel Scope: Filter by FPSO/i);
+    const monthBtn = page.getByTitle(/Reference Month/i);
+    await expect(vesselScopeBtn).toBeVisible();
+    await expect(monthBtn).toBeVisible();
 
     // Valida os botões exclusivos de tecnologia
     const vibBtn = page.getByRole('button', { name: 'Vibration' });
