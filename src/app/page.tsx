@@ -175,6 +175,11 @@ interface WorkOrder {
 const ALL_RECOM_FPSOS = ['DNY', 'UNY', 'PTY', 'ONE'];
 
 export default function MainPage() {
+  const [isHydrated, setIsHydrated] = useState(false);
+  useEffect(() => {
+    setIsHydrated(true);
+  }, []);
+
   const [activeTab, setActiveTab] = useState<'equipment' | 'work-order' | 'recommendations' | 'kpis'>('work-order');
   const [maximizedChart, setMaximizedChart] = useState<string | null>(null);
 
@@ -1476,7 +1481,11 @@ export default function MainPage() {
       <Sidebar />
  
       {/* Main Container */}
-      <main className="flex-1 pt-14 pr-16 pl-6 pb-6 flex flex-col gap-6 max-w-[1440px] mx-auto w-full">
+      <main 
+        data-hydrated={isHydrated ? "true" : "false"} 
+        data-active-tab={activeTab}
+        className="flex-1 pt-14 pr-16 pl-6 pb-6 flex flex-col gap-6 max-w-[1440px] mx-auto w-full"
+      >
         {/* Navigation & Header */}
         <div className="flex items-center justify-between border-b border-border-panel/40 pb-3 mt-2">
           <div className="flex items-center gap-3">

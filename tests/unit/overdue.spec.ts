@@ -3,7 +3,7 @@ import {
   calculatePMOverdue,
   getPMOverdueIndex,
   calculateEquipmentCbmRisk,
-} from '../src/utils/riskMatrix';
+} from '../../src/utils/riskMatrix';
 
 test.describe('Overdue Logic & Risk Compliance Unit & Integration Tests', () => {
   const referenceDate = new Date('2026-10-22T12:00:00Z');

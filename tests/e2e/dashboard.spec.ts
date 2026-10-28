@@ -20,10 +20,12 @@ test.describe('CBM Dashboard E2E Smoke Tests', () => {
   test('deve abrir o Drawer lateral de equipamento padronizado no Design System SLB', async ({ page }) => {
     await page.goto('/');
 
-    // Navega para a aba de Equipamentos
+    // Aguarda hidratação e navega para a aba de Equipamentos
+    await expect(page.locator('main[data-hydrated="true"]')).toBeVisible({ timeout: 15000 });
     const equipmentTab = page.getByRole('button', { name: /^Equipment$/i });
     await expect(equipmentTab).toBeVisible();
     await equipmentTab.click();
+    await expect(page.locator('main[data-active-tab="equipment"]')).toBeVisible({ timeout: 10000 });
 
     // Clica no primeiro equipamento da tabela para abrir o Drawer
     const firstEquipmentRow = page.locator('table tbody tr').first();
@@ -69,10 +71,12 @@ test.describe('CBM Dashboard E2E Smoke Tests', () => {
 
     await page.goto('/');
 
-    // Navega para a aba de Equipamentos
+    // Aguarda hidratação e navega para a aba de Equipamentos
+    await expect(page.locator('main[data-hydrated="true"]')).toBeVisible({ timeout: 15000 });
     const equipmentTab = page.getByRole('button', { name: /^Equipment$/i });
     await expect(equipmentTab).toBeVisible();
     await equipmentTab.click();
+    await expect(page.locator('main[data-active-tab="equipment"]')).toBeVisible({ timeout: 10000 });
 
     // Valida que existem amostras de equipamentos em atraso (Overdue) visíveis na tabela
     const overdueBadges = page.locator('table tbody tr').getByText('Overdue');
@@ -120,10 +124,12 @@ test.describe('CBM Dashboard E2E Smoke Tests', () => {
   test('deve exibir a coluna Next Collect na tabela de Equipamentos com ordenação funcional', async ({ page }) => {
     await page.goto('/');
 
-    // Navega para a aba de Equipamentos
+    // Aguarda hidratação e navega para a aba de Equipamentos
+    await expect(page.locator('main[data-hydrated="true"]')).toBeVisible({ timeout: 15000 });
     const equipmentTab = page.getByRole('button', { name: /^Equipment$/i });
     await expect(equipmentTab).toBeVisible();
     await equipmentTab.click();
+    await expect(page.locator('main[data-active-tab="equipment"]')).toBeVisible({ timeout: 10000 });
 
     // Valida a presença da coluna Next Collect no cabeçalho da tabela
     const nextCollectHeader = page.getByTitle('Sort by Next Collect');
@@ -157,10 +163,12 @@ test.describe('CBM Dashboard E2E Smoke Tests', () => {
 
     await page.goto('/');
 
-    // Navega para a aba de Equipamentos
+    // Aguarda hidratação e navega para a aba de Equipamentos
+    await expect(page.locator('main[data-hydrated="true"]')).toBeVisible({ timeout: 15000 });
     const equipmentTab = page.getByRole('button', { name: /^Equipment$/i });
     await expect(equipmentTab).toBeVisible();
     await equipmentTab.click();
+    await expect(page.locator('main[data-active-tab="equipment"]')).toBeVisible({ timeout: 10000 });
 
     // Valida o checkbox de seleção geral no cabeçalho
     const selectAllCheckbox = page.locator('th input[aria-label="Select all eligible equipments"]');
@@ -213,10 +221,12 @@ test.describe('CBM Dashboard E2E Smoke Tests', () => {
   test('deve navegar para a aba de KPIs, filtrar por tecnologia/mês, alternar as 3 trends e exibir a tabela de relatório mensal com banner e colunas em inglês', async ({ page }) => {
     await page.goto('/');
 
-    // Navega para a aba de KPIs
+    // Aguarda hidratação e navega para a aba de KPIs
+    await expect(page.locator('main[data-hydrated="true"]')).toBeVisible({ timeout: 15000 });
     const kpiTab = page.getByRole('button', { name: /^KPIs$/i });
     await expect(kpiTab).toBeVisible();
     await kpiTab.click();
+    await expect(page.locator('main[data-active-tab="kpis"]')).toBeVisible({ timeout: 10000 });
 
     // Valida os 3 cards de snapshot
     await expect(page.getByRole('heading', { name: /Fault Risk & Overall Health/i })).toBeVisible();
@@ -272,14 +282,14 @@ test.describe('CBM Dashboard E2E Smoke Tests', () => {
     await expect(firstRow).toBeVisible();
     await expect(firstRow.locator('td').nth(3)).toContainText(/Tier 1|Tier 2/i);
 
-    // Valida que clicar na linha do caso crítico/degradado abre direto o modal CBM Analysis Report Details
+    // Valida que clicar na linha do caso crítico/degradado abre direto o Drawer lateral
     await firstRow.click();
-    await expect(page.getByText('CBM Analysis Report Details')).toBeVisible();
+    await expect(page.locator('h4', { hasText: /^Details$/i })).toBeVisible();
 
-    // Fecha o modal de detalhes do relatório
-    const closeReportBtn = page.locator('button[title="Close"]').last();
+    // Fecha o Drawer de detalhes do relatório
+    const closeReportBtn = page.getByTitle('Close Drawer');
     await closeReportBtn.click();
-    await expect(page.getByText('CBM Analysis Report Details')).not.toBeVisible();
+    await expect(page.locator('h4', { hasText: /^Details$/i })).not.toBeVisible();
 
     // Testa a alternância para tecnologia Lub Oil
     await oilBtn.click();
@@ -289,10 +299,12 @@ test.describe('CBM Dashboard E2E Smoke Tests', () => {
   test('deve filtrar corretamente pelas colunas da tabela Equipment List sem bolinhas coloridas nas opções de condição', async ({ page }) => {
     await page.goto('/');
 
-    // Navega para a aba de Equipamentos
+    // Aguarda hidratação e navega para a aba de Equipamentos
+    await expect(page.locator('main[data-hydrated="true"]')).toBeVisible({ timeout: 15000 });
     const equipmentTab = page.getByRole('button', { name: /^Equipment$/i });
     await expect(equipmentTab).toBeVisible();
     await equipmentTab.click();
+    await expect(page.locator('main[data-active-tab="equipment"]')).toBeVisible({ timeout: 10000 });
 
     // 1. Testa filtro da coluna Equip. CBM Condition
     const conditionHeader = page.locator('th', { hasText: 'Equip. CBM Condition' });
