@@ -93,11 +93,7 @@ export async function POST(request: Request) {
       const monitoringTech = report.technology ? `CBM ${report.technology}` : 'CBM Analysis';
       
       // Detailed description combining directive and short fault desc
-      const faultLines = faultDesc
-        .split('\n')
-        .map((l: string) => l.trim())
-        .filter((l: string) => l && !/^1\.\s*Anomaly:?$/i.test(l));
-      const summaryDescription = `${directive} - ${faultLines[0] || faultDesc.split('\n')[0]}`;
+      const summaryDescription = `${directive} - ${faultDesc.split('\n')[0]}`;
 
       // 4. Create new Work Order
       const inserted = await tx

@@ -631,16 +631,6 @@ export default function MainPage() {
 
     const extSrc = isLube ? `CBM-LUB/${critChar}` : `CBM-VIB/${critChar}`;
 
-    const anomalyText =
-      report.conditionAssessment ||
-      `Surveillance assessment for ${report.equipmentTag} evaluated as ${techStatus || 'Tier 1'} based on ${report.technology || 'Vibration Analysis'} parameters.`;
-    const recommendationText = report.longDescription || '';
-    const samplePoint = report.location || report.component || 'N/A';
-
-    const structuredFaultDesc = isLube
-      ? `1. Anomaly:\n${anomalyText}\n\n2. Technical Recommendations:\n${recommendationText}\n\n3. Sample Point (Location):\n${samplePoint}\n\nNote: Always refer to the most recent oil analysis report. See attached document.`
-      : `1. Anomaly:\n${anomalyText}\n\n2. Technical Recommendations:\n${recommendationText}\n\nNote: Always refer to the most recent vibration analysis report. See attached document.`;
-
     setWoFormFields({
       woSite: equipments.find(e => e.tag === report.equipmentTag)?.fpso || 'UNY',
       directive: '',
@@ -648,7 +638,7 @@ export default function MainPage() {
       workType: 'CM',
       externalSource: extSrc,
       externalSourceId: `CBM-${report.id}`,
-      faultDesc: structuredFaultDesc,
+      faultDesc: `Anomaly: ${report.conditionAssessment}\n\nRecommendation: ${report.longDescription}`,
       symptom: isLube ? 'ELU' : 'VIB',
       discovery: '04',
       actionId: isLube ? '7' : '6',

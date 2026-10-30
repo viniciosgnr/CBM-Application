@@ -588,8 +588,9 @@ export async function seed() {
 
   const sanitizedEquipments = sbmEquipments.map((eq: Record<string, string>, index: number) => {
     // Generate distinct relative dates & frequencies for Vibration and Lube Oil
-    const vibDaysAgo = index % 5 === 0 ? 3 : index % 3 === 0 ? 12 : index % 2 === 0 ? 22 : 45;
-    const oilDaysAgo = index % 4 === 0 ? 5 : index % 3 === 0 ? 18 : index % 2 === 0 ? 28 : 60;
+    const isTopOverdueDemo = index < 15 && index % 17 !== 0 && index % 11 !== 0 && index % 7 !== 0;
+    const vibDaysAgo = isTopOverdueDemo ? 55 : index % 5 === 0 ? 3 : index % 3 === 0 ? 12 : index % 2 === 0 ? 22 : 45;
+    const oilDaysAgo = isTopOverdueDemo ? 95 : index % 4 === 0 ? 5 : index % 3 === 0 ? 18 : index % 2 === 0 ? 28 : 60;
 
     const vibDateStr = getRelativeDateStr(vibDaysAgo);
     const oilDateStr = getRelativeDateStr(oilDaysAgo);
