@@ -607,15 +607,39 @@ export default function MainPage() {
   const openWorkOrderForm = (report: AnalysisReport) => {
     setSelectedReportForWo(report);
     
-    let extSrc = 'CBM';
-    const tech = report.technology || '';
-    const cond = report.overallCondition || '';
-    const critChar = cond === 'Critical' ? 'H' : 'M';
-    if (tech.toLowerCase().includes('vibration')) {
-      extSrc = `CBM-VIB/${critChar}`;
-    } else if (tech.toLowerCase().includes('lube') || tech.toLowerCase().includes('oil')) {
-      extSrc = `CBM-LUB/${critChar}`;
+    const tech = (report.technology || '').toLowerCase();
+    const isLube = tech.includes('lube') || tech.includes('oil') || tech.includes('lubric');
+    const techStatus = (
+      isLube
+        ? report.lubeOilStatus || report.overallCondition
+        : report.vibrationStatus || report.overallCondition
+    ) || '';
+    const statusNorm = techStatus.toLowerCase();
+
+    let critChar: 'H' | 'M' | 'L' = 'M';
+    if (statusNorm.includes('critical') || statusNorm.includes('tier 1')) {
+      critChar = 'H';
+    } else if (statusNorm.includes('degraded') || statusNorm.includes('tier 2')) {
+      critChar = 'M';
+    } else if (
+      statusNorm.includes('good') ||
+      statusNorm.includes('tier 3') ||
+      statusNorm.includes('tier 4')
+    ) {
+      critChar = 'L';
     }
+
+    const extSrc = isLube ? `CBM-LUB/${critChar}` : `CBM-VIB/${critChar}`;
+
+    const anomalyText =
+      report.conditionAssessment ||
+      `Surveillance assessment for ${report.equipmentTag} evaluated as ${techStatus || 'Tier 1'} based on ${report.technology || 'Vibration Analysis'} parameters.`;
+    const recommendationText = report.longDescription || '';
+    const samplePoint = report.location || report.component || 'N/A';
+
+    const structuredFaultDesc = isLube
+      ? `1. Anomaly:\n${anomalyText}\n\n2. Technical Recommendations:\n${recommendationText}\n\n3. Sample Point (Location):\n${samplePoint}\n\nNote: Always refer to the most recent oil analysis report. See attached document.`
+      : `1. Anomaly:\n${anomalyText}\n\n2. Technical Recommendations:\n${recommendationText}\n\nNote: Always refer to the most recent vibration analysis report. See attached document.`;
 
     setWoFormFields({
       woSite: equipments.find(e => e.tag === report.equipmentTag)?.fpso || 'UNY',
@@ -624,10 +648,10 @@ export default function MainPage() {
       workType: 'CM',
       externalSource: extSrc,
       externalSourceId: `CBM-${report.id}`,
-      faultDesc: `Anomaly: ${report.conditionAssessment}\n\nRecommendation: ${report.longDescription}`,
-      symptom: tech.toLowerCase().includes('vibration') ? 'VIB' : 'ELU',
+      faultDesc: structuredFaultDesc,
+      symptom: isLube ? 'ELU' : 'VIB',
       discovery: '04',
-      actionId: tech.toLowerCase().includes('vibration') ? '6' : '7',
+      actionId: isLube ? '7' : '6',
       operationalStatus: '01',
       attachedFilename: '',
       attachedFileSize: 0,
@@ -3305,12 +3329,18 @@ export default function MainPage() {
                   </div>
                   <div className="flex flex-col gap-1">
                     <label className="text-text-muted font-semibold uppercase text-[9px] tracking-wider">External Source</label>
-                    <input
-                      type="text"
+                    <select
                       value={woFormFields.externalSource}
-                      disabled
-                      className="bg-[#121626] border border-[#2a3254]/50 rounded-lg p-2 text-text-muted font-medium cursor-not-allowed text-xs"
-                    />
+                      onChange={(e) => setWoFormFields({ ...woFormFields, externalSource: e.target.value })}
+                      className="bg-[#121626] border border-[#2a3254] rounded-lg p-2 text-text-primary focus:border-accent-blue focus:outline-none cursor-pointer text-xs"
+                    >
+                      <option value="CBM-VIB/H">CBM-VIB/H - CBM Vibration Analysis High</option>
+                      <option value="CBM-VIB/M">CBM-VIB/M - CBM Vibration Analysis Medium</option>
+                      <option value="CBM-VIB/L">CBM-VIB/L - CBM Vibration Analysis Low</option>
+                      <option value="CBM-LUB/H">CBM-LUB/H - CBM Lubricant Analysis High</option>
+                      <option value="CBM-LUB/M">CBM-LUB/M - CBM Lubricant Analysis Medium</option>
+                      <option value="CBM-LUB/L">CBM-LUB/L - CBM Lubricant Analysis Low</option>
+                    </select>
                   </div>
                   <div className="flex flex-col gap-1">
                     <label className="text-text-muted font-semibold uppercase text-[9px] tracking-wider">External Source ID</label>
@@ -3388,11 +3418,14 @@ export default function MainPage() {
                       onChange={(e) => setWoFormFields({ ...woFormFields, symptom: e.target.value })}
                       className="bg-[#121626] border border-[#2a3254] rounded-lg p-2 text-text-primary focus:border-accent-blue focus:outline-none cursor-pointer text-xs"
                     >
-                      <option value="VIB">VIB - Vibration</option>
-                      <option value="ELU">ELU - External leakage - utility medium</option>
+                      <option value="BRD">BRD - Breakdown</option>
                       <option value="ELP">ELP - External leakage - process medium</option>
+                      <option value="ELU">ELU - External leakage - utility medium</option>
+                      <option value="NOI">NOI - Noise</option>
+                      <option value="OHE">OHE - Overheating</option>
                       <option value="PLU">PLU - Plugged / Choked</option>
                       <option value="STD">STD - Structural deficiency</option>
+                      <option value="VIB">VIB - Vibration</option>
                     </select>
                   </div>
 
@@ -3442,7 +3475,7 @@ export default function MainPage() {
                     <textarea
                       value={woFormFields.faultDesc}
                       onChange={(e) => setWoFormFields({ ...woFormFields, faultDesc: e.target.value })}
-                      rows={3}
+                      rows={6}
                       className="bg-[#121626] border border-[#2a3254] rounded-lg p-2.5 text-text-primary focus:border-accent-blue focus:outline-none resize-none leading-relaxed text-xs"
                     />
                   </div>
