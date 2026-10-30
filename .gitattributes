@@ -1,0 +1,11 @@
+*.db binary
+*.db-shm binary
+*.db-wal binary
+*.sqlite binary
+*.pdf binary
+*.PDF binary
+*.xlsx binary
+*.png binary
+*.jpg binary
+*.jpeg binary
+
