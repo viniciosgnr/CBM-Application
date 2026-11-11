@@ -2,6 +2,7 @@
 import { useState, useEffect, useMemo, useRef } from 'react';
 import Header from '@/components/Header';
 import Sidebar from '@/components/Sidebar';
+import TaskManagerDrawer from '@/components/TaskManagerDrawer';
 import DashboardCard from '@/components/DashboardCard';
 import KpiMetricCard from '@/components/KpiMetricCard';
 import CustomTable from '@/components/CustomTable';
@@ -29,6 +30,13 @@ import {
   Trash2,
   Download,
   Info,
+  CheckSquare,
+  Paperclip,
+  Tag,
+  Bell,
+  MessageSquare,
+  Clock,
+  UploadCloud,
 } from 'lucide-react';
 import {
   WorkOrderStatusPie,
@@ -132,6 +140,36 @@ interface AnalysisReport {
   failureMechanismSubdivision?: string | null;
   effectiveness?: string | null;
   cbmCaseStatus?: string | null;
+  taskId?: number | null;
+  taskNumber?: string | null;
+  createdAt: string;
+}
+
+interface TaskItem {
+  id: number;
+  taskReference: string;
+  reportId?: number | null;
+  equipmentTag: string;
+  type: string;
+  title: string;
+  description: string;
+  assignedTo: string;
+  priority: string;
+  dueDate: string;
+  associatedEvent?: string | null;
+  associatedEntity?: string | null;
+  faultReportOption: string;
+  workOrderId?: number | null;
+  workOrderReference?: string | null;
+  attachedFilename?: string | null;
+  attachedFileSize?: number | null;
+  sparePartNumber?: string | null;
+  purchaseOrderRef?: string | null;
+  quantity?: string | null;
+  unitOfQuantity?: string | null;
+  status: string;
+  historyJson?: string | null;
+  commentsJson?: string | null;
   createdAt: string;
 }
 
@@ -598,6 +636,35 @@ export default function MainPage() {
   const [isSubmittingWo, setIsSubmittingWo] = useState(false);
   const [woSuccessAlert, setWoSuccessAlert] = useState<string | null>(null);
 
+  // States and Handlers for Task Manager Drawer
+  const [tasksList, setTasksList] = useState<TaskItem[]>([]);
+  const [loadingTasks, setLoadingTasks] = useState(false);
+  const [taskDrawerOpen, setTaskDrawerOpen] = useState(false);
+  const [taskDrawerInitialView, setTaskDrawerInitialView] = useState<'list' | 'new' | 'detail'>('list');
+  const [selectedReportForTask, setSelectedReportForTask] = useState<AnalysisReport | null>(null);
+  const [activeTaskView, setActiveTaskView] = useState<TaskItem | null>(null);
+
+  const openTaskForm = (report: AnalysisReport) => {
+    setSelectedReportForTask(report);
+    setTaskDrawerInitialView('new');
+    setTaskDrawerOpen(true);
+  };
+
+  const fetchTasks = async () => {
+    try {
+      setLoadingTasks(true);
+      const res = await fetch('/api/tasks');
+      if (res.ok) {
+        const data = await res.json();
+        setTasksList(data);
+      }
+    } catch (err) {
+      console.error('Failed to fetch tasks:', err);
+    } finally {
+      setLoadingTasks(false);
+    }
+  };
+
   const navigateToWorkOrder = (ref: string) => {
     setReportDetailsOpen(false);
     setActiveTab('work-order');
@@ -712,8 +779,13 @@ export default function MainPage() {
     try {
       const res = await fetch('/api/reports');
       if (res.ok) {
-        const data = await res.json();
+        const data: AnalysisReport[] = await res.json();
         setReports(data);
+        setSelectedReport(prev => {
+          if (!prev) return null;
+          const updated = data.find(r => r.id === prev.id);
+          return updated || prev;
+        });
       }
     } catch (err) {
       console.error('Error fetching reports:', err);
@@ -741,6 +813,7 @@ export default function MainPage() {
     fetchEquipments();
     fetchReports();
     fetchWorkOrders();
+    fetchTasks();
 
     function handleClickOutsideRecomFpso(event: MouseEvent) {
       if (recomFpsoPopoverRef.current && !recomFpsoPopoverRef.current.contains(event.target as Node)) {
@@ -1493,7 +1566,13 @@ export default function MainPage() {
       <Header />
       
       {/* Sidebar Layout */}
-      <Sidebar />
+      <Sidebar
+        onOpenTaskDrawer={() => {
+          setTaskDrawerInitialView('list');
+          setTaskDrawerOpen(true);
+        }}
+        isTaskDrawerOpen={taskDrawerOpen}
+      />
  
       {/* Main Container */}
       <main 
@@ -3217,26 +3296,46 @@ export default function MainPage() {
 
                     {/* Bottom Action Buttons */}
                     <div className="flex justify-end gap-3 select-none">
-                      {selectedReport.woNumber && selectedReport.woNumber !== 'N/A' ? (
+                      {selectedReport.taskNumber ? (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            const foundTask = tasksList.find(t => t.taskReference === selectedReport.taskNumber || t.id === selectedReport.taskId);
+                            if (foundTask) {
+                              setActiveTaskView(foundTask);
+                              setTaskDrawerInitialView('detail');
+                              setTaskDrawerOpen(true);
+                            } else {
+                              openTaskForm(selectedReport);
+                            }
+                          }}
+                          className="flex items-center gap-2 border border-[#333e68] hover:border-accent-blue bg-[#0e1320] hover:bg-[#1a233a] text-text-primary font-semibold px-5 py-2 rounded-full text-xs transition-colors cursor-pointer shadow active:scale-95"
+                        >
+                          <CheckSquare size={14} className="text-[#8ab4f8]" />
+                          View Task ({selectedReport.taskNumber})
+                        </button>
+                      ) : (
+                        <button
+                          type="button"
+                          onClick={() => openTaskForm(selectedReport)}
+                          className="flex items-center gap-2 border border-[#333e68] hover:border-accent-blue bg-[#0e1320] hover:bg-[#1a233a] text-text-primary font-semibold px-5 py-2 rounded-full text-xs transition-colors cursor-pointer shadow active:scale-95"
+                        >
+                          <CheckSquare size={14} className="text-[#8ab4f8]" />
+                          Create a task
+                        </button>
+                      )}
+
+                      {selectedReport.woNumber && selectedReport.woNumber !== 'N/A' && (
                         <button
                           type="button"
                           onClick={() => {
                             setReportDetailsOpen(false);
                             navigateToWorkOrder(selectedReport.woNumber!);
                           }}
-                          className="flex items-center gap-2 bg-[#60a5fa] hover:bg-[#3b82f6] text-[#090d16] font-semibold px-5 py-2 rounded-full text-xs transition-colors cursor-pointer shadow active:scale-95"
+                          className="flex items-center gap-2 bg-[#60a5fa] hover:bg-[#3b82f6] text-[#090d16] font-semibold px-4 py-2 rounded-full text-xs transition-colors cursor-pointer shadow active:scale-95"
                         >
                           <FileText size={14} />
-                          View Work Order ({selectedReport.woNumber})
-                        </button>
-                      ) : (
-                        <button
-                          type="button"
-                          onClick={() => openWorkOrderForm(selectedReport)}
-                          className="flex items-center gap-2 bg-[#60a5fa] hover:bg-[#3b82f6] text-[#090d16] font-semibold px-5 py-2 rounded-full text-xs transition-colors cursor-pointer shadow active:scale-95"
-                        >
-                          <PlusCircle size={14} />
-                          Generate Work Order (Fault Report)
+                          Work Order ({selectedReport.woNumber})
                         </button>
                       )}
                     </div>
@@ -3249,289 +3348,28 @@ export default function MainPage() {
         </div>
       )}
 
-      {/* Create Work Order Modal SLB Style */}
-      {workOrderFormOpen && selectedReportForWo && (
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[1000] flex items-center justify-center p-4">
-          <div className="bg-[#0b0f19] border border-[#202742] rounded-xl p-6 w-full max-w-[700px] relative animate-fadeIn shadow-2xl text-left flex flex-col max-h-[90vh]">
-            
-            {/* Header Compacto SLB */}
-            <div className="flex items-center justify-between pb-4 border-b border-[#202742]">
-              <div className="flex items-center gap-3">
-                <div className="w-8 h-8 rounded-lg bg-[#60a5fa]/10 border border-[#60a5fa]/30 flex items-center justify-center text-[#60a5fa]">
-                  <Wrench size={16} />
-                </div>
-                <div>
-                  <h2 className="text-sm font-bold text-text-primary uppercase tracking-wide flex items-center gap-2">
-                    Raise Fault Report (Work Order)
-                  </h2>
-                  <div className="flex items-center gap-2 text-[10px] text-text-muted font-medium mt-0.5">
-                    <span className="bg-[#222944] text-[#60a5fa] px-2 py-0.5 rounded font-mono font-bold">{selectedReportForWo.equipmentTag}</span>
-                    <span>•</span>
-                    <span>{selectedReportForWo.facility}</span>
-                    <span>•</span>
-                    <span>{selectedReportForWo.system}</span>
-                  </div>
-                </div>
-              </div>
-              <button
-                onClick={() => setWorkOrderFormOpen(false)}
-                className="text-text-muted hover:text-text-primary p-1 rounded hover:bg-[#202742] transition-colors cursor-pointer"
-                title="Close"
-              >
-                <X size={18} />
-              </button>
-            </div>
-
-            {/* Form */}
-            <form onSubmit={handleWoSubmit} className="flex-1 overflow-y-auto mt-4 pr-1 flex flex-col gap-4 text-xs">
-              
-              {/* Success Alert Banner inside Modal */}
-              {woSuccessAlert && (
-                <div className="bg-status-ok/10 border border-status-ok/30 text-status-ok p-3 rounded-lg flex items-center gap-2 font-medium animate-fadeIn">
-                  <RefreshCw className="animate-spin" size={14} />
-                  <span>{woSuccessAlert}</span>
-                </div>
-              )}
-
-              {/* Bloco 1 SLB: Dados de Identificação do CMMS (Read-only Metadata) */}
-              <div className="bg-[#101422]/60 border border-[#202742] rounded-xl p-4 flex flex-col gap-3">
-                <span className="text-[10px] font-bold text-[#60a5fa] uppercase tracking-wider block border-b border-[#202742] pb-2">
-                  1. External CMMS Integration Details
-                </span>
-                <div className="grid grid-cols-2 gap-3">
-                  <div className="flex flex-col gap-1">
-                    <label className="text-text-muted font-semibold uppercase text-[9px] tracking-wider">WO Site</label>
-                    <input
-                      type="text"
-                      value={woFormFields.woSite}
-                      disabled
-                      className="bg-[#121626] border border-[#2a3254]/50 rounded-lg p-2 text-text-muted font-medium cursor-not-allowed text-xs"
-                    />
-                  </div>
-                  <div className="flex flex-col gap-1">
-                    <label className="text-text-muted font-semibold uppercase text-[9px] tracking-wider">Work Type</label>
-                    <input
-                      type="text"
-                      value={woFormFields.workType}
-                      disabled
-                      className="bg-[#121626] border border-[#2a3254]/50 rounded-lg p-2 text-text-muted font-medium cursor-not-allowed text-xs"
-                    />
-                  </div>
-                  <div className="flex flex-col gap-1">
-                    <label className="text-text-muted font-semibold uppercase text-[9px] tracking-wider">External Source</label>
-                    <select
-                      value={woFormFields.externalSource}
-                      onChange={(e) => setWoFormFields({ ...woFormFields, externalSource: e.target.value })}
-                      className="bg-[#121626] border border-[#2a3254] rounded-lg p-2 text-text-primary focus:border-accent-blue focus:outline-none cursor-pointer text-xs"
-                    >
-                      <option value="CBM-VIB/H">CBM-VIB/H - CBM Vibration Analysis High</option>
-                      <option value="CBM-VIB/M">CBM-VIB/M - CBM Vibration Analysis Medium</option>
-                      <option value="CBM-VIB/L">CBM-VIB/L - CBM Vibration Analysis Low</option>
-                      <option value="CBM-LUB/H">CBM-LUB/H - CBM Lubricant Analysis High</option>
-                      <option value="CBM-LUB/M">CBM-LUB/M - CBM Lubricant Analysis Medium</option>
-                      <option value="CBM-LUB/L">CBM-LUB/L - CBM Lubricant Analysis Low</option>
-                    </select>
-                  </div>
-                  <div className="flex flex-col gap-1">
-                    <label className="text-text-muted font-semibold uppercase text-[9px] tracking-wider">External Source ID</label>
-                    <input
-                      type="text"
-                      value={woFormFields.externalSourceId}
-                      onChange={(e) => setWoFormFields({ ...woFormFields, externalSourceId: e.target.value })}
-                      className="bg-[#121626] border border-[#2a3254] rounded-lg p-2 text-text-primary focus:border-accent-blue focus:outline-none transition-colors text-xs"
-                    />
-                  </div>
-                  <div className="flex flex-col gap-1 col-span-2">
-                    <label className="text-text-muted font-semibold uppercase text-[9px] tracking-wider">Discovery Context</label>
-                    <input
-                      type="text"
-                      value={`${woFormFields.discovery} - Periodic condition monitoring`}
-                      disabled
-                      className="bg-[#121626] border border-[#2a3254]/50 rounded-lg p-2 text-text-muted font-medium cursor-not-allowed text-xs"
-                    />
-                  </div>
-                </div>
-              </div>
-
-              {/* Bloco 2 SLB: Parâmetros Operacionais & Diretivas */}
-              <div className="bg-[#101422]/60 border border-[#202742] rounded-xl p-4 flex flex-col gap-3">
-                <span className="text-[10px] font-bold text-[#60a5fa] uppercase tracking-wider block border-b border-[#202742] pb-2">
-                  2. Directive & Maintenance Parameters
-                </span>
-                <div className="grid grid-cols-2 gap-3">
-                  <div className="flex flex-col gap-1 col-span-2">
-                    <label className="text-text-primary font-bold uppercase text-[9px] tracking-wider flex items-center gap-1">
-                      Directive <span className="text-status-error">*</span>
-                      <span className="text-[8px] text-text-muted normal-case font-normal">(Use capital letters, e.g. OIL REPLACE)</span>
-                    </label>
-                    <input
-                      type="text"
-                      placeholder="Enter directive title in CAPITAL letters"
-                      value={woFormFields.directive}
-                      onChange={(e) => {
-                        const val = e.target.value.toUpperCase();
-                        setWoFormFields({ ...woFormFields, directive: val });
-                        if (val.trim()) setWoFormFieldsError({ directive: '' });
-                      }}
-                      className={`bg-[#121626] border rounded-lg p-2.5 text-text-primary focus:border-accent-blue focus:outline-none transition-colors text-xs ${
-                        woFormFieldsError.directive ? 'border-status-error' : 'border-[#2a3254]'
-                      }`}
-                    />
-                    {woFormFieldsError.directive && (
-                      <span className="text-status-error text-[10px] mt-0.5">{woFormFieldsError.directive}</span>
-                    )}
-                  </div>
-
-                  <div className="flex flex-col gap-1">
-                    <label className="text-text-muted font-semibold uppercase text-[9px] tracking-wider">Maint. Org.</label>
-                    <select
-                      value={woFormFields.maintOrg}
-                      onChange={(e) => setWoFormFields({ ...woFormFields, maintOrg: e.target.value })}
-                      className="bg-[#121626] border border-[#2a3254] rounded-lg p-2 text-text-primary focus:border-accent-blue focus:outline-none cursor-pointer text-xs"
-                    >
-                      <option value="MECHTS">MECHTS - Mechanic - Topside</option>
-                      <option value="MECHER">MECHER - Mechanic - Engine Room</option>
-                      <option value="INSTR">INSTR - Instrument</option>
-                      <option value="ELEC">ELEC - Electrical</option>
-                      <option value="DCS">DCS - Distributed Control System</option>
-                      <option value="EX_INSP">EX_INSP - Ex Inspector</option>
-                      <option value="FABRIC">FABRIC - Fabric Maintenance</option>
-                      <option value="CARGO">CARGO - Cargo</option>
-                      <option value="MEDIC">MEDIC - Medic</option>
-                    </select>
-                  </div>
-
-                  <div className="flex flex-col gap-1">
-                    <label className="text-text-muted font-semibold uppercase text-[9px] tracking-wider">Symptom</label>
-                    <select
-                      value={woFormFields.symptom}
-                      onChange={(e) => setWoFormFields({ ...woFormFields, symptom: e.target.value })}
-                      className="bg-[#121626] border border-[#2a3254] rounded-lg p-2 text-text-primary focus:border-accent-blue focus:outline-none cursor-pointer text-xs"
-                    >
-                      <option value="BRD">BRD - Breakdown</option>
-                      <option value="ELP">ELP - External leakage - process medium</option>
-                      <option value="ELU">ELU - External leakage - utility medium</option>
-                      <option value="NOI">NOI - Noise</option>
-                      <option value="OHE">OHE - Overheating</option>
-                      <option value="PLU">PLU - Plugged / Choked</option>
-                      <option value="STD">STD - Structural deficiency</option>
-                      <option value="VIB">VIB - Vibration</option>
-                    </select>
-                  </div>
-
-                  <div className="flex flex-col gap-1">
-                    <label className="text-text-muted font-semibold uppercase text-[9px] tracking-wider">Action ID</label>
-                    <select
-                      value={woFormFields.actionId}
-                      onChange={(e) => setWoFormFields({ ...woFormFields, actionId: e.target.value })}
-                      className="bg-[#121626] border border-[#2a3254] rounded-lg p-2 text-text-primary focus:border-accent-blue focus:outline-none cursor-pointer text-xs"
-                    >
-                      <option value="2">2 - Repair</option>
-                      <option value="3">3 - Modify</option>
-                      <option value="4">4 - Adjust</option>
-                      <option value="5">5 - Refit</option>
-                      <option value="6">6 - Check</option>
-                      <option value="7">7 - Service</option>
-                      <option value="8">8 - Test</option>
-                      <option value="9">9 - Inspection</option>
-                      <option value="10">10 - Overhaul</option>
-                      <option value="11">11 - Combination</option>
-                    </select>
-                  </div>
-
-                  <div className="flex flex-col gap-1">
-                    <label className="text-text-muted font-semibold uppercase text-[9px] tracking-wider">Operational Status</label>
-                    <select
-                      value={woFormFields.operationalStatus}
-                      onChange={(e) => setWoFormFields({ ...woFormFields, operationalStatus: e.target.value })}
-                      className="bg-[#121626] border border-[#2a3254] rounded-lg p-2 text-text-primary focus:border-accent-blue focus:outline-none cursor-pointer text-xs"
-                    >
-                      <option value="01">01 - Non-intrusive / Non-obstructive</option>
-                      <option value="02">02 - Item Intrusive / Obstructive</option>
-                      <option value="03">03 - Package Intrusive / Obstructive</option>
-                    </select>
-                  </div>
-                </div>
-              </div>
-
-              {/* Bloco 3 SLB: Descrição da Falha & Anexo do Relatório */}
-              <div className="bg-[#101422]/60 border border-[#202742] rounded-xl p-4 flex flex-col gap-3">
-                <span className="text-[10px] font-bold text-[#60a5fa] uppercase tracking-wider block border-b border-[#202742] pb-2">
-                  3. Fault Description & Evidence Attachment
-                </span>
-                <div className="flex flex-col gap-3">
-                  <div className="flex flex-col gap-1">
-                    <label className="text-text-muted font-semibold uppercase text-[9px] tracking-wider">Fault Description</label>
-                    <textarea
-                      value={woFormFields.faultDesc}
-                      onChange={(e) => setWoFormFields({ ...woFormFields, faultDesc: e.target.value })}
-                      rows={6}
-                      className="bg-[#121626] border border-[#2a3254] rounded-lg p-2.5 text-text-primary focus:border-accent-blue focus:outline-none resize-none leading-relaxed text-xs"
-                    />
-                  </div>
-
-                  {/* File Upload Input */}
-                  <div className="flex flex-col gap-1">
-                    <label className="text-text-muted font-semibold uppercase text-[9px] tracking-wider block">Attach Technical Analysis File (Optional)</label>
-                    <div className="border border-dashed border-[#333e68] hover:border-accent-blue rounded-lg p-3 bg-[#121626] flex flex-col items-center justify-center gap-1.5 transition-colors relative cursor-pointer">
-                      <input
-                        type="file"
-                        id="simulated-wo-file"
-                        className="absolute inset-0 opacity-0 cursor-pointer"
-                        onChange={(e) => {
-                          const file = e.target.files?.[0];
-                          if (file) {
-                            setWoFormFields({
-                              ...woFormFields,
-                              attachedFilename: file.name,
-                              attachedFileSize: file.size,
-                            });
-                          }
-                        }}
-                      />
-                      <FileText size={18} className="text-[#60a5fa]/70" />
-                      {woFormFields.attachedFilename ? (
-                        <div className="text-center">
-                          <span className="text-status-ok font-semibold block text-xs">✓ File Attached</span>
-                          <span className="text-text-muted text-[10px]">{woFormFields.attachedFilename} ({(woFormFields.attachedFileSize / 1024).toFixed(1)} KB)</span>
-                        </div>
-                      ) : (
-                        <span className="text-text-muted text-[10px]">Select PDF or spreadsheet analysis report to attach</span>
-                      )}
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              {/* Action Buttons SLB Style */}
-              <div className="flex justify-end gap-3 pt-3 border-t border-[#202742] select-none mt-1">
-                <button
-                  type="button"
-                  onClick={() => setWorkOrderFormOpen(false)}
-                  disabled={isSubmittingWo}
-                  className="border border-[#333e68] text-text-primary px-4 py-1.5 rounded-full text-xs font-medium hover:border-accent-blue transition-colors cursor-pointer disabled:opacity-50"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  disabled={isSubmittingWo}
-                  className="bg-[#60a5fa] hover:bg-[#3b82f6] text-[#090d16] font-semibold px-5 py-1.5 rounded-full text-xs transition-colors cursor-pointer shadow disabled:opacity-50 flex items-center gap-1.5"
-                >
-                  {isSubmittingWo ? (
-                    <>
-                      <RefreshCw className="animate-spin" size={12} />
-                      Submitting...
-                    </>
-                  ) : (
-                    'Submit Work Order'
-                  )}
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
+      {/* Right-Side Task Manager Drawer */}
+      <TaskManagerDrawer
+        isOpen={taskDrawerOpen}
+        onClose={() => setTaskDrawerOpen(false)}
+        initialView={taskDrawerInitialView}
+        selectedReportForNew={selectedReportForTask}
+        selectedTaskForDetail={activeTaskView}
+        tasks={tasksList}
+        reports={reports}
+        equipments={equipments}
+        workOrders={workOrders}
+        onRefreshAll={async () => {
+          await fetchTasks();
+          await fetchReports();
+          await fetchWorkOrders();
+        }}
+        onNavigateToWorkOrder={(woRef) => {
+          setTaskDrawerOpen(false);
+          setReportDetailsOpen(false);
+          navigateToWorkOrder(woRef);
+        }}
+      />
 
       {/* Modal Overlay para exibição de Gráfico Maximizado */}
       {maximizedChart && (

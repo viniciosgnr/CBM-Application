@@ -74,6 +74,8 @@ export const analysisReports = sqliteTable('analysis_reports', {
   failureMechanismSubdivision: text('failure_mechanism_subdivision'),
   effectiveness: text('effectiveness'),
   cbmCaseStatus: text('cbm_case_status'),
+  taskId: integer('task_id'),
+  taskNumber: text('task_number'),
 
   createdAt: text('created_at').notNull(),
 });
@@ -95,6 +97,12 @@ export const workOrders = sqliteTable('work_orders', {
   reportId: integer('report_id').references(() => analysisReports.id),
 
   // CMMS Fault Report Fields
+  entryDate: text('entry_date'),
+  reportedBy: text('reported_by'),
+  itemClassId: text('item_class_id'),
+  actionTakenOnField: integer('action_taken_on_field').default(0),
+  performedWork: text('performed_work'),
+  incidentManagement: text('incident_management'),
   woSite: text('wo_site').notNull(),
   directive: text('directive').notNull(),
   maintOrg: text('maint_org').notNull(),
@@ -110,4 +118,32 @@ export const workOrders = sqliteTable('work_orders', {
   // Simulated File Upload Metadata
   attachedFilename: text('attached_filename'),
   attachedFileSize: integer('attached_file_size'),
+});
+
+export const tasks = sqliteTable('tasks', {
+  id: integer('id').primaryKey({ autoIncrement: true }),
+  taskReference: text('task_reference').notNull().unique(), // e.g. TSK-1001
+  reportId: integer('report_id').references(() => analysisReports.id),
+  equipmentTag: text('equipment_tag').notNull(),
+  type: text('type').notNull().default('Corrective Maintenance'),
+  title: text('title').notNull(),
+  description: text('description').notNull(),
+  assignedTo: text('assigned_to').notNull(),
+  priority: text('priority').notNull(), // 'High' | 'Medium' | 'Low' | 'Very Low'
+  dueDate: text('due_date').notNull(),
+  associatedEvent: text('associated_event'),
+  associatedEntity: text('associated_entity'),
+  faultReportOption: text('fault_report_option').notNull(), // 'none' | 'create' | 'link'
+  workOrderId: integer('work_order_id'),
+  workOrderReference: text('work_order_reference'),
+  attachedFilename: text('attached_filename'),
+  attachedFileSize: integer('attached_file_size'),
+  sparePartNumber: text('spare_part_number'),
+  purchaseOrderRef: text('purchase_order_ref'),
+  quantity: text('quantity'),
+  unitOfQuantity: text('unit_of_quantity'),
+  status: text('status').notNull().default('New'),
+  historyJson: text('history_json'),
+  commentsJson: text('comments_json'),
+  createdAt: text('created_at').notNull(),
 });
