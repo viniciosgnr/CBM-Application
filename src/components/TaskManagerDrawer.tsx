@@ -109,6 +109,8 @@ interface TaskManagerDrawerProps {
   onClose: () => void;
   initialView: 'list' | 'new' | 'detail';
   initialSubTab?: 'my' | 'all';
+  filterReportId?: number | null;
+  onClearFilterReport?: () => void;
   selectedReportForNew?: TaskDrawerReport | null;
   selectedTaskForDetail?: TaskDrawerItem | null;
   tasks: TaskDrawerItem[];
@@ -126,6 +128,8 @@ export default function TaskManagerDrawer({
   onClose,
   initialView,
   initialSubTab = 'all',
+  filterReportId = null,
+  onClearFilterReport,
   selectedReportForNew,
   selectedTaskForDetail,
   tasks,
@@ -458,6 +462,14 @@ export default function TaskManagerDrawer({
 
     return baseList.filter((t) => {
       if (
+        filterReportId !== null &&
+        filterReportId !== undefined &&
+        Number(t.reportId) !== Number(filterReportId)
+      ) {
+        return false;
+      }
+      if (
+        !filterReportId &&
         showCurrentContext &&
         selectedReportForNew?.equipmentTag &&
         t.equipmentTag !== selectedReportForNew.equipmentTag &&
@@ -504,7 +516,7 @@ export default function TaskManagerDrawer({
         return false;
       return true;
     });
-  }, [tasks, subTab, colFilters, showCurrentContext, selectedReportForNew]);
+  }, [tasks, subTab, colFilters, showCurrentContext, selectedReportForNew, filterReportId]);
 
   const totalPages = Math.max(1, Math.ceil(filteredTasks.length / pageSize));
   const paginatedTasks = useMemo(() => {
@@ -1182,45 +1194,20 @@ export default function TaskManagerDrawer({
             : 'w-[355px] max-w-[92vw]'
         }`}
       >
-        {/* Left Vertical Rail inside Drawer (Matches Screenshot 2) */}
+        {/* Left Vertical Rail inside Drawer (Only Task icon) */}
         <div className="w-14 bg-[#060911] border-r border-[#1a2238] flex flex-col items-center py-4 gap-5 shrink-0 select-none">
-          {/* Notification */}
-          <button
-            type="button"
-            onClick={() => setView('list')}
-            className="w-full py-2 flex flex-col items-center gap-1.5 text-text-muted hover:text-text-primary cursor-pointer transition-colors relative group"
-          >
-            <div className="relative">
-              <Bell size={18} />
-              <span className="absolute -top-1.5 -right-2.5 w-4 h-4 rounded-full bg-[#ef4444] text-white text-[9px] font-bold flex items-center justify-center shadow">
-                4
-              </span>
-            </div>
-            <span className="text-[9px] font-medium tracking-tight truncate max-w-[48px]">
-              Notifica...
-            </span>
-          </button>
-
           {/* Task (Active) */}
           <button
             type="button"
-            onClick={() => setView('list')}
+            onClick={() => {
+              onClearFilterReport?.();
+              setView('list');
+            }}
             className="w-full py-2.5 flex flex-col items-center gap-1.5 bg-[#10182b] text-[#60a5fa] font-semibold border-y border-[#1e2946] cursor-pointer"
+            title="Task Manager"
           >
             <CheckSquare size={18} />
             <span className="text-[10px]">Task</span>
-          </button>
-
-          {/* Discussion */}
-          <button
-            type="button"
-            onClick={() => setView('list')}
-            className="w-full py-2 flex flex-col items-center gap-1.5 text-text-muted hover:text-text-primary cursor-pointer transition-colors"
-          >
-            <MessageSquare size={18} />
-            <span className="text-[9px] font-medium tracking-tight truncate max-w-[48px]">
-              Discussi...
-            </span>
           </button>
         </div>
 
@@ -1233,7 +1220,18 @@ export default function TaskManagerDrawer({
             <div className="flex-1 flex flex-col h-full overflow-hidden">
               {/* Top Header */}
               <div className="flex items-center justify-between px-6 py-3.5 border-b border-[#1a2238] shrink-0">
-                <h2 className="text-sm font-bold text-text-primary">Tasks</h2>
+                {filterReportId !== null && filterReportId !== undefined ? (
+                  <button
+                    type="button"
+                    onClick={onClose}
+                    className="flex items-center gap-2 text-xs font-medium text-text-primary hover:text-[#60a5fa] transition-colors cursor-pointer"
+                  >
+                    <ArrowLeft size={15} />
+                    <span>Back</span>
+                  </button>
+                ) : (
+                  <h2 className="text-sm font-bold text-text-primary">Tasks</h2>
+                )}
                 <div className="flex items-center gap-2">
                   <button
                     type="button"
@@ -1258,8 +1256,8 @@ export default function TaskManagerDrawer({
                 </div>
               </div>
 
-              {/* Show: Current Context Toggle (Visible in Compact Mode as in Screenshot 1) */}
-              {!isExpanded && (
+              {/* Show: Current Context Toggle (Visible in Compact Mode when not filtered by a specific recommendation) */}
+              {!isExpanded && !filterReportId && (
                 <div className="flex items-center gap-2.5 px-6 pt-3 pb-1 shrink-0 select-none">
                   <button
                     type="button"

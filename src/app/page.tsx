@@ -3,6 +3,7 @@ import { useState, useEffect, useMemo, useRef } from 'react';
 import Header from '@/components/Header';
 import Sidebar from '@/components/Sidebar';
 import TaskManagerDrawer from '@/components/TaskManagerDrawer';
+import RecommendationTasksPanel from '@/components/RecommendationTasksPanel';
 import DashboardCard from '@/components/DashboardCard';
 import KpiMetricCard from '@/components/KpiMetricCard';
 import CustomTable from '@/components/CustomTable';
@@ -22,6 +23,7 @@ import {
   CheckCircle2,
   Check,
   ChevronDown,
+  ChevronRight,
   Search,
   Activity,
   Filter,
@@ -610,6 +612,7 @@ export default function MainPage() {
   const [selectedReport, setSelectedReport] = useState<AnalysisReport | null>(null);
   const [reportDetailsOpen, setReportDetailsOpen] = useState(false);
   const [isReportDrawerMaximized, setIsReportDrawerMaximized] = useState(false);
+  const [reportTasksPanelOpen, setReportTasksPanelOpen] = useState(false);
   const [isSavingEffectiveness, setIsSavingEffectiveness] = useState(false);
 
   // States and Handlers for Work Order (Fault Report) creation
@@ -641,10 +644,12 @@ export default function MainPage() {
   const [loadingTasks, setLoadingTasks] = useState(false);
   const [taskDrawerOpen, setTaskDrawerOpen] = useState(false);
   const [taskDrawerInitialView, setTaskDrawerInitialView] = useState<'list' | 'new' | 'detail'>('list');
+  const [taskDrawerFilterReportId, setTaskDrawerFilterReportId] = useState<number | null>(null);
   const [selectedReportForTask, setSelectedReportForTask] = useState<AnalysisReport | null>(null);
   const [activeTaskView, setActiveTaskView] = useState<TaskItem | null>(null);
 
   const openTaskForm = (report: AnalysisReport) => {
+    setTaskDrawerFilterReportId(null);
     setSelectedReportForTask(report);
     setTaskDrawerInitialView('new');
     setTaskDrawerOpen(true);
@@ -872,6 +877,7 @@ export default function MainPage() {
     const report = reports.find(r => String(r.id) === row.id);
     if (report) {
       setSelectedReport(report);
+      setReportTasksPanelOpen(false);
       setReportDetailsOpen(true);
     }
   };
@@ -1414,6 +1420,35 @@ export default function MainPage() {
     { key: 'analysisType', header: 'Analysis Type' },
     { key: 'shortDescription', header: 'Short Description' },
     { key: 'cbmStatus', header: 'CBM Status', render: (val: string) => getStatusDot(val) },
+    {
+      key: 'tasksCompleted',
+      header: 'Tasks Completed',
+      render: (val: string, row: Record<string, string>) => {
+        const total = Number(row.totalTasksCount || 0);
+        if (total > 0) {
+          return (
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                setTaskDrawerFilterReportId(Number(row.id));
+                setTaskDrawerInitialView('list');
+                setTaskDrawerOpen(true);
+              }}
+              className="text-[#60a5fa] hover:text-[#93c5fd] hover:underline font-semibold text-xs cursor-pointer transition-colors px-1 py-0.5 rounded"
+              title={`View linked tasks (${val} completed)`}
+            >
+              {val}
+            </button>
+          );
+        }
+        return (
+          <span className="text-[#64748b] font-medium text-xs select-none px-1 py-0.5">
+            {val || '0/0'}
+          </span>
+        );
+      },
+    },
     { 
       key: 'cbmCaseStatus', 
       header: 'CBM Case Status', 
@@ -1522,6 +1557,9 @@ export default function MainPage() {
 
     const linkedWo = r.woNumber ? workOrders.find(w => w.reference === r.woNumber) : undefined;
     const resolved = resolveCbmCaseStatus(r.overallCondition || '', linkedWo?.status, r.effectiveness);
+    const linkedTasks = tasksList.filter(t => Number(t.reportId) === Number(r.id));
+    const completedCount = linkedTasks.filter(t => (t.status || '').toLowerCase() === 'completed').length;
+    const totalTasksCount = linkedTasks.length;
 
     return {
       id: String(r.id),
@@ -1533,6 +1571,9 @@ export default function MainPage() {
       effectiveness: resolved.effectiveness,
       shortDescription: r.shortDescription || '-',
       cbmStatus: formatSurveillanceTier(techniqueStatus),
+      tasksCompleted: `${completedCount}/${totalTasksCount}`,
+      completedTasksCount: String(completedCount),
+      totalTasksCount: String(totalTasksCount),
       cbmCaseStatus: resolved.cbmCaseStatus,
       failureModeDescription: r.failureModeDescription || '-',
       raisedDate: r.raisedDate,
@@ -1568,6 +1609,7 @@ export default function MainPage() {
       {/* Sidebar Layout */}
       <Sidebar
         onOpenTaskDrawer={() => {
+          setTaskDrawerFilterReportId(null);
           setTaskDrawerInitialView('list');
           setTaskDrawerOpen(true);
         }}
@@ -2420,6 +2462,7 @@ export default function MainPage() {
                 onEquipmentClick={(eq) => handleRowClick({ tag: eq.tag })}
                 onReportClick={(report) => {
                   setSelectedReport(report as any);
+                  setReportTasksPanelOpen(false);
                   setReportDetailsOpen(true);
                 }}
               />
@@ -2880,16 +2923,41 @@ export default function MainPage() {
 
       {/* CBM Analysis Report Details SLB Side Drawer */}
       {reportDetailsOpen && selectedReport && (
-        <div 
-          className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[999] flex items-center justify-end p-0 transition-opacity animate-fadeIn"
-          onClick={() => setReportDetailsOpen(false)}
-        >
-          <div 
+        <>
+          <div
+            className="fixed inset-0 bg-black/60 backdrop-blur-[2px] z-[998] transition-opacity animate-fadeIn"
+            onClick={() => setReportDetailsOpen(false)}
+          />
+          <div
             onClick={(e) => e.stopPropagation()}
-            className={`bg-[#0b0f19] border-l border-[#202742] h-full flex flex-col shadow-2xl relative transition-all duration-300 ease-out animate-slideLeft ${
-              isReportDrawerMaximized ? 'w-full max-w-full' : 'w-full md:w-[85vw] max-w-6xl'
+            className={`fixed top-10 right-0 bottom-0 z-[999] bg-[#0b0f19] border-l border-[#1a2238] flex shadow-2xl transition-all duration-200 ease-out animate-slideLeft ${
+              isReportDrawerMaximized
+                ? 'w-full max-w-full'
+                : reportTasksPanelOpen
+                ? 'w-full md:w-[95vw] max-w-[1440px]'
+                : 'w-full md:w-[85vw] max-w-6xl'
             }`}
           >
+            {/* Left Vertical Rail inside Recommendation Drawer (Only Task icon) */}
+            <div className="w-14 bg-[#060911] border-r border-[#1a2238] flex flex-col items-center py-4 gap-5 shrink-0 select-none">
+              <button
+                type="button"
+                onClick={() => {
+                  setReportDetailsOpen(false);
+                  setTaskDrawerFilterReportId(null);
+                  setTaskDrawerInitialView('list');
+                  setTaskDrawerOpen(true);
+                }}
+                className="w-full py-2.5 flex flex-col items-center gap-1.5 text-[#94a3b8] hover:text-text-primary hover:bg-[#10182b]/60 transition-colors cursor-pointer"
+                title="Open Task Manager"
+              >
+                <CheckSquare size={18} />
+                <span className="text-[10px] font-medium">Task</span>
+              </button>
+            </div>
+
+            {/* Right Main Area of Recommendation Drawer */}
+            <div className="flex-1 flex flex-col h-full overflow-hidden">
             {/* Top Bar Header with Section Title & Window Controls */}
             <div className="border-b border-[#202742] bg-[#0d121f] px-6 py-3.5 flex items-center justify-between select-none shrink-0">
               <div className="flex items-center gap-2.5">
@@ -2922,9 +2990,11 @@ export default function MainPage() {
               </div>
             </div>
 
-            {/* Main Drawer Scrollable Content: 2 Cards matching SLB Reference Layout */}
-            <div className="flex-1 overflow-y-auto p-6">
-              <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+            {/* Main Drawer Body: Split into Left (Report Details + Tasks Band) and Right (Tasks Panel when open) */}
+            <div className="flex-1 flex overflow-hidden">
+              <div className="flex-1 flex flex-col h-full overflow-hidden">
+                <div className="flex-1 overflow-y-auto p-6">
+                  <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
                 
                 {/* LEFT CARD: Details (~42% on desktop) */}
                 <div className="lg:col-span-5 bg-[#0c101d] border border-[#202742] rounded-xl p-5 shadow-lg">
@@ -3294,38 +3364,9 @@ export default function MainPage() {
                       );
                     })()}
 
-                    {/* Bottom Action Buttons */}
-                    <div className="flex justify-end gap-3 select-none">
-                      {selectedReport.taskNumber ? (
-                        <button
-                          type="button"
-                          onClick={() => {
-                            const foundTask = tasksList.find(t => t.taskReference === selectedReport.taskNumber || t.id === selectedReport.taskId);
-                            if (foundTask) {
-                              setActiveTaskView(foundTask);
-                              setTaskDrawerInitialView('detail');
-                              setTaskDrawerOpen(true);
-                            } else {
-                              openTaskForm(selectedReport);
-                            }
-                          }}
-                          className="flex items-center gap-2 border border-[#333e68] hover:border-accent-blue bg-[#0e1320] hover:bg-[#1a233a] text-text-primary font-semibold px-5 py-2 rounded-full text-xs transition-colors cursor-pointer shadow active:scale-95"
-                        >
-                          <CheckSquare size={14} className="text-[#8ab4f8]" />
-                          View Task ({selectedReport.taskNumber})
-                        </button>
-                      ) : (
-                        <button
-                          type="button"
-                          onClick={() => openTaskForm(selectedReport)}
-                          className="flex items-center gap-2 border border-[#333e68] hover:border-accent-blue bg-[#0e1320] hover:bg-[#1a233a] text-text-primary font-semibold px-5 py-2 rounded-full text-xs transition-colors cursor-pointer shadow active:scale-95"
-                        >
-                          <CheckSquare size={14} className="text-[#8ab4f8]" />
-                          Create a task
-                        </button>
-                      )}
-
-                      {selectedReport.woNumber && selectedReport.woNumber !== 'N/A' && (
+                    {/* Bottom Action Buttons (only Work Order shortcut if linked; Tasks access is via the Tasks (N) band below) */}
+                    {selectedReport.woNumber && selectedReport.woNumber !== 'N/A' && (
+                      <div className="flex justify-end gap-3 select-none">
                         <button
                           type="button"
                           onClick={() => {
@@ -3337,15 +3378,70 @@ export default function MainPage() {
                           <FileText size={14} />
                           Work Order ({selectedReport.woNumber})
                         </button>
-                      )}
-                    </div>
+                      </div>
+                    )}
                   </div>
                 </div>
 
+                  </div>
+                </div>
+
+                {/* Bottom Full-Width "Tasks (N) >" Band (Anexos 1, 2 & 9) */}
+                <button
+                  type="button"
+                  onClick={() => setReportTasksPanelOpen((prev) => !prev)}
+                  className={`w-full px-6 py-3.5 border-t border-[#202742] flex items-center justify-between text-xs font-bold transition-colors cursor-pointer shrink-0 select-none ${
+                    reportTasksPanelOpen
+                      ? 'bg-[#04070e] text-white'
+                      : 'bg-[#0d121f] hover:bg-[#131b2e] text-text-primary'
+                  }`}
+                >
+                  <span>
+                    Tasks (
+                    {
+                      tasksList.filter(
+                        (t) => Number(t.reportId) === Number(selectedReport.id)
+                      ).length
+                    }
+                    )
+                  </span>
+                  <ChevronRight
+                    size={16}
+                    className={`transition-transform ${
+                      reportTasksPanelOpen
+                        ? 'text-white translate-x-0.5'
+                        : 'text-text-muted'
+                    }`}
+                  />
+                </button>
               </div>
+
+              {/* Right-Side Embedded Tasks Panel for this Recommendation (Anexos 2 a 11) */}
+              {reportTasksPanelOpen && (
+                <div className="w-full sm:w-[380px] lg:w-[440px] xl:w-[480px] shrink-0 h-full overflow-hidden">
+                  <RecommendationTasksPanel
+                    report={selectedReport}
+                    tasks={tasksList}
+                    equipments={equipments}
+                    workOrders={workOrders}
+                    onClosePanel={() => setReportTasksPanelOpen(false)}
+                    onRefreshAll={async () => {
+                      await fetchTasks();
+                      await fetchReports();
+                      await fetchWorkOrders();
+                    }}
+                    onNavigateToWorkOrder={(woRef) => {
+                      setReportTasksPanelOpen(false);
+                      setReportDetailsOpen(false);
+                      navigateToWorkOrder(woRef);
+                    }}
+                  />
+                </div>
+              )}
+            </div>
             </div>
           </div>
-        </div>
+        </>
       )}
 
       {/* Right-Side Task Manager Drawer */}
@@ -3353,6 +3449,8 @@ export default function MainPage() {
         isOpen={taskDrawerOpen}
         onClose={() => setTaskDrawerOpen(false)}
         initialView={taskDrawerInitialView}
+        filterReportId={taskDrawerFilterReportId}
+        onClearFilterReport={() => setTaskDrawerFilterReportId(null)}
         selectedReportForNew={selectedReportForTask}
         selectedTaskForDetail={activeTaskView}
         tasks={tasksList}
