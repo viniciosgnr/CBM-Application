@@ -263,6 +263,7 @@ export default function EquipmentDetailModal({
 }: EquipmentDetailModalProps) {
   const [mounted, setMounted] = useState(false);
   const [isExpanded, setIsExpanded] = useState(false);
+  const [reasonModalOpen, setReasonModalOpen] = useState(false);
   const [isSavingReason, setIsSavingReason] = useState(false);
   const [isReasonSaved, setIsReasonSaved] = useState(false);
   const [reasonTech, setReasonTech] = useState<'Vibration' | 'Lub Oil'>('Vibration');
@@ -307,6 +308,7 @@ export default function EquipmentDetailModal({
         : equipment.lubeOilNonCollectionDate;
     setReasonDate(savedDate || new Date().toISOString().split('T')[0]);
     setIsReasonSaved(false);
+    setReasonModalOpen(false);
   }, [equipment?.tag]);
 
   const handleTechSelectChange = (newTech: 'Vibration' | 'Lub Oil') => {
@@ -343,7 +345,8 @@ export default function EquipmentDetailModal({
       setIsReasonSaved(true);
       setTimeout(() => {
         setIsReasonSaved(false);
-      }, 2500);
+        setReasonModalOpen(false);
+      }, 600);
     } finally {
       setIsSavingReason(false);
     }
@@ -592,88 +595,6 @@ export default function EquipmentDetailModal({
             </div>
           </div>
 
-          {/* Non-collection Reason (Compact single-row layout) */}
-          {(vibNext.isOverdue || oilNext.isOverdue) && (
-            <div className="bg-[#101726]/70 border border-[#1c253b] rounded-md px-2.5 py-2 my-2.5 animate-fadeIn">
-              <div className="flex items-center justify-between mb-1.5">
-                <span className="text-[10px] font-medium text-[#94a3b8] tracking-wide">
-                  Non-collection Reason
-                </span>
-                {isSavingReason && (
-                  <span className="text-[10px] text-[#94a3b8] animate-pulse">
-                    Saving...
-                  </span>
-                )}
-                {isReasonSaved && (
-                  <span className="text-[10px] text-[#10b981] font-semibold">
-                    Saved ✓
-                  </span>
-                )}
-              </div>
-
-              <div className="flex items-center gap-1.5">
-                {/* 1. Technology Selector */}
-                <select
-                  aria-label="Non-collection Technology"
-                  value={reasonTech}
-                  onChange={(e) =>
-                    handleTechSelectChange(
-                      e.target.value as 'Vibration' | 'Lub Oil'
-                    )
-                  }
-                  className="bg-[#0b101d] border border-[#24304a] hover:border-[#3b82f6] focus:border-[#38bdf8] text-[#f8fafc] text-[11px] rounded px-1.5 py-1 outline-none transition-colors cursor-pointer w-[86px] shrink-0"
-                  title="Technology"
-                >
-                  <option value="Vibration" className="bg-[#0b101d] text-[#f8fafc]">
-                    Vibration
-                  </option>
-                  <option value="Lub Oil" className="bg-[#0b101d] text-[#f8fafc]">
-                    Lub Oil
-                  </option>
-                </select>
-
-                {/* 2. Date Picker */}
-                <input
-                  type="date"
-                  aria-label="Non-collection Date"
-                  value={reasonDate}
-                  onChange={(e) => setReasonDate(e.target.value)}
-                  className="bg-[#0b101d] border border-[#24304a] hover:border-[#3b82f6] focus:border-[#38bdf8] text-[#f8fafc] text-[11px] rounded px-1.5 py-1 outline-none transition-colors cursor-pointer w-[112px] shrink-0 [color-scheme:dark]"
-                  title="Date"
-                />
-
-                {/* 3. Reason Selector */}
-                <select
-                  aria-label="Non-collection Reason"
-                  value={reasonValue}
-                  onChange={(e) => setReasonValue(e.target.value)}
-                  className="bg-[#0b101d] border border-[#24304a] hover:border-[#3b82f6] focus:border-[#38bdf8] text-[#f8fafc] text-[11px] rounded px-2 py-1 outline-none transition-colors cursor-pointer flex-1 min-w-0 truncate"
-                  title="Reason"
-                >
-                  {NON_COLLECTION_REASONS.map((r) => (
-                    <option
-                      key={r}
-                      value={r}
-                      className="bg-[#0b101d] text-[#f8fafc]"
-                    >
-                      {r}
-                    </option>
-                  ))}
-                </select>
-
-                {/* 4. Confirm Button */}
-                <button
-                  type="button"
-                  disabled={isSavingReason}
-                  onClick={handleConfirmReason}
-                  className="bg-[#2563eb] hover:bg-[#3b82f6] disabled:opacity-50 text-white text-[11px] font-medium px-2.5 py-1 rounded transition-colors cursor-pointer shrink-0"
-                >
-                  Confirm
-                </button>
-              </div>
-            </div>
-          )}
-
           {/* Historical Condition Trend */}
           <div className="my-5">
             <h4 className="text-xs font-bold text-[#f8fafc] mb-4">
@@ -736,9 +657,18 @@ export default function EquipmentDetailModal({
           </div>
         </div>
 
-        {/* Drawer Bottom Bar: Log New Analysis Button */}
-        {onLogNewAnalysis && (
-          <div className="p-6 bg-transparent flex items-center justify-end">
+        {/* Drawer Bottom Bar: Log Non-Collection Reason & Log New Analysis Buttons */}
+        <div className="p-6 bg-transparent flex items-center justify-end gap-3">
+          {onUpdateNonCollectionReason && (
+            <button
+              type="button"
+              onClick={() => setReasonModalOpen(true)}
+              className="border border-[#334155] bg-[#0c1220] hover:border-[#38bdf8] text-[#f8fafc] px-5 py-2 rounded-full text-xs font-semibold whitespace-nowrap transition-all cursor-pointer shadow-md"
+            >
+              Log Non-Collection Reason
+            </button>
+          )}
+          {onLogNewAnalysis && (
             <button
               type="button"
               onClick={onLogNewAnalysis}
@@ -746,9 +676,136 @@ export default function EquipmentDetailModal({
             >
               Log New Analysis
             </button>
-          </div>
-        )}
+          )}
+        </div>
       </aside>
+
+      {/* Dedicated Compact Modal for Logging Non-Collection Reason */}
+      {reasonModalOpen && (
+        <div
+          className="fixed inset-0 bg-black/75 backdrop-blur-sm z-[1010] flex items-center justify-center p-4 animate-fadeIn"
+          onClick={() => setReasonModalOpen(false)}
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            className="bg-[#111625] border border-[#222b45] rounded-xl w-full max-w-[440px] shadow-2xl overflow-hidden text-left"
+          >
+            {/* Header */}
+            <div className="px-5 py-4 border-b border-[#222b45] flex items-center justify-between">
+              <div>
+                <h3 className="text-sm font-bold text-[#f8fafc]">
+                  Log Non-Collection Reason
+                </h3>
+                <p className="text-[11px] text-[#8a94a6] mt-0.5">
+                  {equipment.tag} — {equipment.name}
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setReasonModalOpen(false)}
+                className="text-[#8a94a6] hover:text-white p-1 rounded transition-colors cursor-pointer"
+                title="Close"
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            {/* Body */}
+            <div className="p-5 flex flex-col gap-3.5 text-xs">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                {/* Technology */}
+                <div className="flex flex-col gap-1">
+                  <label className="text-[#94a3b8] font-medium text-[11px]">
+                    Technology
+                  </label>
+                  <select
+                    aria-label="Non-collection Technology"
+                    value={reasonTech}
+                    onChange={(e) =>
+                      handleTechSelectChange(
+                        e.target.value as 'Vibration' | 'Lub Oil'
+                      )
+                    }
+                    className="bg-[#0c101d] border border-[#232a42] hover:border-[#3b82f6] focus:border-[#38bdf8] text-[#f8fafc] text-xs rounded-md px-2.5 py-2 outline-none transition-colors cursor-pointer w-full"
+                  >
+                    <option value="Vibration" className="bg-[#0c101d] text-[#f8fafc]">
+                      Vibration
+                    </option>
+                    <option value="Lub Oil" className="bg-[#0c101d] text-[#f8fafc]">
+                      Lub Oil
+                    </option>
+                  </select>
+                </div>
+
+                {/* Date */}
+                <div className="flex flex-col gap-1">
+                  <label className="text-[#94a3b8] font-medium text-[11px]">
+                    Date
+                  </label>
+                  <input
+                    type="date"
+                    aria-label="Non-collection Date"
+                    value={reasonDate}
+                    onChange={(e) => setReasonDate(e.target.value)}
+                    className="bg-[#0c101d] border border-[#232a42] hover:border-[#3b82f6] focus:border-[#38bdf8] text-[#f8fafc] text-xs rounded-md px-2.5 py-2 outline-none transition-colors cursor-pointer w-full [color-scheme:dark]"
+                  />
+                </div>
+              </div>
+
+              {/* Reason */}
+              <div className="flex flex-col gap-1">
+                <label className="text-[#94a3b8] font-medium text-[11px]">
+                  Non-Collection Reason
+                </label>
+                <select
+                  aria-label="Non-collection Reason"
+                  value={reasonValue}
+                  onChange={(e) => setReasonValue(e.target.value)}
+                  className="bg-[#0c101d] border border-[#232a42] hover:border-[#3b82f6] focus:border-[#38bdf8] text-[#f8fafc] text-xs rounded-md px-2.5 py-2 outline-none transition-colors cursor-pointer w-full"
+                >
+                  {NON_COLLECTION_REASONS.map((r) => (
+                    <option
+                      key={r}
+                      value={r}
+                      className="bg-[#0c101d] text-[#f8fafc]"
+                    >
+                      {r}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            </div>
+
+            {/* Footer */}
+            <div className="px-5 py-3.5 border-t border-[#222b45] bg-[#0e1320] flex items-center justify-between">
+              <div>
+                {isReasonSaved && (
+                  <span className="text-xs text-[#10b981] font-semibold">
+                    Saved ✓
+                  </span>
+                )}
+              </div>
+              <div className="flex items-center gap-2.5">
+                <button
+                  type="button"
+                  onClick={() => setReasonModalOpen(false)}
+                  className="border border-[#2b3552] text-[#cbd5e1] hover:text-white hover:border-[#475569] px-5 py-1.5 rounded-full text-xs font-medium transition-colors cursor-pointer"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  disabled={isSavingReason}
+                  onClick={handleConfirmReason}
+                  className="bg-[#5096ff] hover:bg-[#3b82f6] disabled:opacity-50 text-[#0a1020] font-semibold px-5 py-1.5 rounded-full text-xs shadow-md transition-colors cursor-pointer"
+                >
+                  {isSavingReason ? 'Saving...' : 'Confirm'}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
