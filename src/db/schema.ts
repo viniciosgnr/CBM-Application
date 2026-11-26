@@ -22,6 +22,8 @@ export const equipments = sqliteTable('equipments', {
   lastLubeOilUpdate: text('last_lube_oil_update'),
   vibrationNonCollectionReason: text('vibration_non_collection_reason'),
   lubeOilNonCollectionReason: text('lube_oil_non_collection_reason'),
+  vibrationNonCollectionDate: text('vibration_non_collection_date'),
+  lubeOilNonCollectionDate: text('lube_oil_non_collection_date'),
   nonCollectionReason: text('non_collection_reason'),
   collectionMethod: text('collection_method').notNull().default('Online'),
 });

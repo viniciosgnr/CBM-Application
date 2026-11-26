@@ -14,6 +14,8 @@ export interface EquipmentComplianceData {
   nonCollectionReason?: string | null;
   vibrationNonCollectionReason?: string | null;
   lubeOilNonCollectionReason?: string | null;
+  vibrationNonCollectionDate?: string | null;
+  lubeOilNonCollectionDate?: string | null;
 }
 
 export interface ReportFailureData {
@@ -159,11 +161,13 @@ const CustomPieTooltip = ({ active, payload }: CustomTooltipProps) => {
 export function CollectionCompliancePie({
   equipments = [],
   selectedTechnology = 'Vibration',
+  selectedMonth,
   onSliceClick,
   selectedSlice,
 }: {
   equipments: EquipmentComplianceData[];
   selectedTechnology: 'Vibration' | 'Lub Oil' | 'Both';
+  selectedMonth?: string;
   onSliceClick?: (sliceName: string) => void;
   selectedSlice?: string | null;
 }) {
@@ -183,12 +187,21 @@ export function CollectionCompliancePie({
     const reasonCounts: Record<string, number> = {};
 
     equipments.forEach(eq => {
-      const activeReason =
+      const rawReason =
         selectedTechnology === 'Vibration'
-          ? eq.vibrationNonCollectionReason || eq.nonCollectionReason
+          ? eq.vibrationNonCollectionReason
           : selectedTechnology === 'Lub Oil'
-          ? eq.lubeOilNonCollectionReason || eq.nonCollectionReason
-          : eq.nonCollectionReason || eq.vibrationNonCollectionReason || eq.lubeOilNonCollectionReason;
+          ? eq.lubeOilNonCollectionReason
+          : eq.vibrationNonCollectionReason || eq.lubeOilNonCollectionReason || eq.nonCollectionReason;
+      const rawDate =
+        selectedTechnology === 'Vibration'
+          ? eq.vibrationNonCollectionDate
+          : selectedTechnology === 'Lub Oil'
+          ? eq.lubeOilNonCollectionDate
+          : eq.vibrationNonCollectionDate || eq.lubeOilNonCollectionDate;
+
+      const dateMatches = !rawDate || !selectedMonth || rawDate.startsWith(selectedMonth);
+      const activeReason = dateMatches ? rawReason : null;
 
       if (activeReason && activeReason.trim() !== '') {
         const clean = activeReason.trim();
@@ -235,7 +248,7 @@ export function CollectionCompliancePie({
       legendItems: legends,
       totalCount: total,
     };
-  }, [equipments, selectedTechnology]);
+  }, [equipments, selectedTechnology, selectedMonth]);
 
   if (!mounted) {
     return <div className="h-[220px] w-full" />;

@@ -55,6 +55,8 @@ export interface Equipment {
   collectionMethod?: string | null;
   vibrationNonCollectionReason?: string | null;
   lubeOilNonCollectionReason?: string | null;
+  vibrationNonCollectionDate?: string | null;
+  lubeOilNonCollectionDate?: string | null;
   nonCollectionReason?: string | null;
 }
 
@@ -67,13 +69,21 @@ export interface HistoryEntry {
   changedAt: string;
 }
 
+export interface NonCollectionReasonUpdatePayload {
+  technology: 'Vibration' | 'Lub Oil';
+  reason: string;
+  date: string;
+}
+
 interface EquipmentDetailModalProps {
   isOpen: boolean;
   onClose: () => void;
   equipment: Equipment | null;
   history?: HistoryEntry[];
   onLogNewAnalysis?: () => void;
-  onUpdateNonCollectionReason?: (reason: string) => Promise<void> | void;
+  onUpdateNonCollectionReason?: (
+    payload: NonCollectionReasonUpdatePayload
+  ) => Promise<void> | void;
 }
 
 const CHART_VALUE_MAP: Record<string, number> = {
@@ -255,17 +265,81 @@ export default function EquipmentDetailModal({
   const [isExpanded, setIsExpanded] = useState(false);
   const [isSavingReason, setIsSavingReason] = useState(false);
   const [isReasonSaved, setIsReasonSaved] = useState(false);
+  const [reasonTech, setReasonTech] = useState<'Vibration' | 'Lub Oil'>('Vibration');
+  const [reasonValue, setReasonValue] = useState<string>('Not collected');
+  const [reasonDate, setReasonDate] = useState<string>(() =>
+    new Date().toISOString().split('T')[0]
+  );
 
   useEffect(() => {
     setMounted(true);
   }, []);
 
-  const handleReasonChange = async (reason: string) => {
+  useEffect(() => {
+    if (!equipment) return;
+    const vDate = equipment.lastVibrationUpdate || equipment.lastUpdate;
+    const oDate = equipment.lastLubeOilUpdate || equipment.lastUpdate;
+    const vFreq = formatFrequencyBadge(equipment.vibrationFrequency, 24);
+    const oFreq = formatFrequencyBadge(equipment.lubeOilFrequency, 84);
+    const vNext = calculateNextPlannedDate(vDate, vFreq, 24);
+    const oNext = calculateNextPlannedDate(oDate, oFreq, 84);
+
+    const defaultTech: 'Vibration' | 'Lub Oil' = vNext.isOverdue
+      ? 'Vibration'
+      : oNext.isOverdue
+      ? 'Lub Oil'
+      : 'Vibration';
+    setReasonTech(defaultTech);
+
+    const savedReason =
+      defaultTech === 'Vibration'
+        ? equipment.vibrationNonCollectionReason ||
+          equipment.nonCollectionReason ||
+          'Not collected'
+        : equipment.lubeOilNonCollectionReason ||
+          equipment.nonCollectionReason ||
+          'Not collected';
+    setReasonValue(savedReason);
+
+    const savedDate =
+      defaultTech === 'Vibration'
+        ? equipment.vibrationNonCollectionDate
+        : equipment.lubeOilNonCollectionDate;
+    setReasonDate(savedDate || new Date().toISOString().split('T')[0]);
+    setIsReasonSaved(false);
+  }, [equipment?.tag]);
+
+  const handleTechSelectChange = (newTech: 'Vibration' | 'Lub Oil') => {
+    setReasonTech(newTech);
+    if (!equipment) return;
+    const savedReason =
+      newTech === 'Vibration'
+        ? equipment.vibrationNonCollectionReason ||
+          equipment.nonCollectionReason ||
+          'Not collected'
+        : equipment.lubeOilNonCollectionReason ||
+          equipment.nonCollectionReason ||
+          'Not collected';
+    setReasonValue(savedReason);
+
+    const savedDate =
+      newTech === 'Vibration'
+        ? equipment.vibrationNonCollectionDate
+        : equipment.lubeOilNonCollectionDate;
+    setReasonDate(savedDate || new Date().toISOString().split('T')[0]);
+    setIsReasonSaved(false);
+  };
+
+  const handleConfirmReason = async () => {
     if (!onUpdateNonCollectionReason) return;
     setIsSavingReason(true);
     setIsReasonSaved(false);
     try {
-      await onUpdateNonCollectionReason(reason);
+      await onUpdateNonCollectionReason({
+        technology: reasonTech,
+        reason: reasonValue,
+        date: reasonDate,
+      });
       setIsReasonSaved(true);
       setTimeout(() => {
         setIsReasonSaved(false);
@@ -518,32 +592,98 @@ export default function EquipmentDetailModal({
             </div>
           </div>
 
-          {/* General Non-collection Reason (Enabled if Vibration, Lube Oil or both are Overdue) */}
+          {/* Non-collection Reason (Enabled if Vibration, Lube Oil or both are Overdue) */}
           {(vibNext.isOverdue || oilNext.isOverdue) && (
-            <div className="bg-[#101726]/80 border border-[#1c253b] rounded-lg p-3 my-3 animate-fadeIn">
-              <div className="flex items-center justify-between mb-1.5">
-                <span className="text-[11px] font-medium text-[#f8fafc] tracking-wide">
+            <div className="bg-[#101726]/80 border border-[#1c253b] rounded-lg p-3.5 my-3 animate-fadeIn">
+              <div className="flex items-center justify-between mb-2.5">
+                <span className="text-[11px] font-semibold text-[#f8fafc] tracking-wide">
                   Non-collection Reason (Overdue)
                 </span>
                 {isSavingReason && (
-                  <span className="text-[10px] text-[#94a3b8] animate-pulse">Saving...</span>
+                  <span className="text-[10px] text-[#94a3b8] animate-pulse">
+                    Saving...
+                  </span>
                 )}
                 {isReasonSaved && (
-                  <span className="text-[10px] text-[#10b981] font-semibold">Saved ✓</span>
+                  <span className="text-[10px] text-[#10b981] font-semibold">
+                    Saved ✓
+                  </span>
                 )}
               </div>
-              <select
-                aria-label="Non-collection Reason"
-                value={equipment.nonCollectionReason || 'Not collected'}
-                onChange={(e) => handleReasonChange(e.target.value)}
-                className="bg-[#0b101d] border border-[#2d3a58] hover:border-[#3b82f6] focus:border-[#38bdf8] text-[#f8fafc] text-xs rounded px-2.5 py-1.5 outline-none transition-colors cursor-pointer w-full"
-              >
-                {NON_COLLECTION_REASONS.map((r) => (
-                  <option key={r} value={r} className="bg-[#0b101d] text-[#f8fafc]">
-                    {r}
-                  </option>
-                ))}
-              </select>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 mb-2.5">
+                {/* 1. Technology Selector (Vibration or Lub Oil) */}
+                <div className="flex flex-col gap-1">
+                  <label className="text-[10px] text-[#8a94a6] font-medium">
+                    Technology
+                  </label>
+                  <select
+                    aria-label="Non-collection Technology"
+                    value={reasonTech}
+                    onChange={(e) =>
+                      handleTechSelectChange(
+                        e.target.value as 'Vibration' | 'Lub Oil'
+                      )
+                    }
+                    className="bg-[#0b101d] border border-[#2d3a58] hover:border-[#3b82f6] focus:border-[#38bdf8] text-[#f8fafc] text-xs rounded-lg px-2.5 py-1.5 outline-none transition-colors cursor-pointer w-full"
+                  >
+                    <option value="Vibration" className="bg-[#0b101d] text-[#f8fafc]">
+                      Vibration
+                    </option>
+                    <option value="Lub Oil" className="bg-[#0b101d] text-[#f8fafc]">
+                      Lub Oil
+                    </option>
+                  </select>
+                </div>
+
+                {/* 2. Date Picker (SLB dark style dd/mm/aaaa) */}
+                <div className="flex flex-col gap-1">
+                  <label className="text-[10px] text-[#8a94a6] font-medium">
+                    Date
+                  </label>
+                  <input
+                    type="date"
+                    aria-label="Non-collection Date"
+                    value={reasonDate}
+                    onChange={(e) => setReasonDate(e.target.value)}
+                    className="bg-[#0b101d] border border-[#2d3a58] hover:border-[#3b82f6] focus:border-[#38bdf8] text-[#f8fafc] text-xs rounded-lg px-2.5 py-1.5 outline-none transition-colors cursor-pointer w-full [color-scheme:dark]"
+                  />
+                </div>
+              </div>
+
+              {/* 3. Reason Selector + 4. Confirm Button */}
+              <div className="flex flex-col sm:flex-row items-stretch sm:items-end gap-2.5">
+                <div className="flex-1 flex flex-col gap-1">
+                  <label className="text-[10px] text-[#8a94a6] font-medium">
+                    Reason
+                  </label>
+                  <select
+                    aria-label="Non-collection Reason"
+                    value={reasonValue}
+                    onChange={(e) => setReasonValue(e.target.value)}
+                    className="bg-[#0b101d] border border-[#2d3a58] hover:border-[#3b82f6] focus:border-[#38bdf8] text-[#f8fafc] text-xs rounded-lg px-2.5 py-1.5 outline-none transition-colors cursor-pointer w-full"
+                  >
+                    {NON_COLLECTION_REASONS.map((r) => (
+                      <option
+                        key={r}
+                        value={r}
+                        className="bg-[#0b101d] text-[#f8fafc]"
+                      >
+                        {r}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <button
+                  type="button"
+                  disabled={isSavingReason}
+                  onClick={handleConfirmReason}
+                  className="bg-[#3b82f6] hover:bg-[#60a5fa] disabled:opacity-50 text-white text-xs font-semibold px-4 py-1.5 rounded-lg transition-colors cursor-pointer shrink-0 h-[32px] shadow-sm"
+                >
+                  Confirm
+                </button>
+              </div>
             </div>
           )}
 

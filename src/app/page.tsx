@@ -97,6 +97,8 @@ interface Equipment {
   collectionMethod?: string | null;
   vibrationNonCollectionReason?: string | null;
   lubeOilNonCollectionReason?: string | null;
+  vibrationNonCollectionDate?: string | null;
+  lubeOilNonCollectionDate?: string | null;
   nonCollectionReason?: string | null;
 }
 
@@ -973,17 +975,43 @@ export default function MainPage() {
     }
   };
 
-  const handleUpdateNonCollectionReason = async (reason: string) => {
+  const handleUpdateNonCollectionReason = async (payload: {
+    technology: 'Vibration' | 'Lub Oil';
+    reason: string;
+    date: string;
+  }) => {
     if (!selectedEquipment) return;
     try {
-      const res = await fetch(`/api/equipments/${encodeURIComponent(selectedEquipment.tag)}`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ nonCollectionReason: reason }),
-      });
+      const bodyPayload =
+        payload.technology === 'Vibration'
+          ? {
+              vibrationNonCollectionReason: payload.reason,
+              vibrationNonCollectionDate: payload.date,
+              nonCollectionReason: payload.reason,
+            }
+          : {
+              lubeOilNonCollectionReason: payload.reason,
+              lubeOilNonCollectionDate: payload.date,
+              nonCollectionReason: payload.reason,
+            };
+
+      const res = await fetch(
+        `/api/equipments/${encodeURIComponent(selectedEquipment.tag)}`,
+        {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(bodyPayload),
+        }
+      );
       if (res.ok) {
-        setSelectedEquipment(prev => prev ? { ...prev, nonCollectionReason: reason } : null);
-        setEquipments(prev => prev.map(eq => eq.tag === selectedEquipment.tag ? { ...eq, nonCollectionReason: reason } : eq));
+        setSelectedEquipment((prev) =>
+          prev ? { ...prev, ...bodyPayload } : null
+        );
+        setEquipments((prev) =>
+          prev.map((eq) =>
+            eq.tag === selectedEquipment.tag ? { ...eq, ...bodyPayload } : eq
+          )
+        );
       }
     } catch (err) {
       console.error('Failed to update non-collection reason:', err);
@@ -1673,7 +1701,7 @@ export default function MainPage() {
               }`}
             >
               <Activity size={13} className={activeTab === 'kpis' ? 'text-accent-blue' : 'text-text-muted'} />
-              KPIs
+              Report
               {activeTab === 'kpis' && (
                 <span className="absolute bottom-[-13px] left-0 right-0 h-[2px] bg-accent-blue shadow-[0_0_8px_rgba(56,189,248,0.6)]" />
               )}
@@ -2425,6 +2453,7 @@ export default function MainPage() {
                 <CollectionCompliancePie
                   equipments={currentKpiEquipments}
                   selectedTechnology={selectedKpiTechnology}
+                  selectedMonth={selectedKpiMonth}
                 />
               </DashboardCard>
 
@@ -3743,6 +3772,7 @@ export default function MainPage() {
                   <CollectionCompliancePie
                     equipments={currentKpiEquipments}
                     selectedTechnology={selectedKpiTechnology}
+                    selectedMonth={selectedKpiMonth}
                   />
                 </div>
               )}

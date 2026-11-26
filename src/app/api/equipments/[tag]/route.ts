@@ -53,6 +53,8 @@ export async function PUT(request: Request, { params }: { params: { tag: string 
       collectionMethod,
       vibrationNonCollectionReason,
       lubeOilNonCollectionReason,
+      vibrationNonCollectionDate,
+      lubeOilNonCollectionDate,
       nonCollectionReason,
       criticality
     } = body;
@@ -70,6 +72,8 @@ export async function PUT(request: Request, { params }: { params: { tag: string 
     if (collectionMethod !== undefined) updateData.collectionMethod = collectionMethod;
     if (vibrationNonCollectionReason !== undefined) updateData.vibrationNonCollectionReason = vibrationNonCollectionReason;
     if (lubeOilNonCollectionReason !== undefined) updateData.lubeOilNonCollectionReason = lubeOilNonCollectionReason;
+    if (vibrationNonCollectionDate !== undefined) updateData.vibrationNonCollectionDate = vibrationNonCollectionDate;
+    if (lubeOilNonCollectionDate !== undefined) updateData.lubeOilNonCollectionDate = lubeOilNonCollectionDate;
     if (nonCollectionReason !== undefined) updateData.nonCollectionReason = nonCollectionReason;
     
     if (condition !== undefined) {
@@ -110,6 +114,8 @@ export async function PUT(request: Request, { params }: { params: { tag: string 
       collectionMethod !== undefined ||
       vibrationNonCollectionReason !== undefined ||
       lubeOilNonCollectionReason !== undefined ||
+      vibrationNonCollectionDate !== undefined ||
+      lubeOilNonCollectionDate !== undefined ||
       nonCollectionReason !== undefined
     ) {
       const updated = await db
