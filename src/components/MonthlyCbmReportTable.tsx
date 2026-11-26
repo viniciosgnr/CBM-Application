@@ -481,21 +481,18 @@ export default function MonthlyCbmReportTable({
                       {statusBadgeNode}
                     </td>
 
-                    {/* 5. CBM Total Risk (Score / 15 - Category) */}
+                    {/* 5. CBM Total Risk (Colored dot + white numeric text "X.X / 15") */}
                     <td className="px-4 py-2.5 text-[11px] font-normal whitespace-nowrap">
                       <span
-                        className="inline-flex items-center gap-1.5 bg-[#141b2d] border border-[#23314f] px-2.5 py-0.5 rounded text-[11px] font-semibold"
+                        className="inline-flex items-center gap-1.5 font-medium text-[11px]"
                         title={`CBM Total Risk (${selectedTechnology}): ${row.totalRisk} / 15 (${row.totalCategory})`}
                       >
                         <span
                           className="w-1.5 h-1.5 rounded-full shrink-0"
                           style={{ backgroundColor: row.totalColorHex }}
                         />
-                        <span style={{ color: row.totalColorHex }} className="font-bold">
+                        <span className="text-text-primary font-medium">
                           {row.totalRisk} / 15
-                        </span>
-                        <span className="text-[#94a3b8] text-[10px] font-medium">
-                          - {row.totalCategory}
                         </span>
                       </span>
                     </td>

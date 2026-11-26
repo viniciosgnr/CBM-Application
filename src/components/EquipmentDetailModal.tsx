@@ -592,12 +592,12 @@ export default function EquipmentDetailModal({
             </div>
           </div>
 
-          {/* Non-collection Reason (Enabled if Vibration, Lube Oil or both are Overdue) */}
+          {/* Non-collection Reason (Compact single-row layout) */}
           {(vibNext.isOverdue || oilNext.isOverdue) && (
-            <div className="bg-[#101726]/80 border border-[#1c253b] rounded-lg p-3.5 my-3 animate-fadeIn">
-              <div className="flex items-center justify-between mb-2.5">
-                <span className="text-[11px] font-semibold text-[#f8fafc] tracking-wide">
-                  Non-collection Reason (Overdue)
+            <div className="bg-[#101726]/70 border border-[#1c253b] rounded-md px-2.5 py-2 my-2.5 animate-fadeIn">
+              <div className="flex items-center justify-between mb-1.5">
+                <span className="text-[10px] font-medium text-[#94a3b8] tracking-wide">
+                  Non-collection Reason
                 </span>
                 {isSavingReason && (
                   <span className="text-[10px] text-[#94a3b8] animate-pulse">
@@ -611,75 +611,62 @@ export default function EquipmentDetailModal({
                 )}
               </div>
 
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 mb-2.5">
-                {/* 1. Technology Selector (Vibration or Lub Oil) */}
-                <div className="flex flex-col gap-1">
-                  <label className="text-[10px] text-[#8a94a6] font-medium">
-                    Technology
-                  </label>
-                  <select
-                    aria-label="Non-collection Technology"
-                    value={reasonTech}
-                    onChange={(e) =>
-                      handleTechSelectChange(
-                        e.target.value as 'Vibration' | 'Lub Oil'
-                      )
-                    }
-                    className="bg-[#0b101d] border border-[#2d3a58] hover:border-[#3b82f6] focus:border-[#38bdf8] text-[#f8fafc] text-xs rounded-lg px-2.5 py-1.5 outline-none transition-colors cursor-pointer w-full"
-                  >
-                    <option value="Vibration" className="bg-[#0b101d] text-[#f8fafc]">
-                      Vibration
+              <div className="flex items-center gap-1.5">
+                {/* 1. Technology Selector */}
+                <select
+                  aria-label="Non-collection Technology"
+                  value={reasonTech}
+                  onChange={(e) =>
+                    handleTechSelectChange(
+                      e.target.value as 'Vibration' | 'Lub Oil'
+                    )
+                  }
+                  className="bg-[#0b101d] border border-[#24304a] hover:border-[#3b82f6] focus:border-[#38bdf8] text-[#f8fafc] text-[11px] rounded px-1.5 py-1 outline-none transition-colors cursor-pointer w-[86px] shrink-0"
+                  title="Technology"
+                >
+                  <option value="Vibration" className="bg-[#0b101d] text-[#f8fafc]">
+                    Vibration
+                  </option>
+                  <option value="Lub Oil" className="bg-[#0b101d] text-[#f8fafc]">
+                    Lub Oil
+                  </option>
+                </select>
+
+                {/* 2. Date Picker */}
+                <input
+                  type="date"
+                  aria-label="Non-collection Date"
+                  value={reasonDate}
+                  onChange={(e) => setReasonDate(e.target.value)}
+                  className="bg-[#0b101d] border border-[#24304a] hover:border-[#3b82f6] focus:border-[#38bdf8] text-[#f8fafc] text-[11px] rounded px-1.5 py-1 outline-none transition-colors cursor-pointer w-[112px] shrink-0 [color-scheme:dark]"
+                  title="Date"
+                />
+
+                {/* 3. Reason Selector */}
+                <select
+                  aria-label="Non-collection Reason"
+                  value={reasonValue}
+                  onChange={(e) => setReasonValue(e.target.value)}
+                  className="bg-[#0b101d] border border-[#24304a] hover:border-[#3b82f6] focus:border-[#38bdf8] text-[#f8fafc] text-[11px] rounded px-2 py-1 outline-none transition-colors cursor-pointer flex-1 min-w-0 truncate"
+                  title="Reason"
+                >
+                  {NON_COLLECTION_REASONS.map((r) => (
+                    <option
+                      key={r}
+                      value={r}
+                      className="bg-[#0b101d] text-[#f8fafc]"
+                    >
+                      {r}
                     </option>
-                    <option value="Lub Oil" className="bg-[#0b101d] text-[#f8fafc]">
-                      Lub Oil
-                    </option>
-                  </select>
-                </div>
+                  ))}
+                </select>
 
-                {/* 2. Date Picker (SLB dark style dd/mm/aaaa) */}
-                <div className="flex flex-col gap-1">
-                  <label className="text-[10px] text-[#8a94a6] font-medium">
-                    Date
-                  </label>
-                  <input
-                    type="date"
-                    aria-label="Non-collection Date"
-                    value={reasonDate}
-                    onChange={(e) => setReasonDate(e.target.value)}
-                    className="bg-[#0b101d] border border-[#2d3a58] hover:border-[#3b82f6] focus:border-[#38bdf8] text-[#f8fafc] text-xs rounded-lg px-2.5 py-1.5 outline-none transition-colors cursor-pointer w-full [color-scheme:dark]"
-                  />
-                </div>
-              </div>
-
-              {/* 3. Reason Selector + 4. Confirm Button */}
-              <div className="flex flex-col sm:flex-row items-stretch sm:items-end gap-2.5">
-                <div className="flex-1 flex flex-col gap-1">
-                  <label className="text-[10px] text-[#8a94a6] font-medium">
-                    Reason
-                  </label>
-                  <select
-                    aria-label="Non-collection Reason"
-                    value={reasonValue}
-                    onChange={(e) => setReasonValue(e.target.value)}
-                    className="bg-[#0b101d] border border-[#2d3a58] hover:border-[#3b82f6] focus:border-[#38bdf8] text-[#f8fafc] text-xs rounded-lg px-2.5 py-1.5 outline-none transition-colors cursor-pointer w-full"
-                  >
-                    {NON_COLLECTION_REASONS.map((r) => (
-                      <option
-                        key={r}
-                        value={r}
-                        className="bg-[#0b101d] text-[#f8fafc]"
-                      >
-                        {r}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-
+                {/* 4. Confirm Button */}
                 <button
                   type="button"
                   disabled={isSavingReason}
                   onClick={handleConfirmReason}
-                  className="bg-[#3b82f6] hover:bg-[#60a5fa] disabled:opacity-50 text-white text-xs font-semibold px-4 py-1.5 rounded-lg transition-colors cursor-pointer shrink-0 h-[32px] shadow-sm"
+                  className="bg-[#2563eb] hover:bg-[#3b82f6] disabled:opacity-50 text-white text-[11px] font-medium px-2.5 py-1 rounded transition-colors cursor-pointer shrink-0"
                 >
                   Confirm
                 </button>
